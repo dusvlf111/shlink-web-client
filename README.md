@@ -45,6 +45,52 @@ The package contains static files only, so just put it in a folder and serve it 
     * If you use Apache, you are covered, since the project includes an `.htaccess` file which already does this.
     * If you use nginx, you can [see how it's done](config/docker/nginx.conf) for the docker image and do the same.
 
+## Environment Configuration
+
+This project supports full-stack deployment with PocketBase for user authentication and PostgreSQL for data persistence.
+
+### Configuration Files
+
+- **`.env.coolify.example`**: Master configuration file for both local development and Coolify production deployment
+  - Contains all environment variables needed for the complete stack
+  - Copy and modify this file for your deployment
+
+### Local Development Setup
+
+1. Copy the example configuration:
+   ```bash
+   cp .env.coolify.example .env.local
+   ```
+
+2. Edit `.env.local` with your local values:
+   - Set `SERVICE_POCKETBASE_URL=http://localhost:8090`
+   - Set `SERVICE_URL_SHLINK_8080=http://localhost:8080`
+   - Adjust other variables as needed
+
+3. Run the development stack:
+   ```bash
+   docker-compose -f docker-compose.yml up -d
+   npm install
+   npm run start
+   ```
+
+### Coolify Production Deployment
+
+See [COOLIFY_DEPLOYMENT.md](COOLIFY_DEPLOYMENT.md) for complete setup instructions:
+
+1. Upload `docker-compose.coolify.yml` to Coolify
+2. Configure environment variables using `.env.coolify.example` as a template
+3. Run deployment
+4. Initialize PocketBase with schema from `pocketbase/schema.json`
+
+### Available Environment Variables
+
+See `.env.coolify.example` for the complete list with descriptions:
+- **Required**: `SERVICE_PASSWORD_POSTGRES`, `SERVICE_BASE64_SHLINKAPIKEY`, domain FQDNs
+- **Backend services**: Shlink, PocketBase, PostgreSQL configuration
+- **Web client**: PocketBase URL, API configuration
+- **Optional**: Sentry, Google Analytics, locale settings
+
 ## Pre-configuring servers
 
 The first time you access shlink-web-client from a browser, you will have to configure the list of shlink servers you want to manage, and they will be saved in the local storage.
