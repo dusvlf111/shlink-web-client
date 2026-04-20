@@ -85,13 +85,7 @@ services:
 
   # Shlink Web Client
   shlink-web:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        VERSION: custom
-        VITE_POCKETBASE_URL: ${VITE_POCKETBASE_URL:-http://pocketbase:8080}
-    image: 'shlink-web-client:custom'
+    image: '${SHLINK_WEB_IMAGE:-ghcr.io/dusvlf111/shlink-web-client:main}'
     container_name: shlink-web-client
     depends_on:
       shlink:
