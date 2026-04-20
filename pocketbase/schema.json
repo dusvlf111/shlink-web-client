@@ -1,98 +1,239 @@
 [
   {
+    "id": "_pb_users_auth_",
     "name": "users",
     "type": "auth",
+    "system": false,
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
+    "createRule": "",
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id",
+    "authRule": "",
+    "manageRule": null,
     "fields": [
       {
+        "id": "text1579384326",
         "name": "name",
         "type": "text",
-        "required": false
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
       },
       {
+        "id": "select_role",
         "name": "role",
         "type": "select",
         "required": true,
-        "options": {
-          "maxSelect": 1,
-          "values": ["admin", "member"]
-        }
+        "presentable": false,
+        "maxSelect": 1,
+        "values": ["admin", "member"]
       },
       {
+        "id": "select_status",
         "name": "status",
         "type": "select",
         "required": true,
-        "options": {
-          "maxSelect": 1,
-          "values": ["pending", "active", "inactive"]
-        }
+        "presentable": false,
+        "maxSelect": 1,
+        "values": ["pending", "active", "inactive"]
       }
-    ]
+    ],
+    "indexes": []
   },
   {
+    "id": "pbc_utm_templates",
     "name": "utm_templates",
     "type": "base",
+    "system": false,
+    "listRule": "@request.auth.id != '' && user = @request.auth.id",
+    "viewRule": "@request.auth.id != '' && user = @request.auth.id",
+    "createRule": "@request.auth.id != ''",
+    "updateRule": "@request.auth.id != '' && user = @request.auth.id",
+    "deleteRule": "@request.auth.id != '' && user = @request.auth.id",
     "fields": [
       {
+        "id": "rel_user_tmpl",
         "name": "user",
         "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "_pb_users_auth_",
-          "cascadeDelete": true,
-          "maxSelect": 1
-        }
+        "presentable": false,
+        "collectionId": "_pb_users_auth_",
+        "cascadeDelete": true,
+        "minSelect": 1,
+        "maxSelect": 1
       },
-      { "name": "name", "type": "text", "required": true },
-      { "name": "source", "type": "text", "required": false },
-      { "name": "medium", "type": "text", "required": false },
-      { "name": "campaign", "type": "text", "required": false },
-      { "name": "term", "type": "text", "required": false },
-      { "name": "content", "type": "text", "required": false }
-    ]
+      {
+        "id": "text_name_tmpl",
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_source_tmpl",
+        "name": "source",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_medium_tmpl",
+        "name": "medium",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_campaign_tmpl",
+        "name": "campaign",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_term_tmpl",
+        "name": "term",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_content_tmpl",
+        "name": "content",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      }
+    ],
+    "indexes": []
   },
   {
+    "id": "pbc_utm_tags_coll",
     "name": "utm_tags",
     "type": "base",
+    "system": false,
+    "listRule": "@request.auth.id != '' && user = @request.auth.id",
+    "viewRule": "@request.auth.id != '' && user = @request.auth.id",
+    "createRule": "@request.auth.id != ''",
+    "updateRule": "@request.auth.id != '' && user = @request.auth.id",
+    "deleteRule": "@request.auth.id != '' && user = @request.auth.id",
     "fields": [
       {
+        "id": "rel_user_tags",
         "name": "user",
         "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "_pb_users_auth_",
-          "cascadeDelete": true,
-          "maxSelect": 1
-        }
+        "presentable": false,
+        "collectionId": "_pb_users_auth_",
+        "cascadeDelete": true,
+        "minSelect": 1,
+        "maxSelect": 1
       },
       {
+        "id": "select_category",
         "name": "category",
         "type": "select",
         "required": true,
-        "options": {
-          "maxSelect": 1,
-          "values": ["source", "medium", "campaign", "term", "content"]
-        }
+        "presentable": false,
+        "maxSelect": 1,
+        "values": ["source", "medium", "campaign", "term", "content"]
       },
-      { "name": "value", "type": "text", "required": true }
-    ]
+      {
+        "id": "text_value_tags",
+        "name": "value",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 255,
+        "pattern": ""
+      }
+    ],
+    "indexes": []
   },
   {
+    "id": "pbc_public_token",
     "name": "public_tokens",
     "type": "base",
+    "system": false,
+    "listRule": "@request.auth.id != '' && created_by = @request.auth.id",
+    "viewRule": "@request.auth.id != '' && created_by = @request.auth.id",
+    "createRule": "@request.auth.id != ''",
+    "updateRule": "@request.auth.id != '' && created_by = @request.auth.id",
+    "deleteRule": "@request.auth.id != '' && created_by = @request.auth.id",
     "fields": [
-      { "name": "short_code", "type": "text", "required": true },
-      { "name": "token", "type": "text", "required": true },
       {
+        "id": "text_shortcode",
+        "name": "short_code",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_token",
+        "name": "token",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "rel_created_by",
         "name": "created_by",
         "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "_pb_users_auth_",
-          "cascadeDelete": true,
-          "maxSelect": 1
-        }
+        "presentable": false,
+        "collectionId": "_pb_users_auth_",
+        "cascadeDelete": true,
+        "minSelect": 1,
+        "maxSelect": 1
       },
-      { "name": "expires_at", "type": "date", "required": false }
-    ]
+      {
+        "id": "date_expires_at",
+        "name": "expires_at",
+        "type": "date",
+        "required": false,
+        "presentable": false,
+        "min": "",
+        "max": ""
+      }
+    ],
+    "indexes": []
   }
 ]
