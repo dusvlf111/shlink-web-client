@@ -4,6 +4,7 @@ import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { fromPartial } from '@total-typescript/shoehorn';
 import type { PropsWithChildren, ReactElement } from 'react';
+import { AuthProvider } from '../../src/auth/AuthContext';
 import { Provider } from 'react-redux';
 import { ContainerProvider } from '../../src/container/context';
 import type { RootState } from '../../src/store';
@@ -39,7 +40,9 @@ export const renderWithStore = (
   const store = setUpStore(initialState);
   const Wrapper = ({ children }: PropsWithChildren) => (
     <ContainerProvider value={fromPartial({ buildShlinkApiClient })}>
-      <Provider store={store}>{children}</Provider>
+      <Provider store={store}>
+        <AuthProvider>{children}</AuthProvider>
+      </Provider>
     </ContainerProvider>
   );
 
