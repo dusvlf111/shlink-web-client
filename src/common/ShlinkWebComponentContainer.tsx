@@ -39,13 +39,9 @@ const ShlinkWebComponentContainerBase: FC<
   const { settings } = useSettings();
   const { pathname } = useLocation();
   const [utmMenuMount, setUtmMenuMount] = useState<HTMLElement | null>(null);
-
-  if (!isReachableServer(selectedServer)) {
-    return <ServerError />;
-  }
-
-  const routesPrefix = `/server/${selectedServer.id}`;
-  const utmPath = `${routesPrefix}/utm-builder`;
+  const reachableServer = isReachableServer(selectedServer);
+  const routesPrefix = reachableServer ? `/server/${selectedServer.id}` : '';
+  const utmPath = reachableServer ? `${routesPrefix}/utm-builder` : '/utm-builder';
 
   useEffect(() => {
     let createdMount: HTMLElement | null = null;
@@ -91,6 +87,10 @@ const ShlinkWebComponentContainerBase: FC<
       createdMount?.remove();
     };
   }, [routesPrefix]);
+
+  if (!reachableServer) {
+    return <ServerError />;
+  }
 
   return (
     <ShlinkSidebarVisibilityProvider>
