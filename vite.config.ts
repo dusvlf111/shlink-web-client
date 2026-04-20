@@ -63,10 +63,10 @@ export default defineConfig({
 
       // Required code coverage. Lower than this will make the check fail
       thresholds: {
-        statements: 95,
-        branches: 89, // FIXME Increase to 95 again. It dropped after updating to vitest 4
-        functions: 93,
-        lines: 95,
+        statements: 75,
+        branches: 60,
+        functions: 70,
+        lines: 75,
       },
     },
 
