@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Shlink
+  postgres:
+    image: 'postgres:15-alpine'
+    container_name: shlink-postgres
+    environment:
+      POSTGRES_DB: shlink
+      POSTGRES_USER: shlink
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U shlink -d shlink
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Shlink Backend
+  shlink:
+    image: 'shlinkio/shlink:stable'
+    container_name: shlink-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Coolify service environment variables
+      - SERVICE_URL_SHLINK_8080=${SERVICE_URL_SHLINK_8080}
+      - 'DEFAULT_DOMAIN=${SERVICE_FQDN_SHLINK:-localhost}'
+      - IS_HTTPS_ENABLED=${IS_HTTPS_ENABLED:-false}
+      - 'INITIAL_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
+      # Database configuration
+      - 'DB_DRIVER=pdo_pgsql'
+      - 'DB_HOST=postgres'
+      - 'DB_PORT=5432'
+      - 'DB_NAME=shlink'
+      - 'DB_USER=shlink'
+      - 'DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES:-changeme}'
+      # Additional Shlink config
+      - 'RESOLVE_TITLE=true'
+      - 'SHORT_URL_MODE=path'
+      - 'VISITS_WEBHOOKS=true'
+    volumes:
+      - shlink-data:/etc/shlink/data
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:8080/rest/v3/health'
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # PocketBase for Authentication & User Management
+  pocketbase:
+    image: 'ghcr.io/pocketbase/pocketbase:latest'
+    container_name: shlink-pocketbase
+    command: 'serve --http=0.0.0.0:8090'
+    environment:
+      - SERVICE_URL_POCKETBASE_8090=${SERVICE_URL_POCKETBASE_8090}
+    volumes:
+      - pocketbase-data:/pb_data
+    ports:
+      - '8090:8090'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:8090/api/health'
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Shlink Web Client
+  shlink-web:
+    image: 'shlinkio/shlink-web-client:latest'
+    container_name: shlink-web-client
+    depends_on:
+      shlink:
+        condition: service_healthy
+      pocketbase:
+        condition: service_healthy
+    environment:
+      # Coolify service environment variables
+      - SERVICE_URL_SHLINKWEB_8080=${SERVICE_URL_SHLINKWEB_8080}
+      - 'SHLINK_SERVER_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
+      - 'SHLINK_SERVER_URL=${SERVICE_URL_SHLINK:-http://shlink:8080}'
+      # PocketBase configuration
+      - 'VITE_POCKETBASE_URL=${SERVICE_URL_POCKETBASE:-http://pocketbase:8090}'
+    ports:
+      - '3000:8080'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:8080'
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    driver: local
+  shlink-data:
+    driver: local
+  pocketbase-data:
+    driver: local
+
+networks:
+  default:
+    name: shlink-network
+    driver: bridge
