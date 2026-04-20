@@ -8,6 +8,7 @@ export type UtmTag = {
   id: string;
   category: UtmCategory;
   value: string;
+  description?: string;
 };
 
 export type UtmTemplate = {
@@ -48,13 +49,18 @@ export const useUtmTags = () => {
     void fetch();
   }, [fetch]);
 
-  const addTag = async (category: UtmCategory, value: string) => {
+  const addTag = async (category: UtmCategory, value: string, description = '') => {
     const userId = currentUserId();
     if (!userId || !value.trim()) {
       return;
     }
 
-    await pb.collection('utm_tags').create({ category, value: value.trim(), user: userId });
+    await pb.collection('utm_tags').create({
+      category,
+      value: value.trim(),
+      description: description.trim(),
+      user: userId,
+    });
     await fetch();
   };
 

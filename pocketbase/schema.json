@@ -187,6 +187,17 @@
         "min": 1,
         "max": 255,
         "pattern": ""
+      },
+      {
+        "id": "text_description_tags",
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
       }
     ],
     "indexes": []

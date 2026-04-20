@@ -10,13 +10,33 @@ type Props = {
   onChange: (val: string) => void;
   tags: UtmTag[];
   onAddTag: (val: string) => Promise<void>;
-  onDeleteTag: (id: string) => Promise<void>;
+  onDeleteTag: (tag: UtmTag) => Promise<void>;
   required?: boolean;
 };
 
 export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTag, onDeleteTag, required }) => {
   const [showTags, setShowTags] = useState(false);
   const inputId = `utm-${label}`;
+  const normalizedValue = value.trim().toLowerCase();
+
+  const suggestedTags = tags
+    .map((tag) => {
+      const normalizedTag = tag.value.toLowerCase();
+      let score = 2;
+
+      if (!normalizedValue) {
+        score = 0;
+      } else if (normalizedTag.startsWith(normalizedValue)) {
+        score = 0;
+      } else if (normalizedTag.includes(normalizedValue)) {
+        score = 1;
+      }
+
+      return { tag, score };
+    })
+    .sort((a, b) => a.score - b.score || a.tag.value.localeCompare(b.tag.value))
+    .filter(({ score }) => !normalizedValue || score < 2)
+    .map(({ tag }) => tag);
 
   const handleAddTag = async () => {
     if (!value.trim()) return;
@@ -50,9 +70,9 @@ export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTa
         </button>
       </div>
 
-      {showTags && tags.length > 0 && (
+      {showTags && suggestedTags.length > 0 && (
         <div className="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-          {tags.map((tag) => (
+          {suggestedTags.map((tag) => (
             <div
               key={tag.id}
               className="flex items-center justify-between px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -62,11 +82,14 @@ export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTa
                 className="flex-1 text-left text-gray-800 dark:text-gray-200"
                 onMouseDown={() => onChange(tag.value)}
               >
-                {tag.value}
+                <span className="block">{tag.value}</span>
+                {!!tag.description && (
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{tag.description}</span>
+                )}
               </button>
               <button
                 type="button"
-                onClick={() => onDeleteTag(tag.id)}
+                onClick={() => onDeleteTag(tag)}
                 className="ml-2 text-gray-400 hover:text-red-500"
               >
                 <FontAwesomeIcon icon={faTimes} />

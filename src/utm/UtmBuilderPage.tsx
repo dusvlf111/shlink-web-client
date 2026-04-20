@@ -4,7 +4,7 @@ import type { FC } from 'react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { NoMenuLayout } from '../common/NoMenuLayout';
-import { useUtmTags, useUtmTemplates,UTM_CATEGORIES, type UtmCategory } from './useUtmData';
+import { useUtmTags, useUtmTemplates,UTM_CATEGORIES, type UtmCategory, type UtmTag, type UtmTemplate } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
 
 type UtmFields = {
@@ -59,6 +59,13 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
 const hasRequiredFields = (fields: UtmFields) =>
   !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim() && !!fields.campaign.trim();
 
+const extractTemplateTags = (template: UtmTemplate): Array<{ category: UtmCategory; value: string }> =>
+  UTM_CATEGORIES.flatMap((category) => {
+    const value = template[category];
+
+    return value ? [{ category, value }] : [];
+  });
+
 export const UtmBuilderPage: FC = () => {
   const { serverId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
@@ -66,6 +73,9 @@ export const UtmBuilderPage: FC = () => {
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
+  const [newTagCategory, setNewTagCategory] = useState<UtmCategory>('source');
+  const [newTagValue, setNewTagValue] = useState('');
+  const [newTagDescription, setNewTagDescription] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
 
   const { tags, addTag, deleteTag } = useUtmTags();
@@ -129,6 +139,31 @@ export const UtmBuilderPage: FC = () => {
     setFields((prev) => ({ ...prev, ...tpl }));
   };
 
+  const applyTag = (tag: UtmTag) => {
+    setFields((prev) => ({
+      ...prev,
+      [tag.category]: tag.value,
+    }));
+  };
+
+  const confirmAndDeleteTag = async (tag: UtmTag) => {
+    if (!window.confirm(`'${tag.value}' 태그를 삭제할까요?`)) {
+      return;
+    }
+
+    await deleteTag(tag.id);
+  };
+
+  const handleAddManagedTag = async () => {
+    if (!newTagValue.trim()) {
+      return;
+    }
+
+    await addTag(newTagCategory, newTagValue, newTagDescription);
+    setNewTagValue('');
+    setNewTagDescription('');
+  };
+
   return (
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
@@ -162,7 +197,7 @@ export const UtmBuilderPage: FC = () => {
                 onChange={set(cat)}
                 tags={tagsFor(cat)}
                 onAddTag={(val) => addTag(cat, val)}
-                onDeleteTag={deleteTag}
+                onDeleteTag={confirmAndDeleteTag}
                 required={cat === 'source' || cat === 'medium' || cat === 'campaign'}
               />
             ))}
@@ -249,6 +284,21 @@ export const UtmBuilderPage: FC = () => {
                         {!!tpl.description && (
                           <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{tpl.description}</span>
                         )}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {extractTemplateTags(tpl).map(({ category, value }) => {
+                            const matchedTag = tags.find((tag) => tag.category === category && tag.value === value);
+
+                            return (
+                              <span
+                                key={`${tpl.id}-${category}-${value}`}
+                                className="rounded bg-lm-primary/60 px-1.5 py-0.5 text-[10px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)"
+                              >
+                                {`utm_${category}: ${value}`}
+                                {matchedTag?.description ? ` (${matchedTag.description})` : ''}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </button>
                       <button
                         onClick={() => {
@@ -267,6 +317,81 @@ export const UtmBuilderPage: FC = () => {
                 </div>
               </div>
             )}
+
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">UTM 태그 관리</h2>
+
+              <div className="mb-3 space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
+                <select
+                  value={newTagCategory}
+                  onChange={(e) => setNewTagCategory(e.target.value as UtmCategory)}
+                  className="w-full rounded border border-lm-border px-2 py-1 text-sm dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                >
+                  {UTM_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>{`utm_${category}`}</option>
+                  ))}
+                </select>
+                <input
+                  value={newTagValue}
+                  onChange={(e) => setNewTagValue(e.target.value)}
+                  placeholder="태그 값"
+                  className="w-full rounded border border-lm-border px-2 py-1 text-sm dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                <input
+                  value={newTagDescription}
+                  onChange={(e) => setNewTagDescription(e.target.value)}
+                  placeholder="태그 설명 (선택)"
+                  className="w-full rounded border border-lm-border px-2 py-1 text-sm dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddManagedTag}
+                  disabled={!newTagValue.trim()}
+                  className="w-full rounded bg-lm-main px-3 py-2 text-sm text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
+                >
+                  태그 저장
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {UTM_CATEGORIES.map((category) => {
+                  const categoryTags = tagsFor(category);
+
+                  return (
+                    <div key={category} className="rounded border border-lm-border p-2 dark:border-dm-border">
+                      <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{`utm_${category}`}</p>
+                      {categoryTags.length === 0 ? (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">저장된 태그 없음</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {categoryTags.map((tag) => (
+                            <div key={tag.id} className="flex items-center justify-between gap-2 rounded border border-lm-border px-2 py-1 dark:border-dm-border">
+                              <button
+                                type="button"
+                                onClick={() => applyTag(tag)}
+                                className="flex-1 text-left"
+                              >
+                                <span className="block text-xs text-(--light-text-color) dark:text-(--dark-text-color)">{tag.value}</span>
+                                {!!tag.description && (
+                                  <span className="block text-[11px] text-gray-500 dark:text-gray-400">{tag.description}</span>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void confirmAndDeleteTag(tag)}
+                                className="text-gray-400 hover:text-red-500"
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>

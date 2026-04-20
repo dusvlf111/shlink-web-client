@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import type { UtmTag } from '../../src/utm/useUtmData';
 import { UtmBuilderPage } from '../../src/utm/UtmBuilderPage';
 import { renderWithEvents } from '../__helpers__/setUpTest';
 
@@ -7,11 +8,15 @@ const saveTemplateMock = vi.fn(async () => undefined);
 const deleteTemplateMock = vi.fn(async () => undefined);
 const addTagMock = vi.fn(async () => undefined);
 const deleteTagMock = vi.fn(async () => undefined);
+let mockTags: UtmTag[] = [
+  { id: 'tag-1', category: 'source', value: 'google', description: '검색 유입' },
+  { id: 'tag-2', category: 'medium', value: 'cpc', description: '유료 클릭' },
+];
 
 vi.mock('../../src/utm/useUtmData', () => ({
   UTM_CATEGORIES: ['source', 'medium', 'campaign', 'term', 'content'],
   useUtmTags: () => ({
-    tags: [],
+    tags: mockTags,
     addTag: addTagMock,
     deleteTag: deleteTagMock,
   }),
@@ -34,6 +39,10 @@ vi.mock('../../src/utm/useUtmData', () => ({
 describe('<UtmBuilderPage />', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTags = [
+      { id: 'tag-1', category: 'source', value: 'google', description: '검색 유입' },
+      { id: 'tag-2', category: 'medium', value: 'cpc', description: '유료 클릭' },
+    ];
   });
 
   const setUp = () => renderWithEvents(
@@ -92,6 +101,33 @@ describe('<UtmBuilderPage />', () => {
 
     await user.click(trashButton!);
     await waitFor(() => expect(deleteTemplateMock).toHaveBeenCalledWith('tpl-1'));
+
+    confirmSpy.mockRestore();
+  });
+
+  it('applies right panel tag to matching UTM field on click', async () => {
+    const { user } = setUp();
+
+    await user.click(screen.getByRole('button', { name: /google/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/utm_source/i)).toHaveValue('google');
+    });
+  });
+
+  it('asks confirmation before deleting tag from right panel', async () => {
+    const { user } = setUp();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+    const deleteButtons = screen.getAllByRole('button').filter((button) => button.querySelector('svg'));
+    const lastDeleteButton = deleteButtons.at(-1);
+    expect(lastDeleteButton).toBeDefined();
+
+    await user.click(lastDeleteButton!);
+    expect(deleteTagMock).not.toHaveBeenCalled();
+
+    await user.click(lastDeleteButton!);
+    await waitFor(() => expect(deleteTagMock).toHaveBeenCalledWith('tag-2'));
 
     confirmSpy.mockRestore();
   });
