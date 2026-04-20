@@ -1,7 +1,9 @@
 FROM node:25.9-alpine AS node
 COPY . /shlink-web-client
 ARG VERSION="latest"
+ARG VITE_POCKETBASE_URL="http://127.0.0.1:8090"
 ENV VERSION=${VERSION}
+ENV VITE_POCKETBASE_URL=${VITE_POCKETBASE_URL}
 RUN cd /shlink-web-client && npm ci && node --run build
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
