@@ -61,6 +61,23 @@ describe('<UtmBuilderPage />', () => {
     expect(screen.getByText('템플릿이 저장됐습니다.')).toBeInTheDocument();
   });
 
+  it('fills utm fields when base URL already has utm params', async () => {
+    const { user } = setUp();
+
+    await user.type(
+      screen.getByLabelText('기본 URL *'),
+      'https://example.com/page?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_term=dev&utm_content=hero',
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/utm_source/i)).toHaveValue('google');
+      expect(screen.getByLabelText(/utm_medium/i)).toHaveValue('cpc');
+      expect(screen.getByLabelText(/utm_campaign/i)).toHaveValue('spring');
+      expect(screen.getByLabelText(/utm_term/i)).toHaveValue('dev');
+      expect(screen.getByLabelText(/utm_content/i)).toHaveValue('hero');
+    });
+  });
+
   it('asks confirmation before deleting template', async () => {
     const { user } = setUp();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);

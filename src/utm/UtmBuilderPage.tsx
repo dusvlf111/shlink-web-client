@@ -35,6 +35,27 @@ const buildUtmUrl = (fields: UtmFields): string => {
   }
 };
 
+const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'baseUrl'>> | null => {
+  if (!baseUrl.trim()) {
+    return null;
+  }
+
+  try {
+    const url = new URL(baseUrl);
+    const extracted = {
+      source: url.searchParams.get('utm_source') ?? '',
+      medium: url.searchParams.get('utm_medium') ?? '',
+      campaign: url.searchParams.get('utm_campaign') ?? '',
+      term: url.searchParams.get('utm_term') ?? '',
+      content: url.searchParams.get('utm_content') ?? '',
+    };
+
+    return Object.values(extracted).some((value) => value.trim()) ? extracted : null;
+  } catch {
+    return null;
+  }
+};
+
 const hasRequiredFields = (fields: UtmFields) =>
   !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim() && !!fields.campaign.trim();
 
@@ -54,6 +75,22 @@ export const UtmBuilderPage: FC = () => {
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
 
   const set = (key: keyof UtmFields) => (val: string) => setFields((prev) => ({ ...prev, [key]: val }));
+
+  const handleBaseUrlChange = (baseUrl: string) => {
+    setFields((prev) => {
+      const extracted = extractUtmFieldsFromUrl(baseUrl);
+
+      if (!extracted) {
+        return { ...prev, baseUrl };
+      }
+
+      return {
+        ...prev,
+        baseUrl,
+        ...extracted,
+      };
+    });
+  };
 
   const tagsFor = (cat: UtmCategory) => tags.filter((tag) => tag.category === cat);
 
@@ -108,10 +145,13 @@ export const UtmBuilderPage: FC = () => {
                 id="utm-base-url"
                 type="url"
                 value={fields.baseUrl}
-                onChange={(e) => set('baseUrl')(e.target.value)}
+                onChange={(e) => handleBaseUrlChange(e.target.value)}
                 placeholder="https://example.com/page"
                 className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                URL에 포함된 utm_source, utm_medium, utm_campaign, utm_term, utm_content 값은 아래 입력칸에 자동 반영됩니다.
+              </p>
             </div>
 
             {UTM_CATEGORIES.map((cat) => (
