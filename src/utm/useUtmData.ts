@@ -69,7 +69,22 @@ export const useUtmTags = () => {
     await fetch();
   };
 
-  return { tags, addTag, deleteTag, refetch: fetch };
+  const updateTag = async (id: string, category: UtmCategory, value: string, description = '') => {
+    const userId = currentUserId();
+    if (!userId || !value.trim()) {
+      return;
+    }
+
+    await pb.collection('utm_tags').update(id, {
+      category,
+      value: value.trim(),
+      description: description.trim(),
+      user: userId,
+    });
+    await fetch();
+  };
+
+  return { tags, addTag, updateTag, deleteTag, refetch: fetch };
 };
 
 export const useUtmTemplates = () => {
@@ -107,10 +122,20 @@ export const useUtmTemplates = () => {
     await fetch();
   };
 
+  const updateTemplate = async (id: string, data: Omit<UtmTemplate, 'id'>) => {
+    const userId = currentUserId();
+    if (!userId) {
+      return;
+    }
+
+    await pb.collection('utm_templates').update(id, { ...data, user: userId });
+    await fetch();
+  };
+
   const deleteTemplate = async (id: string) => {
     await pb.collection('utm_templates').delete(id);
     await fetch();
   };
 
-  return { templates, saveTemplate, deleteTemplate };
+  return { templates, saveTemplate, updateTemplate, deleteTemplate };
 };

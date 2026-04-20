@@ -1,7 +1,5 @@
-import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { UtmTag } from './useUtmData';
 
 type Props = {
@@ -9,39 +7,49 @@ type Props = {
   value: string;
   onChange: (val: string) => void;
   tags: UtmTag[];
-  onAddTag: (val: string) => Promise<void>;
-  onDeleteTag: (tag: UtmTag) => Promise<void>;
   required?: boolean;
 };
 
-export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTag, onDeleteTag, required }) => {
-  const [showTags, setShowTags] = useState(false);
+export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, required }) => {
   const inputId = `utm-${label}`;
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const normalizedValue = value.trim().toLowerCase();
 
-  const suggestedTags = tags
-    .filter((tag) => {
+  const suggestedTags = useMemo(() => {
+    const valueMap = new Map<string, { value: string; description?: string }>();
+
+    tags.forEach((tag) => {
+      const trimmedValue = tag.value.trim();
+      if (!trimmedValue) {
+        return;
+      }
+
+      if (!valueMap.has(trimmedValue)) {
+        valueMap.set(trimmedValue, {
+          value: trimmedValue,
+          description: tag.description?.trim() || undefined,
+        });
+        return;
+      }
+
+      const existing = valueMap.get(trimmedValue);
+      if (existing && !existing.description && tag.description?.trim()) {
+        existing.description = tag.description.trim();
+      }
+    });
+
+    const uniqueValues = [...valueMap.values()];
+    const filtered = uniqueValues.filter(({ value: tagValue }) => {
       if (!normalizedValue) {
         return true;
       }
 
-      const normalizedTag = tag.value.toLowerCase();
-      return normalizedTag.startsWith(normalizedValue) || normalizedTag.includes(normalizedValue);
-    })
-    .sort((a, b) => {
-      const aNormalized = a.value.toLowerCase();
-      const bNormalized = b.value.toLowerCase();
-
-      const aScore = aNormalized.startsWith(normalizedValue) ? 0 : 1;
-      const bScore = bNormalized.startsWith(normalizedValue) ? 0 : 1;
-
-      return aScore - bScore || a.value.localeCompare(b.value);
+      const normalizedTagValue = tagValue.toLowerCase();
+      return normalizedTagValue.includes(normalizedValue) || normalizedTagValue.startsWith(normalizedValue);
     });
 
-  const handleAddTag = async () => {
-    if (!value.trim()) return;
-    await onAddTag(value.trim());
-  };
+    return filtered.sort((a, b) => a.value.localeCompare(b.value)).slice(0, 8);
+  }, [tags, normalizedValue]);
 
   return (
     <div className="relative">
@@ -49,52 +57,32 @@ export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTa
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
-      <div className="flex gap-2">
-        <input
-          id={inputId}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setShowTags(true)}
-          onBlur={() => setTimeout(() => setShowTags(false), 150)}
-          className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          placeholder={`${label} 입력 또는 태그 선택`}
-        />
-        <button
-          type="button"
-          onClick={handleAddTag}
-          title="현재 값을 태그로 저장"
-          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
-        >
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
-      </div>
+      <input
+        id={inputId}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+        autoComplete="off"
+        className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+        placeholder={`${label} 입력`}
+      />
 
-      {showTags && suggestedTags.length > 0 && (
+      {showSuggestions && suggestedTags.length > 0 && (
         <div className="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
           {suggestedTags.map((tag) => (
-            <div
-              key={tag.id}
-              className="flex items-center justify-between px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+            <button
+              key={tag.value}
+              type="button"
+              onMouseDown={() => onChange(tag.value)}
+              className="block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
             >
-              <button
-                type="button"
-                className="flex-1 text-left text-gray-800 dark:text-gray-200"
-                onMouseDown={() => onChange(tag.value)}
-              >
-                <span className="block">{tag.value}</span>
-                {!!tag.description && (
-                  <span className="block text-xs text-gray-500 dark:text-gray-400">{tag.description}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteTag(tag)}
-                className="ml-2 text-gray-400 hover:text-red-500"
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
+              <span className="block">{tag.value}</span>
+              {tag.description && (
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{tag.description}</span>
+              )}
+            </button>
           ))}
         </div>
       )}

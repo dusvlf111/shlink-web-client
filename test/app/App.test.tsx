@@ -12,6 +12,18 @@ vi.mock(import('../../src/common/ShlinkWebComponentContainer'), () => ({
   ShlinkWebComponentContainer: () => <span>ShlinkWebComponentContainer</span>,
 }));
 
+vi.mock(import('../../src/utm/UtmBuilderPage'), () => ({
+  UtmBuilderPage: () => <span>UtmBuilderPage</span>,
+}));
+
+vi.mock(import('../../src/utm/UtmTemplateManager'), () => ({
+  UtmTemplateManager: () => <span>UtmTemplateManager</span>,
+}));
+
+vi.mock(import('../../src/utm/UtmTagManager'), () => ({
+  UtmTagManager: () => <span>UtmTagManager</span>,
+}));
+
 describe('<App />', () => {
   const setUp = async (activeRoute = '/') => act(() => renderWithStore(
     <MemoryRouter initialEntries={[{ pathname: activeRoute }]}>
@@ -67,5 +79,36 @@ describe('<App />', () => {
     } else {
       expect(shlinkWrapper).not.toHaveClass('flex');
     }
+  });
+
+  it('toggles the floating UTM button between UTM management and overview', async () => {
+    await setUp('/');
+
+    expect(screen.getByRole('button', { name: /utm 관리로 이동/i })).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole('button', { name: /utm 관리로 이동/i }).click();
+    });
+
+    expect(screen.getByText('UtmBuilderPage')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /overview로 이동/i })).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole('button', { name: /overview로 이동/i }).click();
+    });
+
+    expect(screen.getByText('Welcome!')).toBeInTheDocument();
+  });
+
+  it('moves to root overview when clicking the floating button from a server UTM route', async () => {
+    await setUp('/server/abc123/utm-builder');
+
+    expect(screen.getByRole('button', { name: /overview로 이동/i })).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole('button', { name: /overview로 이동/i }).click();
+    });
+
+    expect(screen.getByText('Welcome!')).toBeInTheDocument();
   });
 });

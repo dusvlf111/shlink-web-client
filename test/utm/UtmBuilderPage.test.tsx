@@ -53,23 +53,6 @@ describe('<UtmBuilderPage />', () => {
     </MemoryRouter>,
   );
 
-  it('saves template with description', async () => {
-    const { user } = setUp();
-
-    await user.type(screen.getByPlaceholderText('템플릿 이름'), '신규 템플릿');
-    await user.type(screen.getByPlaceholderText('템플릿 설명 (선택)'), '설명 텍스트');
-
-    await user.click(screen.getByRole('button', { name: /현재 값 저장/i }));
-
-    await waitFor(() => expect(saveTemplateMock).toHaveBeenCalled());
-    expect(saveTemplateMock).toHaveBeenCalledWith(expect.objectContaining({
-      name: '신규 템플릿',
-      description: '설명 텍스트',
-    }));
-
-    expect(screen.getByText('템플릿이 저장됐습니다.')).toBeInTheDocument();
-  });
-
   it('fills utm fields when base URL already has utm params', async () => {
     const { user } = setUp();
 
@@ -87,48 +70,56 @@ describe('<UtmBuilderPage />', () => {
     });
   });
 
-  it('asks confirmation before deleting template', async () => {
-    const { user } = setUp();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
-
-    const templateName = screen.getByText('기본 템플릿');
-    const templateRow = templateName.closest('div');
-    const trashButton = templateRow?.querySelector('button:last-child') as HTMLButtonElement | null;
-    expect(trashButton).not.toBeNull();
-
-    await user.click(trashButton!);
-    expect(deleteTemplateMock).not.toHaveBeenCalled();
-
-    await user.click(trashButton!);
-    await waitFor(() => expect(deleteTemplateMock).toHaveBeenCalledWith('tpl-1'));
-
-    confirmSpy.mockRestore();
-  });
-
-  it('applies right panel tag to matching UTM field on click', async () => {
+  it('applies template to UTM fields on template button click', async () => {
     const { user } = setUp();
 
-    await user.click(screen.getByText('google'));
+    await user.type(
+      screen.getByLabelText('기본 URL *'),
+      'https://example.com/page',
+    );
+
+    await user.click(screen.getByRole('button', { name: /기본 템플릿/i }));
 
     await waitFor(() => {
       expect(screen.getByLabelText(/utm_source/i)).toHaveValue('google');
+      expect(screen.getByLabelText(/utm_medium/i)).toHaveValue('cpc');
+      expect(screen.getByLabelText(/utm_campaign/i)).toHaveValue('spring');
+      expect(screen.getByLabelText(/utm_term/i)).toHaveValue('keyword');
+      expect(screen.getByLabelText(/utm_content/i)).toHaveValue('banner');
     });
   });
 
-  it('asks confirmation before deleting tag from right panel', async () => {
+  it('generates UTM URL when required fields are filled', async () => {
     const { user } = setUp();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
 
-    const deleteButtons = screen.getAllByRole('button').filter((button) => button.querySelector('svg'));
-    const lastDeleteButton = deleteButtons.at(-1);
-    expect(lastDeleteButton).toBeDefined();
+    await user.type(
+      screen.getByLabelText('기본 URL *'),
+      'https://example.com/page',
+    );
 
-    await user.click(lastDeleteButton!);
-    expect(deleteTagMock).not.toHaveBeenCalled();
+    await user.type(
+      screen.getByLabelText(/utm_source/i),
+      'google',
+    );
 
-    await user.click(lastDeleteButton!);
-    await waitFor(() => expect(deleteTagMock).toHaveBeenCalledWith('tag-2'));
+    await user.type(
+      screen.getByLabelText(/utm_medium/i),
+      'organic',
+    );
 
-    confirmSpy.mockRestore();
+    await user.type(
+      screen.getByLabelText(/utm_campaign/i),
+      'test',
+    );
+
+    await waitFor(() => {
+      const urlDisplay = screen.getByText(/https:\/\/example\.com\/page\?utm_source=google/);
+      expect(urlDisplay).toBeInTheDocument();
+    });
+  });
+
+  it('renders back button', () => {
+    setUp();
+    expect(screen.getByRole('button', { name: /뒤로가기/i })).toBeInTheDocument();
   });
 });
