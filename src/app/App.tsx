@@ -56,7 +56,6 @@ export const App: FC = () => {
               <Route path="/utm-builder" element={<UtmBuilderPage />} />
               <Route path="/server/create" element={<CreateServer />} />
               <Route path="/server/:serverId/edit" element={<EditServer />} />
-              <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
               <Route path="/server/:serverId/*">
                 {['', '*'].map((path) => <Route key={path} path={path} element={<ShlinkWebComponentContainer />} />)}
               </Route>

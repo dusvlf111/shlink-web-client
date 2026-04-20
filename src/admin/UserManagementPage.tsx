@@ -16,6 +16,17 @@ const ROLE_LABEL: Record<string, string> = {
   member: '멤버',
 };
 
+const isBadFilterRequest = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const maybeError = error as { status?: number; message?: string; response?: { message?: string } };
+  const message = (maybeError.response?.message ?? maybeError.message ?? '').toLowerCase();
+
+  return maybeError.status === 400 && (message.includes('filter') || message.includes('status'));
+};
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === 'object' && error !== null) {
     const maybeError = error as { status?: number; message?: string; response?: { message?: string } };
@@ -47,6 +58,17 @@ export const UserManagementPage: FC = () => {
       });
       setUsers(records);
     } catch (error: unknown) {
+      if (isBadFilterRequest(error)) {
+        try {
+          const allUsers = await pb.collection('users').getFullList<UserRecord>({ sort: 'created' });
+          setUsers(allUsers.filter((user) => user.status === tab));
+          return;
+        } catch (fallbackError: unknown) {
+          setError(getErrorMessage(fallbackError, '사용자 목록을 불러오는 데 실패했습니다.'));
+          return;
+        }
+      }
+
       setError(getErrorMessage(error, '사용자 목록을 불러오는 데 실패했습니다.'));
     } finally {
       setLoading(false);

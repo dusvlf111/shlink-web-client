@@ -18,6 +18,7 @@ import { ServerError } from '../servers/helpers/ServerError';
 import { withSelectedServer } from '../servers/helpers/withSelectedServer';
 import { useSelectedServer } from '../servers/reducers/selectedServer';
 import { useSettings } from '../settings/reducers/settings';
+import { UtmBuilderPage } from '../utm/UtmBuilderPage';
 import { NotFound } from './NotFound';
 
 export type ShlinkWebComponentContainerProps = {
@@ -117,9 +118,13 @@ const ShlinkWebComponentContainerBase: FC<
         settings={settings}
         routesPrefix={routesPrefix}
         tagColorsStorage={tagColorsStorage}
-        createNotFound={(nonPrefixedHomePath: string) => (
-          <NotFound to={`${routesPrefix}${nonPrefixedHomePath}`}>List short URLs</NotFound>
-        )}
+        createNotFound={(nonPrefixedHomePath: string) => {
+          if (nonPrefixedHomePath.startsWith('/utm-builder')) {
+            return <UtmBuilderPage />;
+          }
+
+          return <NotFound to={`${routesPrefix}${nonPrefixedHomePath}`}>List short URLs</NotFound>;
+        }}
         autoSidebarToggle={false}
       />
     </ShlinkSidebarVisibilityProvider>
