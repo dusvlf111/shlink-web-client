@@ -40,9 +40,9 @@ const ManageServersBase: FC<ManageServersProps> = withoutSelectedServer(({
 
       <div className="flex flex-col md:flex-row gap-2">
         <div className="flex gap-2">
-          <ImportServersBtn className="flex-grow" onError={setErrorImporting}>Import servers</ImportServersBtn>
+          <ImportServersBtn className="grow" onError={setErrorImporting}>Import servers</ImportServersBtn>
           {filteredServers.length > 0 && (
-            <Button variant="secondary" className="flex-grow" onClick={async () => serversExporter.exportServers()}>
+            <Button variant="secondary" className="grow" onClick={async () => serversExporter.exportServers()}>
               <FontAwesomeIcon icon={exportIcon} widthAuto /> Export servers
             </Button>
           )}
@@ -56,7 +56,7 @@ const ManageServersBase: FC<ManageServersProps> = withoutSelectedServer(({
         <Table header={(
           <Table.Row>
             {hasAutoConnect && (
-              <Table.Cell className="w-[35px]"><span className="sr-only">Auto-connect</span></Table.Cell>
+              <Table.Cell className="w-8.75"><span className="sr-only">Auto-connect</span></Table.Cell>
             )}
             <Table.Cell>Name</Table.Cell>
             <Table.Cell>Base URL</Table.Cell>

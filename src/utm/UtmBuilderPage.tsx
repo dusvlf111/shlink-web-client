@@ -170,7 +170,7 @@ export const UtmBuilderPage: FC = () => {
             {/* 결과 URL */}
             <div className="mt-2">
               <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">생성된 URL</p>
-              <div className="min-h-[48px] break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-(--light-text-color) dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)">
+              <div className="min-h-12 break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-(--light-text-color) dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)">
                 {utmUrl || <span className="text-gray-500 dark:text-gray-400">기본 URL을 입력하세요</span>}
               </div>
               {!canGenerate && (
