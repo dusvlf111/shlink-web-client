@@ -26,6 +26,8 @@ export type ShlinkWebComponentContainerProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
+const normalizeHomePath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+
 const ShlinkWebComponentContainerBase: FC<
   ShlinkWebComponentContainerProps
 // FIXME Using `memo` here to solve a flickering effect in charts.
@@ -119,7 +121,7 @@ const ShlinkWebComponentContainerBase: FC<
         routesPrefix={routesPrefix}
         tagColorsStorage={tagColorsStorage}
         createNotFound={(nonPrefixedHomePath: string) => {
-          if (nonPrefixedHomePath.startsWith('/utm-builder')) {
+          if (normalizeHomePath(nonPrefixedHomePath).startsWith('/utm-builder')) {
             return <UtmBuilderPage />;
           }
 

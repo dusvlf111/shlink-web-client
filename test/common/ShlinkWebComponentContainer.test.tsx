@@ -7,6 +7,7 @@ import { checkAccessibility } from '../__helpers__/accessibility';
 import { renderWithStore } from '../__helpers__/setUpTest';
 
 let renderUtmBuilderFallback = false;
+let renderUtmBuilderFallbackWithoutSlash = false;
 
 vi.mock('@shlinkio/shlink-web-component', () => ({
   ShlinkSidebarVisibilityProvider: ({ children }: any) => children,
@@ -15,6 +16,7 @@ vi.mock('@shlinkio/shlink-web-component', () => ({
     <>
       ShlinkWebComponent
       {renderUtmBuilderFallback ? createNotFound('/utm-builder') : null}
+      {renderUtmBuilderFallbackWithoutSlash ? createNotFound('utm-builder') : null}
     </>
   ),
 }));
@@ -22,6 +24,7 @@ vi.mock('@shlinkio/shlink-web-component', () => ({
 describe('<ShlinkWebComponentContainer />', () => {
   beforeEach(() => {
     renderUtmBuilderFallback = false;
+    renderUtmBuilderFallbackWithoutSlash = false;
   });
 
   const setUp = (selectedServer: SelectedServer) => renderWithStore(
@@ -65,6 +68,14 @@ describe('<ShlinkWebComponentContainer />', () => {
 
   it('renders UTM builder when shlink not-found path matches UTM route', () => {
     renderUtmBuilderFallback = true;
+
+    setUp(fromPartial({ version: '3.0.0' }));
+
+    expect(screen.getByText('UTM 빌더')).toBeInTheDocument();
+  });
+
+  it('renders UTM builder when shlink not-found path omits the leading slash', () => {
+    renderUtmBuilderFallbackWithoutSlash = true;
 
     setUp(fromPartial({ version: '3.0.0' }));
 
