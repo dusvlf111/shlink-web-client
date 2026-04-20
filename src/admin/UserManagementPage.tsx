@@ -54,13 +54,12 @@ export const UserManagementPage: FC = () => {
     try {
       const records = await pb.collection('users').getFullList<UserRecord>({
         filter: `status = "${tab}"`,
-        sort: 'created',
       });
       setUsers(records);
     } catch (error: unknown) {
       if (isBadFilterRequest(error)) {
         try {
-          const allUsers = await pb.collection('users').getFullList<UserRecord>({ sort: 'created' });
+          const allUsers = await pb.collection('users').getFullList<UserRecord>();
           setUsers(allUsers.filter((user) => user.status === tab));
           return;
         } catch (fallbackError: unknown) {

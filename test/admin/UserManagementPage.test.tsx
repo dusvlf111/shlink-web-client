@@ -43,8 +43,8 @@ describe('<UserManagementPage />', () => {
 
     await waitFor(() => expect(screen.getByText('Pending')).toBeInTheDocument());
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
-    expect(usersCollectionMock.getFullList).toHaveBeenNthCalledWith(1, { filter: 'status = "pending"', sort: 'created' });
-    expect(usersCollectionMock.getFullList).toHaveBeenNthCalledWith(2, { sort: 'created' });
+    expect(usersCollectionMock.getFullList).toHaveBeenNthCalledWith(1, { filter: 'status = "pending"' });
+    expect(usersCollectionMock.getFullList).toHaveBeenNthCalledWith(2);
   });
 
   it('updates user status from pending tab actions', async () => {
