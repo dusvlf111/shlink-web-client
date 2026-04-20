@@ -31,7 +31,7 @@ IS_HTTPS_ENABLED=false  # 기본값. Coolify가 SSL 처리하면 true로 변경
 ```
 SERVICE_URL_SHLINK_8080=http://shlink:8080  # 또는 SERVICE_FQDN_SHLINK에서 자동 생성
 SERVICE_URL_SHLINKWEB_8080=http://shlink-web:8080  # 또는 SERVICE_FQDN_SHLINKWEB에서 자동 생성
-SERVICE_URL_POCKETBASE_8090=http://pocketbase:8090  # 또는 SERVICE_FQDN_POCKETBASE에서 자동 생성
+SERVICE_URL_POCKETBASE_8080=http://pocketbase:8080  # 또는 SERVICE_FQDN_POCKETBASE에서 자동 생성
 ```
 
 ## 배포 단계
@@ -65,16 +65,16 @@ SERVICE_URL_POCKETBASE_8090=http://pocketbase:8090  # 또는 SERVICE_FQDN_POCKET
 
 | 서비스 | 컨테이너 포트 | Coolify 외부 포트 | 용도 |
 |--------|--------------|-------------------|------|
-| PostgreSQL | 5432 | 5432 | 내부 전용 |
-| Shlink | 8080 | 8080 | API 엔드포인트 |
-| PocketBase | 8090 | 8090 | 인증 서버 |
-| Shlink Web | 8080 | 3000 | 웹 인터페이스 |
+| PostgreSQL | 5432 | 없음 (내부 전용) | 내부 전용 |
+| Shlink | 8080 | 도메인 라우팅 사용 | API 엔드포인트 |
+| PocketBase | 8080 | 도메인 라우팅 사용 | 인증 서버 |
+| Shlink Web | 8080 | 도메인 라우팅 사용 | 웹 인터페이스 |
 
 ## 서비스 간 통신
 
 모든 서비스는 같은 Docker 네트워크(`shlink-network`)에 연결되므로:
 - Shlink Web은 `http://shlink:8080`으로 Shlink 접근
-- Shlink Web은 `http://pocketbase:8090`으로 PocketBase 접근
+- Shlink Web은 `http://pocketbase:8080`으로 PocketBase 접근
 - Shlink는 `postgres` 호스트명으로 DB 접근
 
 ## 데이터 지속성
@@ -93,7 +93,7 @@ SERVICE_URL_POCKETBASE_8090=http://pocketbase:8090  # 또는 SERVICE_FQDN_POCKET
 
 ### PocketBase에 접근할 수 없는 경우
 1. PocketBase 서비스 health check 확인
-2. 방화벽 규칙에서 8090 포트 허용
+2. Coolify에서 PocketBase 도메인이 올바르게 연결되었는지 확인
 3. DNS 설정 확인
 
 ### Shlink Web에서 API 호출 실패
@@ -106,7 +106,7 @@ SERVICE_URL_POCKETBASE_8090=http://pocketbase:8090  # 또는 SERVICE_FQDN_POCKET
 1. **데이터베이스 비밀번호**: 강력한 비밀번호 사용 (최소 16자)
 2. **API 키**: 충분히 길고 복잡한 문자열 사용
 3. **HTTPS**: 프로덕션 환경에서는 Coolify의 SSL/TLS 설정 활성화
-4. **방화벽**: 필요한 포트만 공개 (8080, 8090, 3000)
+4. **방화벽**: 데이터베이스 포트는 외부에 노출하지 않고, 서비스는 도메인 라우팅만 사용
 
 ## 백업
 

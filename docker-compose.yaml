@@ -46,8 +46,8 @@ services:
       - 'VISITS_WEBHOOKS=true'
     volumes:
       - shlink-data:/etc/shlink/data
-    ports:
-      - '8080:8080'
+    expose:
+      - '8080'
     healthcheck:
       test:
         - CMD
@@ -69,14 +69,14 @@ services:
     volumes:
       - pocketbase-data:/app/pb_data
       - pocketbase-hooks:/app/pb_hooks
-    ports:
-      - '8090:8080'
+    expose:
+      - '8080'
     healthcheck:
       test:
         - CMD
         - curl
         - '-f'
-        - 'http://127.0.0.1:8090/api/health'
+        - 'http://127.0.0.1:8080/api/health'
       interval: 5s
       timeout: 10s
       retries: 5
@@ -105,8 +105,8 @@ services:
       - 'SHLINK_SERVER_URL=${SERVICE_URL_SHLINK:-http://shlink:8080}'
       # PocketBase configuration
       - 'VITE_POCKETBASE_URL=${SERVICE_URL_POCKETBASE:-http://pocketbase:8080}'
-    ports:
-      - '3000:8080'
+    expose:
+      - '8080'
     healthcheck:
       test:
         - CMD
