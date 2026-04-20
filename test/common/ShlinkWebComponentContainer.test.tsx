@@ -6,13 +6,24 @@ import type { NonReachableServer, NotFoundServer, SelectedServer } from '../../s
 import { checkAccessibility } from '../__helpers__/accessibility';
 import { renderWithStore } from '../__helpers__/setUpTest';
 
+let renderUtmBuilderFallback = false;
+
 vi.mock('@shlinkio/shlink-web-component', () => ({
   ShlinkSidebarVisibilityProvider: ({ children }: any) => children,
   ShlinkSidebarToggleButton: ({ children }: any) => children,
-  ShlinkWebComponent: () => <>ShlinkWebComponent</>,
+  ShlinkWebComponent: ({ createNotFound }: any) => (
+    <>
+      ShlinkWebComponent
+      {renderUtmBuilderFallback ? createNotFound('/utm-builder') : null}
+    </>
+  ),
 }));
 
 describe('<ShlinkWebComponentContainer />', () => {
+  beforeEach(() => {
+    renderUtmBuilderFallback = false;
+  });
+
   const setUp = (selectedServer: SelectedServer) => renderWithStore(
     <MemoryRouter>
       <ShlinkWebComponentContainer TagColorsStorage={fromPartial({})} />
@@ -50,5 +61,13 @@ describe('<ShlinkWebComponentContainer />', () => {
 
     expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
     expect(screen.getByText('ShlinkWebComponent')).toBeInTheDocument();
+  });
+
+  it('renders UTM builder when shlink not-found path matches UTM route', () => {
+    renderUtmBuilderFallback = true;
+
+    setUp(fromPartial({ version: '3.0.0' }));
+
+    expect(screen.getByText('UTM 빌더')).toBeInTheDocument();
   });
 });
