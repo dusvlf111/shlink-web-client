@@ -33,8 +33,9 @@ services:
       - 'DEFAULT_DOMAIN=${SERVICE_FQDN_SHLINK:-localhost}'
       - IS_HTTPS_ENABLED=${IS_HTTPS_ENABLED:-false}
       - 'INITIAL_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
+      - SHELL_VERBOSITY=3
       # Database configuration
-      - 'DB_DRIVER=pdo_pgsql'
+      - 'DB_DRIVER=postgres'
       - 'DB_HOST=postgres'
       - 'DB_PORT=5432'
       - 'DB_NAME=shlink'
