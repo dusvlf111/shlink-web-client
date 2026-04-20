@@ -29,7 +29,7 @@ services:
         condition: service_healthy
     environment:
       # Coolify service environment variables
-      - SERVICE_URL_SHLINK_8080=${SERVICE_URL_SHLINK_8080}
+      - SERVICE_URL_SHLINK_8080=${SERVICE_URL_SHLINK_8080:-http://shlink:8080}
       - 'DEFAULT_DOMAIN=${SERVICE_FQDN_SHLINK:-localhost}'
       - IS_HTTPS_ENABLED=${IS_HTTPS_ENABLED:-false}
       - 'INITIAL_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
@@ -62,11 +62,11 @@ services:
 
   # PocketBase for Authentication & User Management
   pocketbase:
-    image: 'ghcr.io/pocketbase/pocketbase:latest'
+    image: 'pocketbase/pocketbase:latest'
     container_name: shlink-pocketbase
     command: 'serve --http=0.0.0.0:8090'
     environment:
-      - SERVICE_URL_POCKETBASE_8090=${SERVICE_URL_POCKETBASE_8090}
+      - SERVICE_URL_POCKETBASE_8090=${SERVICE_URL_POCKETBASE_8090:-http://pocketbase:8090}
     volumes:
       - pocketbase-data:/pb_data
     ports:
@@ -100,7 +100,7 @@ services:
         condition: service_healthy
     environment:
       # Coolify service environment variables
-      - SERVICE_URL_SHLINKWEB_8080=${SERVICE_URL_SHLINKWEB_8080}
+      - SERVICE_URL_SHLINKWEB_8080=${SERVICE_URL_SHLINKWEB_8080:-http://shlink-web:8080}
       - 'SHLINK_SERVER_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
       - 'SHLINK_SERVER_URL=${SERVICE_URL_SHLINK:-http://shlink:8080}'
       # PocketBase configuration
