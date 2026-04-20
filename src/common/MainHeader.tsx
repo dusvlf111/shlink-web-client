@@ -1,4 +1,4 @@
-import { faCogs as cogsIcon, faSignOutAlt as logoutIcon } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine as chartLineIcon, faCogs as cogsIcon, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
@@ -30,6 +30,22 @@ export const MainHeader: FC = () => {
         <FontAwesomeIcon icon={cogsIcon} /> Settings
       </NavBar.MenuItem>
       <ServersDropdown />
+      <NavBar.MenuItem
+        to="/utm-builder"
+        active={pathname.startsWith('/utm-builder') || pathname.includes('/utm-builder')}
+        className="flex items-center gap-1.5"
+      >
+        <FontAwesomeIcon icon={chartLineIcon} /> UTM 빌더
+      </NavBar.MenuItem>
+      {user?.role === 'admin' && (
+        <NavBar.MenuItem
+          to="/admin/users"
+          active={pathname.startsWith('/admin/users')}
+          className="flex items-center gap-1.5"
+        >
+          <FontAwesomeIcon icon={usersIcon} /> 사용자 관리
+        </NavBar.MenuItem>
+      )}
       {user && (
         <button
           onClick={logout}

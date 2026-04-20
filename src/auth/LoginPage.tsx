@@ -57,8 +57,9 @@ export const LoginPage: FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">이름</label>
+              <label htmlFor="auth-name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">이름</label>
               <input
+                id="auth-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -69,8 +70,9 @@ export const LoginPage: FC = () => {
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">이메일</label>
+            <label htmlFor="auth-email" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">이메일</label>
             <input
+              id="auth-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -80,8 +82,9 @@ export const LoginPage: FC = () => {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">비밀번호</label>
+            <label htmlFor="auth-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">비밀번호</label>
             <input
+              id="auth-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

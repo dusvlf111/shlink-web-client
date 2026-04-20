@@ -1,0 +1,109 @@
+import { useCallback, useEffect, useState } from 'react';
+import { pb } from '../lib/pocketbase';
+
+export const UTM_CATEGORIES = ['source', 'medium', 'campaign', 'term', 'content'] as const;
+export type UtmCategory = (typeof UTM_CATEGORIES)[number];
+
+export type UtmTag = {
+  id: string;
+  category: UtmCategory;
+  value: string;
+};
+
+export type UtmTemplate = {
+  id: string;
+  name: string;
+  source: string;
+  medium: string;
+  campaign: string;
+  term: string;
+  content: string;
+};
+
+const currentUserId = () => pb.authStore.record?.id;
+
+export const useUtmTags = () => {
+  const [tags, setTags] = useState<UtmTag[]>([]);
+
+  const fetch = useCallback(async () => {
+    const userId = currentUserId();
+    if (!userId) {
+      setTags([]);
+      return;
+    }
+
+    try {
+      const records = await pb.collection('utm_tags').getFullList<UtmTag>({
+        sort: 'category,value',
+        filter: `user = "${userId}"`,
+      });
+      setTags(records);
+    } catch {
+      setTags([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetch();
+  }, [fetch]);
+
+  const addTag = async (category: UtmCategory, value: string) => {
+    const userId = currentUserId();
+    if (!userId || !value.trim()) {
+      return;
+    }
+
+    await pb.collection('utm_tags').create({ category, value: value.trim(), user: userId });
+    await fetch();
+  };
+
+  const deleteTag = async (id: string) => {
+    await pb.collection('utm_tags').delete(id);
+    await fetch();
+  };
+
+  return { tags, addTag, deleteTag, refetch: fetch };
+};
+
+export const useUtmTemplates = () => {
+  const [templates, setTemplates] = useState<UtmTemplate[]>([]);
+
+  const fetch = useCallback(async () => {
+    const userId = currentUserId();
+    if (!userId) {
+      setTemplates([]);
+      return;
+    }
+
+    try {
+      const records = await pb.collection('utm_templates').getFullList<UtmTemplate>({
+        sort: 'name',
+        filter: `user = "${userId}"`,
+      });
+      setTemplates(records);
+    } catch {
+      setTemplates([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetch();
+  }, [fetch]);
+
+  const saveTemplate = async (data: Omit<UtmTemplate, 'id'>) => {
+    const userId = currentUserId();
+    if (!userId) {
+      return;
+    }
+
+    await pb.collection('utm_templates').create({ ...data, user: userId });
+    await fetch();
+  };
+
+  const deleteTemplate = async (id: string) => {
+    await pb.collection('utm_templates').delete(id);
+    await fetch();
+  };
+
+  return { templates, saveTemplate, deleteTemplate };
+};

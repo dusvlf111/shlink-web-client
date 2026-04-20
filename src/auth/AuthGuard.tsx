@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from 'react';
-import { LoginPage } from './LoginPage';
 import { useAuth } from './AuthContext';
+import { LoginPage } from './LoginPage';
 
 export const AuthGuard: FC<{ children: ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();

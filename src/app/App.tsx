@@ -3,6 +3,7 @@ import { clsx } from 'clsx';
 import type { FC } from 'react';
 import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
+import { UserManagementPage } from '../admin/UserManagementPage';
 import { AppUpdateBanner } from '../common/AppUpdateBanner';
 import { Home } from '../common/Home';
 import { MainHeader } from '../common/MainHeader';
@@ -16,6 +17,7 @@ import { useLoadRemoteServers } from '../servers/reducers/remoteServers';
 import { useSettings } from '../settings/reducers/settings';
 import { Settings } from '../settings/Settings';
 import { forceUpdate } from '../utils/helpers/sw';
+import { UtmBuilderPage } from '../utm/UtmBuilderPage';
 import { useAppUpdated } from './reducers/appUpdates';
 
 export const App: FC = () => {
@@ -50,8 +52,11 @@ export const App: FC = () => {
                 {['', '*'].map((path) => <Route key={path} path={path} element={<Settings />} />)}
               </Route>
               <Route path="/manage-servers" element={<ManageServers />} />
+              <Route path="/admin/users" element={<UserManagementPage />} />
+              <Route path="/utm-builder" element={<UtmBuilderPage />} />
               <Route path="/server/create" element={<CreateServer />} />
               <Route path="/server/:serverId/edit" element={<EditServer />} />
+              <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
               <Route path="/server/:serverId">
                 {['', '*'].map((path) => <Route key={path} path={path} element={<ShlinkWebComponentContainer />} />)}
               </Route>
