@@ -1,6 +1,7 @@
 import { faChartLine as chartLineIcon, faCogs as cogsIcon, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
+import { clsx } from 'clsx';
 import type { FC } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
@@ -17,9 +18,35 @@ export const MainHeader: FC = () => {
     <NavBar
       className="[&]:fixed top-0 z-900"
       brand={(
-        <Link to="/" className="[&]:text-white no-underline flex items-center gap-2">
-          <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
+            <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-4">
+            <Link
+              to="/utm-builder"
+              className={clsx(
+                '[&]:text-white/80 hover:[&]:text-white no-underline flex items-center gap-1.5 text-sm whitespace-nowrap',
+                { '[&]:text-white': pathname.startsWith('/utm-builder') || pathname.includes('/utm-builder') },
+              )}
+            >
+              <FontAwesomeIcon icon={chartLineIcon} /> UTM 빌더
+            </Link>
+
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin/users"
+                className={clsx(
+                  '[&]:text-white/80 hover:[&]:text-white no-underline flex items-center gap-1.5 text-sm whitespace-nowrap',
+                  { '[&]:text-white': pathname.startsWith('/admin/users') },
+                )}
+              >
+                <FontAwesomeIcon icon={usersIcon} /> 사용자 관리
+              </Link>
+            )}
+          </div>
+        </div>
       )}
     >
       <NavBar.MenuItem
@@ -30,22 +57,6 @@ export const MainHeader: FC = () => {
         <FontAwesomeIcon icon={cogsIcon} /> Settings
       </NavBar.MenuItem>
       <ServersDropdown />
-      <NavBar.MenuItem
-        to="/utm-builder"
-        active={pathname.startsWith('/utm-builder') || pathname.includes('/utm-builder')}
-        className="flex items-center gap-1.5"
-      >
-        <FontAwesomeIcon icon={chartLineIcon} /> UTM 빌더
-      </NavBar.MenuItem>
-      {user?.role === 'admin' && (
-        <NavBar.MenuItem
-          to="/admin/users"
-          active={pathname.startsWith('/admin/users')}
-          className="flex items-center gap-1.5"
-        >
-          <FontAwesomeIcon icon={usersIcon} /> 사용자 관리
-        </NavBar.MenuItem>
-      )}
       {user && (
         <button
           onClick={logout}
