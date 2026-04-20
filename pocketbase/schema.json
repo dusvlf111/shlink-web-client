@@ -1,0 +1,98 @@
+[
+  {
+    "name": "users",
+    "type": "auth",
+    "fields": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "role",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["admin", "member"]
+        }
+      },
+      {
+        "name": "status",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["pending", "active", "inactive"]
+        }
+      }
+    ]
+  },
+  {
+    "name": "utm_templates",
+    "type": "base",
+    "fields": [
+      {
+        "name": "user",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "_pb_users_auth_",
+          "cascadeDelete": true,
+          "maxSelect": 1
+        }
+      },
+      { "name": "name", "type": "text", "required": true },
+      { "name": "source", "type": "text", "required": false },
+      { "name": "medium", "type": "text", "required": false },
+      { "name": "campaign", "type": "text", "required": false },
+      { "name": "term", "type": "text", "required": false },
+      { "name": "content", "type": "text", "required": false }
+    ]
+  },
+  {
+    "name": "utm_tags",
+    "type": "base",
+    "fields": [
+      {
+        "name": "user",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "_pb_users_auth_",
+          "cascadeDelete": true,
+          "maxSelect": 1
+        }
+      },
+      {
+        "name": "category",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["source", "medium", "campaign", "term", "content"]
+        }
+      },
+      { "name": "value", "type": "text", "required": true }
+    ]
+  },
+  {
+    "name": "public_tokens",
+    "type": "base",
+    "fields": [
+      { "name": "short_code", "type": "text", "required": true },
+      { "name": "token", "type": "text", "required": true },
+      {
+        "name": "created_by",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "_pb_users_auth_",
+          "cascadeDelete": true,
+          "maxSelect": 1
+        }
+      },
+      { "name": "expires_at", "type": "date", "required": false }
+    ]
+  }
+]
