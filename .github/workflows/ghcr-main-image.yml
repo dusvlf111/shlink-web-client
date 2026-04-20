@@ -16,6 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate PocketBase URL variable
+        run: |
+          if [ -z "${{ vars.VITE_POCKETBASE_URL }}" ]; then
+            echo "Repository variable VITE_POCKETBASE_URL is required (example: https://pocketbase.your-domain.com)"
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -46,4 +53,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=main
-            VITE_POCKETBASE_URL=http://pocketbase:8080
+            VITE_POCKETBASE_URL=${{ vars.VITE_POCKETBASE_URL }}

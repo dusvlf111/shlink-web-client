@@ -97,8 +97,6 @@ services:
       # Coolify service environment variables
       - 'SHLINK_SERVER_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
       - 'SHLINK_SERVER_URL=${SERVICE_URL_SHLINK:-http://shlink:8080}'
-      # PocketBase configuration
-      - 'VITE_POCKETBASE_URL=${SERVICE_URL_POCKETBASE:-http://pocketbase:8080}'
     expose:
       - '8080'
     healthcheck:
