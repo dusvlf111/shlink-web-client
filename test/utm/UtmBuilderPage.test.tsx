@@ -120,7 +120,7 @@ describe('<UtmBuilderPage />', () => {
     });
   });
 
-  it('renders back button', () => {
+  it('renders UTM management menu links', () => {
     setUp();
     expect(screen.getByRole('link', { name: /빌더/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /템플릿 관리/i })).toBeInTheDocument();
