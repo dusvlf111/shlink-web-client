@@ -16,6 +16,19 @@ const ROLE_LABEL: Record<string, string> = {
   member: '멤버',
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as { status?: number; message?: string; response?: { message?: string } };
+    if (maybeError.status === 403) {
+      return '권한이 없어 사용자 목록을 조회할 수 없습니다. PocketBase users 컬렉션 listRule을 확인하세요.';
+    }
+
+    return maybeError.response?.message ?? maybeError.message ?? fallback;
+  }
+
+  return fallback;
+};
+
 export const UserManagementPage: FC = () => {
   const { user: me } = useAuth();
   const [tab, setTab] = useState<TabKey>('pending');
@@ -33,8 +46,8 @@ export const UserManagementPage: FC = () => {
         sort: 'created',
       });
       setUsers(records);
-    } catch {
-      setError('사용자 목록을 불러오는 데 실패했습니다.');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, '사용자 목록을 불러오는 데 실패했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -49,8 +62,8 @@ export const UserManagementPage: FC = () => {
     try {
       await pb.collection('users').update(id, data);
       await fetchUsers();
-    } catch {
-      setError('업데이트에 실패했습니다.');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, '업데이트에 실패했습니다.'));
     } finally {
       setActionLoading(null);
     }
