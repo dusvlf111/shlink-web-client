@@ -108,7 +108,7 @@ describe('<UtmBuilderPage />', () => {
   it('applies right panel tag to matching UTM field on click', async () => {
     const { user } = setUp();
 
-    await user.click(screen.getByRole('button', { name: /google/i }));
+    await user.click(screen.getByText('google'));
 
     await waitFor(() => {
       expect(screen.getByLabelText(/utm_source/i)).toHaveValue('google');

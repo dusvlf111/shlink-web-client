@@ -20,23 +20,23 @@ export const UtmFieldInput: FC<Props> = ({ label, value, onChange, tags, onAddTa
   const normalizedValue = value.trim().toLowerCase();
 
   const suggestedTags = tags
-    .map((tag) => {
-      const normalizedTag = tag.value.toLowerCase();
-      let score = 2;
-
+    .filter((tag) => {
       if (!normalizedValue) {
-        score = 0;
-      } else if (normalizedTag.startsWith(normalizedValue)) {
-        score = 0;
-      } else if (normalizedTag.includes(normalizedValue)) {
-        score = 1;
+        return true;
       }
 
-      return { tag, score };
+      const normalizedTag = tag.value.toLowerCase();
+      return normalizedTag.startsWith(normalizedValue) || normalizedTag.includes(normalizedValue);
     })
-    .sort((a, b) => a.score - b.score || a.tag.value.localeCompare(b.tag.value))
-    .filter(({ score }) => !normalizedValue || score < 2)
-    .map(({ tag }) => tag);
+    .sort((a, b) => {
+      const aNormalized = a.value.toLowerCase();
+      const bNormalized = b.value.toLowerCase();
+
+      const aScore = aNormalized.startsWith(normalizedValue) ? 0 : 1;
+      const bScore = bNormalized.startsWith(normalizedValue) ? 0 : 1;
+
+      return aScore - bScore || a.value.localeCompare(b.value);
+    });
 
   const handleAddTag = async () => {
     if (!value.trim()) return;
