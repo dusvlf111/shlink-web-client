@@ -43,6 +43,7 @@ export const UtmBuilderPage: FC = () => {
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
 
   const { tags, addTag, deleteTag } = useUtmTags();
@@ -73,6 +74,7 @@ export const UtmBuilderPage: FC = () => {
     if (!templateName.trim()) return;
     await saveTemplate({
       name: templateName.trim(),
+      description: templateDescription.trim(),
       source: fields.source,
       medium: fields.medium,
       campaign: fields.campaign,
@@ -80,6 +82,7 @@ export const UtmBuilderPage: FC = () => {
       content: fields.content,
     });
     setTemplateName('');
+    setTemplateDescription('');
     setSaveMsg('템플릿이 저장됐습니다.');
     setTimeout(() => setSaveMsg(''), 2000);
   };
@@ -169,6 +172,14 @@ export const UtmBuilderPage: FC = () => {
               placeholder="템플릿 이름"
               className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
+            <textarea
+              value={templateDescription}
+              onChange={(e) => setTemplateDescription(e.target.value)}
+              placeholder="템플릿 설명 (선택)"
+              rows={3}
+              maxLength={500}
+              className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
             <button
               onClick={handleSaveTemplate}
               disabled={!templateName.trim()}
@@ -192,10 +203,19 @@ export const UtmBuilderPage: FC = () => {
                       onClick={() => applyTemplate(tpl)}
                       className="flex-1 text-left text-sm text-blue-600 hover:underline dark:text-blue-400"
                     >
-                      {tpl.name}
+                      <span className="block">{tpl.name}</span>
+                      {!!tpl.description && (
+                        <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{tpl.description}</span>
+                      )}
                     </button>
                     <button
-                      onClick={() => deleteTemplate(tpl.id)}
+                      onClick={() => {
+                        if (!window.confirm(`'${tpl.name}' 템플릿을 삭제할까요?`)) {
+                          return;
+                        }
+
+                        void deleteTemplate(tpl.id);
+                      }}
                       className="ml-2 text-gray-400 hover:text-red-500"
                     >
                       <FontAwesomeIcon icon={faTrash} className="text-xs" />

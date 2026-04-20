@@ -13,6 +13,7 @@ export type UtmTag = {
 export type UtmTemplate = {
   id: string;
   name: string;
+  description?: string;
   source: string;
   medium: string;
   campaign: string;
