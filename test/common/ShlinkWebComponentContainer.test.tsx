@@ -8,6 +8,8 @@ import { renderWithStore } from '../__helpers__/setUpTest';
 
 let renderUtmBuilderFallback = false;
 let renderUtmBuilderFallbackWithoutSlash = false;
+let renderUtmBuilderFallbackWithPrefix = false;
+let renderUtmBuilderFallbackWithQuery = false;
 
 vi.mock('@shlinkio/shlink-web-component', () => ({
   ShlinkSidebarVisibilityProvider: ({ children }: any) => children,
@@ -17,6 +19,8 @@ vi.mock('@shlinkio/shlink-web-component', () => ({
       ShlinkWebComponent
       {renderUtmBuilderFallback ? createNotFound('/utm-builder') : null}
       {renderUtmBuilderFallbackWithoutSlash ? createNotFound('utm-builder') : null}
+      {renderUtmBuilderFallbackWithPrefix ? createNotFound('/server/server-1/utm-builder') : null}
+      {renderUtmBuilderFallbackWithQuery ? createNotFound('/utm-builder?from=menu') : null}
     </>
   ),
 }));
@@ -25,6 +29,8 @@ describe('<ShlinkWebComponentContainer />', () => {
   beforeEach(() => {
     renderUtmBuilderFallback = false;
     renderUtmBuilderFallbackWithoutSlash = false;
+    renderUtmBuilderFallbackWithPrefix = false;
+    renderUtmBuilderFallbackWithQuery = false;
   });
 
   const setUp = (selectedServer: SelectedServer) => renderWithStore(
@@ -76,6 +82,22 @@ describe('<ShlinkWebComponentContainer />', () => {
 
   it('renders UTM builder when shlink not-found path omits the leading slash', () => {
     renderUtmBuilderFallbackWithoutSlash = true;
+
+    setUp(fromPartial({ version: '3.0.0' }));
+
+    expect(screen.getByText('UTM 빌더')).toBeInTheDocument();
+  });
+
+  it('renders UTM builder when shlink not-found path contains server prefix', () => {
+    renderUtmBuilderFallbackWithPrefix = true;
+
+    setUp(fromPartial({ version: '3.0.0' }));
+
+    expect(screen.getByText('UTM 빌더')).toBeInTheDocument();
+  });
+
+  it('renders UTM builder when shlink not-found path contains query params', () => {
+    renderUtmBuilderFallbackWithQuery = true;
 
     setUp(fromPartial({ version: '3.0.0' }));
 

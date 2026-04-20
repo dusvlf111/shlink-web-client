@@ -26,7 +26,12 @@ export type ShlinkWebComponentContainerProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
-const normalizeHomePath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+const normalizeHomePath = (path: string) => {
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  return withLeadingSlash.split(/[?#]/, 1)[0] ?? withLeadingSlash;
+};
+
+const isUtmBuilderPath = (path: string) => normalizeHomePath(path).includes('/utm-builder');
 
 const ShlinkWebComponentContainerBase: FC<
   ShlinkWebComponentContainerProps
@@ -121,7 +126,7 @@ const ShlinkWebComponentContainerBase: FC<
         routesPrefix={routesPrefix}
         tagColorsStorage={tagColorsStorage}
         createNotFound={(nonPrefixedHomePath: string) => {
-          if (normalizeHomePath(nonPrefixedHomePath).startsWith('/utm-builder')) {
+          if (isUtmBuilderPath(nonPrefixedHomePath)) {
             return <UtmBuilderPage />;
           }
 
