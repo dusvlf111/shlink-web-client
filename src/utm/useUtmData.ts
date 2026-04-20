@@ -37,7 +37,6 @@ export const useUtmTags = () => {
     try {
       const records = await pb.collection('utm_tags').getFullList<UtmTag>({
         sort: 'category,value',
-        filter: `user = "${userId}"`,
       });
       setTags(records);
     } catch {
@@ -100,7 +99,6 @@ export const useUtmTemplates = () => {
     try {
       const records = await pb.collection('utm_templates').getFullList<UtmTemplate>({
         sort: 'name',
-        filter: `user = "${userId}"`,
       });
       setTemplates(records);
     } catch {
