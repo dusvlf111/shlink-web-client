@@ -37,8 +37,7 @@ SERVICE_URL_POCKETBASE_8090=http://pocketbase:8090  # 또는 SERVICE_FQDN_POCKET
 ## 배포 단계
 
 ### 1단계: Docker Compose 파일 업로드
-- `docker-compose.coolify.yml` 파일을 Coolify 프로젝트에 업로드
-- 파일명을 `docker-compose.yml`로 변경하거나 Coolify에서 이 파일을 선택
+- `docker-compose.yaml` 파일을 Coolify 프로젝트에 업로드하거나 Coolify에서 선택
 
 ### 2단계: 환경 변수 설정
 1. Coolify 대시보드 → Project Settings
