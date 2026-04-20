@@ -81,6 +81,8 @@ export const App: FC = () => {
               <Route path="/manage-servers" element={<ManageServers />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
               <Route path="/utm-builder" element={<UtmBuilderPage />} />
+              <Route path="/utm-template-manager" element={<UtmTemplateManager />} />
+              <Route path="/utm-tag-manager" element={<UtmTagManager />} />
               <Route path="/server/create" element={<CreateServer />} />
               <Route path="/server/:serverId/edit" element={<EditServer />} />
               <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
