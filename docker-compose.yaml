@@ -100,7 +100,6 @@ services:
         condition: service_healthy
     environment:
       # Coolify service environment variables
-      - SERVICE_URL_SHLINKWEB_8080=${SERVICE_URL_SHLINKWEB_8080:-http://shlink-web:8080}
       - 'SHLINK_SERVER_API_KEY=${SERVICE_BASE64_SHLINKAPIKEY}'
       - 'SHLINK_SERVER_URL=${SERVICE_URL_SHLINK:-http://shlink:8080}'
       # PocketBase configuration
