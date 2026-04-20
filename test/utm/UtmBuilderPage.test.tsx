@@ -7,6 +7,7 @@ import { renderWithEvents } from '../__helpers__/setUpTest';
 const saveTemplateMock = vi.fn(async () => undefined);
 const deleteTemplateMock = vi.fn(async () => undefined);
 const addTagMock = vi.fn(async () => undefined);
+const addMissingTagsMock = vi.fn(async () => undefined);
 const deleteTagMock = vi.fn(async () => undefined);
 let mockTags: UtmTag[] = [
   { id: 'tag-1', category: 'source', value: 'google', description: '검색 유입' },
@@ -18,6 +19,7 @@ vi.mock('../../src/utm/useUtmData', () => ({
   useUtmTags: () => ({
     tags: mockTags,
     addTag: addTagMock,
+    addMissingTags: addMissingTagsMock,
     deleteTag: deleteTagMock,
   }),
   useUtmTemplates: () => ({
@@ -120,6 +122,8 @@ describe('<UtmBuilderPage />', () => {
 
   it('renders back button', () => {
     setUp();
-    expect(screen.getByRole('button', { name: /뒤로가기/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /빌더/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /템플릿 관리/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /태그 관리/i })).toBeInTheDocument();
   });
 });
