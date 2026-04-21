@@ -252,8 +252,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
               ...createPayload,
               customSlug,
             });
-          } catch {
-            shortUrl = await apiClient.createShortUrl(createPayload);
+          } catch (slugError) {
+            const isSlugConflict = slugError instanceof Error
+              && (slugError.message.includes('slug') || slugError.message.includes('conflict') || slugError.message.includes('409'));
+
+            if (customSlug && isSlugConflict) {
+              shortUrl = await apiClient.createShortUrl(createPayload);
+            } else {
+              throw slugError;
+            }
           }
 
           return {
@@ -275,6 +282,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       const successCount = rowsWithShortUrl.filter((row) => !!row.shortUrl).length;
       const failCount = rowsWithShortUrl.length - successCount;
       setActionMessage(`단축링크 생성 완료: 성공 ${successCount}건, 실패 ${failCount}건`);
+    } catch {
+      setActionMessage('단축링크 생성 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
     } finally {
       setCreatingShortUrls(false);
     }

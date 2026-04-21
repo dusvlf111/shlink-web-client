@@ -52,8 +52,8 @@
     "listRule": "@request.auth.id != ''",
     "viewRule": "@request.auth.id != ''",
     "createRule": "@request.auth.id != ''",
-    "updateRule": "@request.auth.id != '' && user = @request.auth.id",
-    "deleteRule": "@request.auth.id != '' && user = @request.auth.id",
+    "updateRule": "@request.auth.id != ''",
+    "deleteRule": "@request.auth.id != ''",
     "fields": [
       {
         "id": "rel_user_tmpl",
@@ -154,8 +154,8 @@
     "listRule": "@request.auth.id != ''",
     "viewRule": "@request.auth.id != ''",
     "createRule": "@request.auth.id != ''",
-    "updateRule": "@request.auth.id != '' && user = @request.auth.id",
-    "deleteRule": "@request.auth.id != '' && user = @request.auth.id",
+    "updateRule": "@request.auth.id != ''",
+    "deleteRule": "@request.auth.id != ''",
     "fields": [
       {
         "id": "rel_user_tags",
