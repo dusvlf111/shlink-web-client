@@ -110,7 +110,7 @@ describe('<UtmTagManager />', () => {
     await user.type(screen.getByLabelText(/태그 값/i), 'bing');
     await user.click(screen.getByRole('button', { name: /태그 수정 저장/i }));
 
-    expect(updateTagMock).toHaveBeenCalledWith('tag-1', 'source', 'bing', '');
+    expect(updateTagMock).toHaveBeenCalledWith('tag-1', 'source', 'bing', '검색');
   });
 
   it('shows save confirmation message after saving', async () => {
