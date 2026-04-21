@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import type { UtmTag } from '../../src/utm/useUtmData';
 import { UtmBuilderPage } from '../../src/utm/UtmBuilderPage';
-import { renderWithEvents } from '../__helpers__/setUpTest';
+import { renderWithStore } from '../__helpers__/setUpTest';
 
 const saveTemplateMock = vi.fn(async () => undefined);
 const deleteTemplateMock = vi.fn(async () => undefined);
@@ -47,7 +47,7 @@ describe('<UtmBuilderPage />', () => {
     ];
   });
 
-  const setUp = () => renderWithEvents(
+  const setUp = () => renderWithStore(
     <MemoryRouter initialEntries={['/server/server-1/utm-builder']}>
       <Routes>
         <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />

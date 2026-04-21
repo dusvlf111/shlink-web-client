@@ -22,10 +22,6 @@ export type UtmTemplate = {
   content: string;
 };
 
-const normalizeTemplate = (template: Record<string, any>): UtmTemplate => ({
-  ...template,
-});
-
 const currentUserId = () => pb.authStore.record?.id;
 
 export const useUtmTags = () => {
@@ -101,10 +97,10 @@ export const useUtmTemplates = () => {
     }
 
     try {
-      const records = await pb.collection('utm_templates').getFullList<Record<string, any>>({
+      const records = await pb.collection('utm_templates').getFullList<UtmTemplate>({
         sort: 'name',
       });
-      setTemplates(records.map(normalizeTemplate));
+      setTemplates(records);
     } catch {
       setTemplates([]);
     }

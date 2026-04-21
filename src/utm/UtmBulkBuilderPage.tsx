@@ -7,8 +7,8 @@ import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuil
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useServers } from '../servers/reducers/servers';
-import { UtmManagementMenu } from './UtmManagementMenu';
 import { useUtmTemplates } from './useUtmData';
+import { UtmManagementMenu } from './UtmManagementMenu';
 
 type GeneratedRow = {
   id: string;
@@ -140,6 +140,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
   const allSelected = templates.length > 0 && selectedIds.length === templates.length;
   const hasShortUrls = generatedRows.some((row) => !!row.shortUrl);
+  const isBulkCreateDisabled = creatingShortUrls
+    || !shortOptions.titlePrefix.trim()
+    || parseTags(shortOptions.additionalTags).length === 0;
 
   const toggleSelected = (templateId: string) => {
     setSelectedIds((prev) => (prev.includes(templateId)
@@ -446,7 +449,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">추가 태그는 모든 항목에 공통 적용됩니다.</p>
                 <button
                   type="button"
-                  disabled={creatingShortUrls || !shortOptions.titlePrefix.trim() || parseTags(shortOptions.additionalTags).length === 0}
+                  disabled={isBulkCreateDisabled}
                   onClick={() => void handleCreateShortUrlsInBulk()}
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
