@@ -20,12 +20,13 @@ import { useSettings } from '../settings/reducers/settings';
 import { Settings } from '../settings/Settings';
 import { forceUpdate } from '../utils/helpers/sw';
 import { UtmBuilderPage } from '../utm/UtmBuilderPage';
+import { UtmBulkBuilderPage } from '../utm/UtmBulkBuilderPage';
 import { UtmTagManager } from '../utm/UtmTagManager';
 import { UtmTemplateManager } from '../utm/UtmTemplateManager';
 import { useAppUpdated } from './reducers/appUpdates';
 
 const isUtmRoute = (pathname: string) =>
-  pathname.includes('/utm-builder') || pathname.includes('/utm-template-manager') || pathname.includes('/utm-tag-manager');
+  pathname.includes('/utm-builder') || pathname.includes('/utm-bulk-builder') || pathname.includes('/utm-template-manager') || pathname.includes('/utm-tag-manager');
 
 const getServerIdFromPathname = (pathname: string) => {
   const match = pathname.match(/^\/server\/([^/]+)(?:\/|$)/);
@@ -81,11 +82,13 @@ export const App: FC = () => {
               <Route path="/manage-servers" element={<ManageServers />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
               <Route path="/utm-builder" element={<UtmBuilderPage />} />
+              <Route path="/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
               <Route path="/utm-template-manager" element={<UtmTemplateManager />} />
               <Route path="/utm-tag-manager" element={<UtmTagManager />} />
               <Route path="/server/create" element={<CreateServer />} />
               <Route path="/server/:serverId/edit" element={<EditServer />} />
               <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
+              <Route path="/server/:serverId/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
               <Route path="/server/:serverId/utm-template-manager" element={<UtmTemplateManager />} />
               <Route path="/server/:serverId/utm-tag-manager" element={<UtmTagManager />} />
               <Route path="/server/:serverId/*" element={<ShlinkWebComponentContainer />} />

@@ -200,6 +200,7 @@ export const UtmTemplateManager: FC = () => {
                   className="w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
+
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">

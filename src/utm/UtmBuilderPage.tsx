@@ -3,7 +3,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
+import { withDependencies } from '../container/context';
+import { useServers } from '../servers/reducers/servers';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
 import { UtmManagementMenu } from './UtmManagementMenu';
@@ -17,7 +20,19 @@ type UtmFields = {
   content: string;
 };
 
+type ShortCreateOptions = {
+  customSlug: string;
+  title: string;
+  tags: string;
+};
+
 const EMPTY: UtmFields = { baseUrl: '', source: '', medium: '', campaign: '', term: '', content: '' };
+const EMPTY_SHORT_OPTIONS: ShortCreateOptions = { customSlug: '', title: '', tags: '' };
+
+const parseTags = (rawTags: string): string[] => rawTags
+  .split(',')
+  .map((tag) => tag.trim())
+  .filter(Boolean);
 
 const buildUtmUrl = (fields: UtmFields): string => {
   if (!fields.baseUrl) return '';
@@ -60,20 +75,31 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
 const hasRequiredFields = (fields: UtmFields) =>
   !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim() && !!fields.campaign.trim();
 
-export const UtmBuilderPage: FC = () => {
+type UtmBuilderPageProps = {
+  buildShlinkApiClient: ShlinkApiClientBuilder;
+};
+
+const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) => {
   const { serverId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
+  const { servers } = useServers();
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
+  const [creatingShortUrl, setCreatingShortUrl] = useState(false);
+  const [quickShortUrl, setQuickShortUrl] = useState('');
+  const [shortCreateMsg, setShortCreateMsg] = useState('');
+  const [showShortOptions, setShowShortOptions] = useState(false);
+  const [shortOptions, setShortOptions] = useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
 
   const utmUrl = useMemo(() => buildUtmUrl(fields), [fields]);
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
+  const selectedServer = serverId ? servers[serverId] : null;
 
   const set = (key: keyof UtmFields) => (val: string) => setFields((prev) => ({ ...prev, [key]: val }));
 
@@ -109,7 +135,60 @@ export const UtmBuilderPage: FC = () => {
     navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
   };
 
-  const applyTemplate = (tpl: { source: string; medium: string; campaign: string; term: string; content: string }) => {
+  const handleCreateShortInOneClick = async () => {
+    if (creatingShortUrl) {
+      return;
+    }
+
+    if (!canGenerate) {
+      setShortCreateMsg('URL과 필수 UTM 값을 먼저 입력해 주세요.');
+      return;
+    }
+
+    if (!selectedServer) {
+      setShortCreateMsg('선택된 서버를 찾을 수 없습니다.');
+      return;
+    }
+
+    if (!shortOptions.title.trim()) {
+      setShortCreateMsg('제목은 필수입니다.');
+      return;
+    }
+
+    if (parseTags(shortOptions.tags).length === 0) {
+      setShortCreateMsg('태그는 1개 이상 필수입니다.');
+      return;
+    }
+
+    setCreatingShortUrl(true);
+    setShortCreateMsg('단축링크 생성 중...');
+
+    try {
+      const apiClient = buildShlinkApiClient(selectedServer);
+      const customSlug = shortOptions.customSlug.trim() || undefined;
+      const created = await apiClient.createShortUrl({
+        longUrl: utmUrl,
+        customSlug,
+        title: shortOptions.title.trim() || undefined,
+        tags: parseTags(shortOptions.tags),
+        findIfExists: true,
+      });
+      setQuickShortUrl(created.shortUrl);
+      setShortCreateMsg('단축링크 생성 완료');
+    } catch {
+      setShortCreateMsg('단축링크 생성에 실패했습니다.');
+    } finally {
+      setCreatingShortUrl(false);
+    }
+  };
+
+  const applyTemplate = (tpl: {
+    source: string;
+    medium: string;
+    campaign: string;
+    term: string;
+    content: string;
+  }) => {
     setFields((prev) => ({ ...prev, ...tpl }));
   };
 
@@ -193,6 +272,15 @@ export const UtmBuilderPage: FC = () => {
               </button>
               {serverId && (
                 <button
+                  onClick={() => setShowShortOptions((prev) => !prev)}
+                  className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                >
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                  한번에 링크 만들기
+                </button>
+              )}
+              {serverId && (
+                <button
                   onClick={handleGoToShorten}
                   disabled={!canGenerate}
                   className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
@@ -202,6 +290,51 @@ export const UtmBuilderPage: FC = () => {
                 </button>
               )}
             </div>
+
+            {shortCreateMsg && (
+              <p className="text-xs text-blue-600 dark:text-blue-300">{shortCreateMsg}</p>
+            )}
+            {showShortOptions && (
+              <div className="space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
+                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">단축링크 생성 옵션</p>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  <input
+                    type="text"
+                    value={shortOptions.title}
+                    onChange={(e) => setShortOptions((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="제목 (필수)"
+                    className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
+                  />
+                  <input
+                    type="text"
+                    value={shortOptions.tags}
+                    onChange={(e) => setShortOptions((prev) => ({ ...prev, tags: e.target.value }))}
+                    placeholder="태그 (필수, 쉼표 구분)"
+                    className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
+                  />
+                  <input
+                    type="text"
+                    value={shortOptions.customSlug}
+                    onChange={(e) => setShortOptions((prev) => ({ ...prev, customSlug: e.target.value }))}
+                    placeholder="슬러그 직접 입력 (선택)"
+                    className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                  />
+                </div>
+                <button
+                  onClick={() => void handleCreateShortInOneClick()}
+                  disabled={!shortOptions.title.trim() || parseTags(shortOptions.tags).length === 0 || creatingShortUrl}
+                  className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                >
+                  단축링크 생성 실행
+                </button>
+              </div>
+            )}
+            {quickShortUrl && (
+              <div className="rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs dark:border-dm-border dark:bg-dm-main">
+                <p className="mb-1 font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">생성된 단축링크</p>
+                <p className="break-all text-(--light-text-color) dark:text-(--dark-text-color)">{quickShortUrl}</p>
+              </div>
+            )}
           </div>
 
           {/* 오른쪽: 템플릿 검색/적용 */}
@@ -275,3 +408,5 @@ export const UtmBuilderPage: FC = () => {
     </NoMenuLayout>
   );
 };
+
+export const UtmBuilderPage = withDependencies(UtmBuilderPageBase, ['buildShlinkApiClient']);

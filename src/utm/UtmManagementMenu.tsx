@@ -10,6 +10,7 @@ export const UtmManagementMenu: FC = () => {
 
   const items = [
     { to: `${prefix}/utm-builder`, label: '빌더' },
+    { to: `${prefix}/utm-bulk-builder`, label: '벌크 생성' },
     { to: `${prefix}/utm-template-manager`, label: '템플릿 관리' },
     { to: `${prefix}/utm-tag-manager`, label: '태그 관리' },
   ];

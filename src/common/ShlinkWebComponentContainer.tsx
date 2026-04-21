@@ -14,6 +14,7 @@ import { withSelectedServer } from '../servers/helpers/withSelectedServer';
 import { useSelectedServer } from '../servers/reducers/selectedServer';
 import { useSettings } from '../settings/reducers/settings';
 import { UtmBuilderPage } from '../utm/UtmBuilderPage';
+import { UtmBulkBuilderPage } from '../utm/UtmBulkBuilderPage';
 import { NotFound } from './NotFound';
 
 export type ShlinkWebComponentContainerProps = {
@@ -27,6 +28,7 @@ const normalizeHomePath = (path: string) => {
 };
 
 const isUtmBuilderPath = (path: string) => normalizeHomePath(path).includes('/utm-builder');
+const isUtmBulkBuilderPath = (path: string) => normalizeHomePath(path).includes('/utm-bulk-builder');
 
 const ShlinkWebComponentContainerBase: FC<
   ShlinkWebComponentContainerProps
@@ -59,6 +61,10 @@ const ShlinkWebComponentContainerBase: FC<
         createNotFound={(nonPrefixedHomePath: string) => {
           if (isUtmBuilderPath(nonPrefixedHomePath)) {
             return <UtmBuilderPage />;
+          }
+
+          if (isUtmBulkBuilderPath(nonPrefixedHomePath)) {
+            return <UtmBulkBuilderPage />;
           }
 
           return <NotFound to={`${routesPrefix}${nonPrefixedHomePath}`}>List short URLs</NotFound>;
