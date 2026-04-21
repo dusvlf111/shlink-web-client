@@ -16,8 +16,8 @@ const ServerListItem = ({ id, name }: { id: string; name: string }) => (
     className={clsx(
       'servers-list__server-item',
       'flex items-center justify-between gap-x-2 px-4 py-3',
-      'rounded-none hover:bg-lm-secondary hover:dark:bg-dm-secondary',
       'border-b last:border-0 border-lm-border dark:border-dm-border',
+      'rounded-none hover:bg-lm-secondary hover:dark:bg-dm-secondary',
     )}
   >
     <span className="truncate">{name}</span>

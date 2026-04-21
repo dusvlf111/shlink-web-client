@@ -10,6 +10,7 @@ import { AppUpdateBanner } from '../common/AppUpdateBanner';
 import { Home } from '../common/Home';
 import { MainHeader } from '../common/MainHeader';
 import { NotFound } from '../common/NotFound';
+import { ServerInfoFloating } from '../common/ServerInfoFloating';
 import { ShlinkVersionsContainer } from '../common/ShlinkVersionsContainer';
 import { ShlinkWebComponentContainer } from '../common/ShlinkWebComponentContainer';
 import { CreateServer } from '../servers/CreateServer';
@@ -101,6 +102,8 @@ export const App: FC = () => {
           </div>
         </div>
       </>
+
+      <ServerInfoFloating />
 
       <button
         type="button"

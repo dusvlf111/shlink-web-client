@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { UtmTagManager } from '../../src/utm/UtmTagManager';
-import { renderWithEvents } from '../__helpers__/setUpTest';
+import { renderWithStore } from '../__helpers__/setUpTest';
 
 const addTagMock = vi.fn(async () => undefined);
 const updateTagMock = vi.fn(async () => undefined);
@@ -25,7 +25,7 @@ describe('<UtmTagManager />', () => {
     vi.clearAllMocks();
   });
 
-  const setUp = () => renderWithEvents(
+  const setUp = () => renderWithStore(
     <MemoryRouter initialEntries={['/utm-tag-manager']}>
       <Routes>
         <Route path="/utm-tag-manager" element={<UtmTagManager />} />

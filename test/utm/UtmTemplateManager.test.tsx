@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { UtmTemplateManager } from '../../src/utm/UtmTemplateManager';
-import { renderWithEvents } from '../__helpers__/setUpTest';
+import { renderWithStore } from '../__helpers__/setUpTest';
 
 const saveTemplateMock = vi.fn(async () => undefined);
 const updateTemplateMock = vi.fn(async () => undefined);
@@ -42,7 +42,7 @@ describe('<UtmTemplateManager />', () => {
     vi.clearAllMocks();
   });
 
-  const setUp = () => renderWithEvents(
+  const setUp = () => renderWithStore(
     <MemoryRouter initialEntries={['/utm-template-manager']}>
       <Routes>
         <Route path="/utm-template-manager" element={<UtmTemplateManager />} />

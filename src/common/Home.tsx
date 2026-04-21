@@ -44,7 +44,14 @@ export const Home: FC = withoutSelectedServer(() => {
             >
               Welcome!
             </h1>
-            {hasServers ? <ServersListGroup servers={serversList} /> : (
+            {hasServers ? (
+              <>
+                <ServersListGroup servers={serversList} />
+                <p className="px-4 py-2 text-center text-xs text-gray-400 dark:text-gray-500">
+                  서버 정보를 수정하려면 서버 설정 메뉴를 이용하세요.
+                </p>
+              </>
+            ) : (
               <div className="p-6 text-center flex flex-col gap-12 text-xl">
                 <p>This application will help you manage your Shlink servers.</p>
                 <p>
