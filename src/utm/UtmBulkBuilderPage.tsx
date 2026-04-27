@@ -30,9 +30,29 @@ type UtmBulkBuilderPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
+type UtmTemplateFields = {
+  source: string;
+  medium: string;
+  campaign: string;
+  term: string;
+  content: string;
+};
+
+type OverrideFields = {
+  campaign: string;
+  term: string;
+  content: string;
+};
+
+const pickOverride = (overrideValue: string | undefined, templateValue: string) => {
+  const trimmed = overrideValue?.trim();
+  return trimmed ? trimmed : templateValue;
+};
+
 const buildUtmUrlFromTemplate = (
   baseUrl: string,
-  template: { source: string; medium: string; campaign: string; term: string; content: string },
+  template: UtmTemplateFields,
+  overrides?: Partial<OverrideFields>,
 ): string => {
   if (!baseUrl.trim()) {
     return '';
@@ -44,9 +64,9 @@ const buildUtmUrlFromTemplate = (
     const values = {
       utm_source: template.source,
       utm_medium: template.medium,
-      utm_campaign: template.campaign,
-      utm_term: template.term,
-      utm_content: template.content,
+      utm_campaign: pickOverride(overrides?.campaign, template.campaign),
+      utm_term: pickOverride(overrides?.term, template.term),
+      utm_content: pickOverride(overrides?.content, template.content),
     };
 
     Object.entries(values).forEach(([key, value]) => {
@@ -102,6 +122,11 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     titlePrefix: '',
     additionalTags: '',
   });
+  const [overrideFields, setOverrideFields] = useState<OverrideFields>({
+    campaign: '',
+    term: '',
+    content: '',
+  });
 
   const selectedServer = serverId ? servers[serverId] : null;
 
@@ -119,9 +144,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       id: template.id,
       name: template.name,
       description: template.description,
-      utmUrl: buildUtmUrlFromTemplate(normalizeBaseUrl(baseUrl), template),
+      utmUrl: buildUtmUrlFromTemplate(normalizeBaseUrl(baseUrl), template, overrideFields),
     }))
-    .filter((row) => row.utmUrl), [baseUrl, selectedTemplates]);
+    .filter((row) => row.utmUrl), [baseUrl, overrideFields, selectedTemplates]);
 
   useEffect(() => {
     if (templates.length === 0 || selectedIds.length > 0) {
@@ -137,7 +162,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     setCopiedAll(false);
     setActionMessage('');
     setShowShortOptions(false);
-  }, [baseUrl, selectedIds]);
+  }, [baseUrl, selectedIds, overrideFields]);
 
   const allSelected = templates.length > 0 && selectedIds.length === templates.length;
   const hasShortUrls = generatedRows.some((row) => !!row.shortUrl);
@@ -161,7 +186,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
   const handleCopyAll = async () => {
     if (!hasShortUrls) {
-      setActionMessage('단축링크 생성 후 전체 복사가 가능합니다.');
+      setActionMessage(t('utm.bulk.message.copyAllNeeded'));
       return;
     }
 
@@ -172,29 +197,29 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
     await copyText(tsv);
     setCopiedAll(true);
-    setActionMessage('전체 복사가 완료되었습니다.');
+    setActionMessage(t('utm.bulk.message.copyAllDone'));
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
   const handleGenerate = () => {
     if (!baseUrl.trim()) {
-      setActionMessage('기본 URL을 먼저 입력해 주세요.');
+      setActionMessage(t('utm.bulk.message.needBaseUrl'));
       return;
     }
 
     if (selectedIds.length === 0) {
-      setActionMessage('템플릿을 1개 이상 선택해 주세요.');
+      setActionMessage(t('utm.bulk.message.needTemplate'));
       return;
     }
 
     if (previewRows.length === 0) {
-      setActionMessage('URL 형식을 확인해 주세요. 예: https://example.com/path');
+      setActionMessage(t('utm.bulk.message.invalidUrl'));
       return;
     }
 
     setGeneratedRows(previewRows);
     setHasGenerated(true);
-    setActionMessage(`${previewRows.length}개 URL이 생성되었습니다.`);
+    setActionMessage(t('utm.bulk.message.generated', { count: previewRows.length }));
   };
 
   const handleCreateShortUrlsInBulk = async () => {
@@ -203,27 +228,27 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     }
 
     if (!selectedServer) {
-      setActionMessage('선택된 서버를 찾을 수 없습니다. 서버 경로에서 다시 시도해 주세요.');
+      setActionMessage(t('utm.bulk.message.serverMissing'));
       return;
     }
 
     if (generatedRows.length === 0) {
-      setActionMessage('먼저 생성하기 버튼으로 URL을 생성해 주세요.');
+      setActionMessage(t('utm.bulk.message.needGenerate'));
       return;
     }
 
     if (!shortOptions.titlePrefix.trim()) {
-      setActionMessage('제목은 필수입니다.');
+      setActionMessage(t('utm.bulk.message.needTitle'));
       return;
     }
 
     if (parseTags(shortOptions.additionalTags).length === 0) {
-      setActionMessage('태그는 1개 이상 필수입니다.');
+      setActionMessage(t('utm.bulk.message.needTags'));
       return;
     }
 
     setCreatingShortUrls(true);
-    setActionMessage('단축링크를 생성하고 있습니다...');
+    setActionMessage(t('utm.bulk.message.creating'));
 
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
@@ -271,10 +296,10 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
             createError: undefined,
           };
         } catch (error) {
-          const message = error instanceof Error ? error.message : '단축링크 생성 실패';
+          const message = error instanceof Error ? error.message : t('utm.bulk.row.errorPrefix');
           return {
             ...row,
-            createError: `단축링크 생성 실패: ${message}`,
+            createError: `${t('utm.bulk.row.errorPrefix')}: ${message}`,
           };
         }
       }));
@@ -282,9 +307,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       setGeneratedRows(rowsWithShortUrl);
       const successCount = rowsWithShortUrl.filter((row) => !!row.shortUrl).length;
       const failCount = rowsWithShortUrl.length - successCount;
-      setActionMessage(`단축링크 생성 완료: 성공 ${successCount}건, 실패 ${failCount}건`);
+      setActionMessage(t('utm.bulk.message.bulkResult', { success: successCount, fail: failCount }));
     } catch {
-      setActionMessage('단축링크 생성 중 오류가 발생했습니다. 서버 연결을 확인해주세요.');
+      setActionMessage(t('utm.bulk.message.bulkError'));
     } finally {
       setCreatingShortUrls(false);
     }
@@ -310,25 +335,75 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
         <div className="space-y-4">
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-              1. 기본 URL 입력
+              {t('utm.bulk.step1.title')}
             </h2>
             <input
               id="bulk-base-url"
               type="url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://example.com/path"
+              placeholder={t('utm.bulk.step1.placeholder')}
               className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              선택한 템플릿의 utm_source, utm_medium, utm_campaign, utm_term, utm_content를 자동으로 붙여 여러 URL을 생성합니다.
+              {t('utm.bulk.step1.help')}
+            </p>
+          </div>
+
+          <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
+            <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+              {t('utm.bulk.overrideSection.title')}
+            </h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label htmlFor="bulk-override-campaign" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('utm.bulk.override.campaign.label')}
+                </label>
+                <input
+                  id="bulk-override-campaign"
+                  type="text"
+                  value={overrideFields.campaign}
+                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, campaign: e.target.value }))}
+                  placeholder={t('utm.bulk.override.campaign.placeholder')}
+                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+              </div>
+              <div>
+                <label htmlFor="bulk-override-term" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('utm.bulk.override.term.label')}
+                </label>
+                <input
+                  id="bulk-override-term"
+                  type="text"
+                  value={overrideFields.term}
+                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, term: e.target.value }))}
+                  placeholder={t('utm.bulk.override.term.placeholder')}
+                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+              </div>
+              <div>
+                <label htmlFor="bulk-override-content" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('utm.bulk.override.content.label')}
+                </label>
+                <input
+                  id="bulk-override-content"
+                  type="text"
+                  value={overrideFields.content}
+                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, content: e.target.value }))}
+                  placeholder={t('utm.bulk.override.content.placeholder')}
+                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {t('utm.bulk.overrideSection.help')}
             </p>
           </div>
 
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                2. 템플릿 선택
+                {t('utm.bulk.step2.title')}
               </h2>
               {templates.length > 0 && (
                 <button
@@ -336,19 +411,19 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                   onClick={toggleAll}
                   className="rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                 >
-                  {allSelected ? '전체 해제' : '전체 선택'}
+                  {allSelected ? t('utm.bulk.step2.deselectAll') : t('utm.bulk.step2.selectAll')}
                 </button>
               )}
             </div>
 
             {templates.length === 0 ? (
               <div className="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>저장된 템플릿이 없습니다.</span>
+                <span>{t('utm.bulk.step2.empty')}</span>
                 <Link
                   to={serverId ? `/server/${serverId}/utm-template-manager` : '/utm-template-manager'}
                   className="w-fit rounded bg-blue-700 px-3 py-1.5 text-white no-underline hover:bg-blue-800"
                 >
-                  템플릿 관리로 이동
+                  {t('utm.bulk.step2.gotoTemplates')}
                 </Link>
               </div>
             ) : (
@@ -392,7 +467,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                3. 생성 결과
+                {t('utm.bulk.step3.title')}
               </h2>
               <div className="flex items-center gap-2">
                 <button
@@ -400,7 +475,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                   onClick={handleGenerate}
                   className="rounded bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
                 >
-                  생성하기
+                  {t('utm.bulk.action.generate')}
                 </button>
                 {serverId && (
                   <button
@@ -409,7 +484,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                     onClick={() => setShowShortOptions((prev) => !prev)}
                     className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                   >
-                    {creatingShortUrls ? '단축링크 생성 중...' : '한번에 단축링크 만들기'}
+                    {creatingShortUrls ? t('utm.bulk.action.makingShortUrls') : t('utm.bulk.action.makeShortUrls')}
                   </button>
                 )}
                 <button
@@ -419,7 +494,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                   className="flex items-center gap-2 rounded bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
                 >
                   <FontAwesomeIcon icon={faCopy} />
-                  {copiedAll ? '전체 복사됨' : '전체 복사(TSV)'}
+                  {copiedAll ? t('utm.bulk.action.copiedAll') : t('utm.bulk.action.copyAll')}
                 </button>
               </div>
             </div>
@@ -430,45 +505,45 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
             {showShortOptions && (
               <div className="mb-2 space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
-                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">일괄 단축링크 생성 옵션</p>
+                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.bulk.options.title')}</p>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <input
                     type="text"
                     value={shortOptions.titlePrefix}
                     onChange={(e) => setShortOptions((prev) => ({ ...prev, titlePrefix: e.target.value }))}
-                    placeholder="제목 (필수)"
+                    placeholder={t('utm.bulk.options.titlePrefix.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.additionalTags}
                     onChange={(e) => setShortOptions((prev) => ({ ...prev, additionalTags: e.target.value }))}
-                    placeholder="태그 (필수, 쉼표 구분)"
+                    placeholder={t('utm.bulk.options.tags.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.slugPrefix}
                     onChange={(e) => setShortOptions((prev) => ({ ...prev, slugPrefix: e.target.value }))}
-                    placeholder="슬러그 접두사 (선택)"
+                    placeholder={t('utm.bulk.options.slugPrefix.placeholder')}
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">추가 태그는 모든 항목에 공통 적용됩니다.</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('utm.bulk.options.tagsHelp')}</p>
                 <button
                   type="button"
                   disabled={isBulkCreateDisabled}
                   onClick={() => void handleCreateShortUrlsInBulk()}
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
-                  {creatingShortUrls ? '단축링크 생성 중...' : '일괄 단축링크 생성 실행'}
+                  {creatingShortUrls ? t('utm.bulk.action.makingShortUrls') : t('utm.bulk.options.runBulk')}
                 </button>
               </div>
             )}
 
             {!hasGenerated ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                기본 URL을 입력하고 템플릿을 선택한 뒤 생성하기 버튼을 눌러주세요.
+                {t('utm.bulk.step3.empty')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -496,7 +571,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
                     {row.shortUrl && (
                       <p className="mt-1 break-all rounded bg-green-50 px-2 py-1 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                        단축 URL: {row.shortUrl}
+                        {t('utm.bulk.row.shortLabel')}: {row.shortUrl}
                       </p>
                     )}
                     {row.createError && (
@@ -512,7 +587,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                         className="flex items-center gap-2 rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                       >
                         <FontAwesomeIcon icon={faCopy} />
-                        {row.shortUrl ? '단축 URL 복사' : 'UTM URL 복사'}
+                        {row.shortUrl ? t('utm.bulk.row.copyShort') : t('utm.bulk.row.copyUtm')}
                       </button>
                       {serverId && (
                         <button
@@ -521,7 +596,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                           className="flex items-center gap-2 rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
                         >
                           <FontAwesomeIcon icon={faExternalLinkAlt} />
-                          단축링크 만들기
+                          {t('utm.bulk.row.openCreate')}
                         </button>
                       )}
                     </div>
