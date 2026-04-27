@@ -4,6 +4,7 @@ import type { ShlinkApiClient, ShlinkShortUrl } from '@shlinkio/shlink-js-sdk/ap
 import type { FC } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
+import { normalizeShortCodeInput } from './services/shareTokenService';
 
 const RESULT_LIMIT = 8;
 // Shlink's `searchTerm` only checks longUrl + title + tags, so users typing a
@@ -16,9 +17,19 @@ const tokenize = (input: string) => input.toLowerCase().split(/\s+/).filter(Bool
 
 const matchesAllTokens = (url: ShlinkShortUrl, tokens: string[]) => {
   if (tokens.length === 0) return true;
+  const shortCode = url.shortCode.toLowerCase();
   const tags = (url.tags ?? []).join(' ');
   const haystack = `${url.shortCode} ${url.title ?? ''} ${url.longUrl ?? ''} ${tags}`.toLowerCase();
-  return tokens.every((token) => haystack.includes(token));
+  return tokens.every((token) => {
+    if (haystack.includes(token)) {
+      return true;
+    }
+    // The haystack only contains the *destination* URL, not the short URL,
+    // so pasting "https://l.example.com/abc123" never matches via substring.
+    // Strip protocol/host and compare the trailing path segment to shortCode.
+    const normalized = normalizeShortCodeInput(token).toLowerCase();
+    return normalized !== '' && normalized === shortCode;
+  });
 };
 
 export type ShortUrlPickerProps = {

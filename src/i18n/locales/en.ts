@@ -51,6 +51,8 @@ export const enMessages: Messages = {
   'share.manager.create.issuedUrl': 'Issued link',
   'share.manager.list.title': 'Active share links',
   'share.manager.list.empty': 'No share links yet.',
+  'share.manager.list.sortNewest': 'Newest first',
+  'share.manager.row.createdAt': 'Created',
   'share.manager.row.expires': 'Expires',
   'share.manager.row.never': 'Never',
   'share.manager.row.expired': 'Expired',

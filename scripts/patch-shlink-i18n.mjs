@@ -45,11 +45,16 @@ const REPLACEMENTS = [
   ['"Base URL"', '"기본 URL"'],
   ['"Base path redirect"', '"기본 경로 리다이렉트"'],
   ['"Regular 404"', '"일반 404"'],
-  ['"Orphan visits"', '"삭제된 링크 방문"'],
-  // Earlier versions of this script translated Orphan visits to "고아 방문";
-  // upgrade those installs to the friendlier wording.
-  ['"고아 방문"', '"삭제된 링크 방문"'],
-  ['"Orphan visits type:"', '"삭제된 링크 방문 종류:"'],
+  ['"Orphan visits"', '"알 수 없는 링크 방문"'],
+  // Earlier versions of this script translated Orphan visits to "고아 방문" /
+  // "삭제된 링크 방문" / "잘못된 링크 방문"; upgrade those installs to the
+  // latest wording.
+  ['"고아 방문"', '"알 수 없는 링크 방문"'],
+  ['"삭제된 링크 방문"', '"알 수 없는 링크 방문"'],
+  ['"잘못된 링크 방문"', '"알 수 없는 링크 방문"'],
+  ['"Orphan visits type:"', '"알 수 없는 링크 방문 종류:"'],
+  ['"삭제된 링크 방문 종류:"', '"알 수 없는 링크 방문 종류:"'],
+  ['"잘못된 링크 방문 종류:"', '"알 수 없는 링크 방문 종류:"'],
   ['"Non-orphan visits"', '"일반 방문"'],
   ['"Delete visits."', '"방문 기록 삭제."'],
   ['"Delete visits"', '"방문 기록 삭제"'],
