@@ -7,9 +7,9 @@ import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuil
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useServers } from '../servers/reducers/servers';
+import { useT } from '../i18n';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
-import { UtmManagementMenu } from './UtmManagementMenu';
 
 type UtmFields = {
   baseUrl: string;
@@ -82,6 +82,7 @@ type UtmBuilderPageProps = {
 const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) => {
   const { serverId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
+  const t = useT();
   const { servers } = useServers();
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
@@ -211,10 +212,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">UTM 빌더</h1>
+          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.builder.title')}</h1>
         </div>
-
-        <UtmManagementMenu />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* 왼쪽: 빌더 */}

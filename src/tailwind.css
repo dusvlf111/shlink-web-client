@@ -10,3 +10,12 @@
         --footer-margin: .8rem;
     }
 }
+
+/*
+ * UnifiedSidebar replaces the @shlinkio/shlink-web-component built-in sidebar.
+ * The package does not expose an option to hide its <aside>, so we suppress it
+ * via CSS scoped to the wrapper test id.
+ */
+[data-testid="shlink-wrapper"] aside.bg-lm-primary {
+    display: none !important;
+}

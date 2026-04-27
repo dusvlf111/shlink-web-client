@@ -3,10 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useState } from 'react';
 import { NoMenuLayout } from '../common/NoMenuLayout';
+import { useT } from '../i18n';
 import { useUtmTags, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
-import { UtmManagementMenu } from './UtmManagementMenu';
 
 export const UtmTagManager: FC = () => {
+  const t = useT();
   const [category, setCategory] = useState<UtmCategory>('source');
   const [value, setValue] = useState('');
   const [description, setDescription] = useState('');
@@ -52,10 +53,8 @@ export const UtmTagManager: FC = () => {
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">태그 관리</h1>
+          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.tag.title')}</h1>
         </div>
-
-        <UtmManagementMenu />
 
         <div className="space-y-4">
           <div className="rounded-md border border-lm-border bg-white p-3 dark:border-dm-border dark:bg-dm-primary">

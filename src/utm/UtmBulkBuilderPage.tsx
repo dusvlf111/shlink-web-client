@@ -7,8 +7,8 @@ import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuil
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useServers } from '../servers/reducers/servers';
+import { useT } from '../i18n';
 import { useUtmTemplates } from './useUtmData';
-import { UtmManagementMenu } from './UtmManagementMenu';
 
 type GeneratedRow = {
   id: string;
@@ -85,6 +85,7 @@ const sanitizeSlugPart = (rawValue: string): string => rawValue
 const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiClient }) => {
   const { serverId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
+  const t = useT();
   const { templates } = useUtmTemplates();
   const { servers } = useServers();
 
@@ -302,11 +303,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-            UTM 벌크 생성
+            {t('utm.bulk.title')}
           </h1>
         </div>
-
-        <UtmManagementMenu />
 
         <div className="space-y-4">
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">

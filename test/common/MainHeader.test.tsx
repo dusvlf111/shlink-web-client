@@ -32,7 +32,7 @@ describe('<MainHeader />', () => {
     ['/settings/bar', true],
   ])('sets link to settings as active only when current path is settings', (currentPath, isActive) => {
     setUp(currentPath);
-    expect(screen.getByRole('menuitem', { name: /Settings$/ })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: /설정$/ })).toHaveAttribute(
       'data-active', isActive ? 'true' : 'false',
     );
   });

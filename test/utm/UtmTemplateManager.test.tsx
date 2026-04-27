@@ -50,10 +50,9 @@ describe('<UtmTemplateManager />', () => {
     </MemoryRouter>,
   );
 
-  it('renders heading and management menu', () => {
+  it('renders heading using the i18n key', () => {
     setUp();
-    expect(screen.getByRole('heading', { name: '템플릿 관리' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '템플릿 관리' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'UTM 템플릿 관리' })).toBeInTheDocument();
   });
 
   it('renders the form inputs', () => {

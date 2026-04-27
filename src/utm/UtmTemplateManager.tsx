@@ -3,10 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useMemo, useState } from 'react';
 import { NoMenuLayout } from '../common/NoMenuLayout';
+import { useT } from '../i18n';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
-import { UtmManagementMenu } from './UtmManagementMenu';
 
 export const UtmTemplateManager: FC = () => {
+  const t = useT();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [fields, setFields] = useState<Record<UtmCategory, string>>({
@@ -159,11 +160,9 @@ export const UtmTemplateManager: FC = () => {
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-            템플릿 관리
+            {t('utm.template.title')}
           </h1>
         </div>
-
-        <UtmManagementMenu />
 
         <div className="space-y-4">
           <div className="rounded-md border border-lm-border bg-white p-3 dark:border-dm-border dark:bg-dm-primary">

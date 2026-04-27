@@ -41,11 +41,9 @@ describe('<UtmBulkBuilderPage />', () => {
     </MemoryRouter>,
   );
 
-  it('renders heading and management menu', () => {
+  it('renders heading using the i18n key', () => {
     setUp();
     expect(screen.getByRole('heading', { name: 'UTM 벌크 생성' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '빌더' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '벌크 생성' })).toBeInTheDocument();
   });
 
   it('renders template checkboxes for each template', () => {
