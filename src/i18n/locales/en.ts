@@ -85,6 +85,13 @@ export const enMessages: Messages = {
   'utm.template.title': 'UTM template manager',
   'utm.tag.title': 'UTM tag manager',
 
+  'home.title': 'Server list',
+  'home.subtitle': 'Click a server to start managing your short links.',
+  'home.empty.title': 'No server registered yet.',
+  'home.empty.action': 'Add a server',
+  'home.learnMore': 'Learn more about Shlink',
+  'home.editHint': 'Use the server settings menu to edit server details.',
+
   'language.ko': '한국어',
   'language.en': 'English',
 };

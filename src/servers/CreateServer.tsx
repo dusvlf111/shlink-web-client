@@ -13,6 +13,7 @@ import { ImportServersBtn } from './helpers/ImportServersBtn';
 import { ServerForm } from './helpers/ServerForm';
 import { withoutSelectedServer } from './helpers/withoutSelectedServer';
 import { useServers } from './reducers/servers';
+import { createServerConfig, isPocketBaseLoggedIn } from './services/serverConfigsService';
 
 const SHOW_IMPORT_MSG_TIME = 4000;
 
@@ -38,11 +39,24 @@ const CreateServerBase: FC<CreateServerProps> = withoutSelectedServer(({ useTime
   const [errorImporting, setErrorImporting] = useTimeoutToggle({ delay: SHOW_IMPORT_MSG_TIME });
   const { flag: isConfirmModalOpen, toggle: toggleConfirmModal } = useToggle();
   const [serverData, setServerData] = useState<ServerData>();
-  const saveNewServer = useCallback((newServerData: ServerData) => {
-    const [newServerWithUniqueId] = ensureUniqueIds(servers, [newServerData]);
+  const saveNewServer = useCallback(async (newServerData: ServerData) => {
+    let saved;
+    if (isPocketBaseLoggedIn()) {
+      try {
+        saved = await createServerConfig(newServerData);
+      } catch {
+        // Fall through to the local-only path so the user is never stuck if
+        // PocketBase is unreachable or the request is rejected.
+      }
+    }
 
-    createServers([newServerWithUniqueId]);
-    navigate(`/server/${newServerWithUniqueId.id}`);
+    if (!saved) {
+      const [withId] = ensureUniqueIds(servers, [newServerData]);
+      saved = withId;
+    }
+
+    createServers([saved]);
+    navigate(`/server/${saved.id}`);
   }, [createServers, navigate, servers]);
   const onSubmit = useCallback((newServerData: ServerData) => {
     setServerData(newServerData);
@@ -54,7 +68,7 @@ const CreateServerBase: FC<CreateServerProps> = withoutSelectedServer(({ useTime
     if (serverExists) {
       toggleConfirmModal();
     } else {
-      saveNewServer(newServerData);
+      void saveNewServer(newServerData);
     }
   }, [saveNewServer, servers, toggleConfirmModal]);
 
@@ -75,7 +89,7 @@ const CreateServerBase: FC<CreateServerProps> = withoutSelectedServer(({ useTime
         open={isConfirmModalOpen}
         duplicatedServers={serverData ? [serverData] : []}
         onClose={goBack}
-        onConfirm={() => serverData && saveNewServer(serverData)}
+        onConfirm={() => serverData && void saveNewServer(serverData)}
       />
     </NoMenuLayout>
   );

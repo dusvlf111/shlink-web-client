@@ -5,7 +5,9 @@ import { useDependencies } from '../../container/context';
 import { useAppDispatch } from '../../store';
 import { createAsyncThunk } from '../../store/helpers';
 import { hasServerData } from '../data';
+import type { ServerWithId } from '../data';
 import { ensureUniqueIds } from '../helpers';
+import { fetchServerConfigs, isPocketBaseLoggedIn } from '../services/serverConfigsService';
 import { createServers, useServers } from './servers';
 
 const responseToServersList = (data: any) => ensureUniqueIds(
@@ -13,13 +15,37 @@ const responseToServersList = (data: any) => ensureUniqueIds(
   (Array.isArray(data) ? data.filter(hasServerData) : []),
 );
 
+const fetchPocketBaseServers = async (): Promise<ServerWithId[]> => {
+  if (!isPocketBaseLoggedIn()) {
+    return [];
+  }
+  try {
+    return await fetchServerConfigs();
+  } catch {
+    return [];
+  }
+};
+
+const fetchStaticServers = async (httpClient: HttpClient): Promise<ServerWithId[]> => {
+  try {
+    const resp = await httpClient.jsonRequest<any>(`${pack.homepage}/servers.json`);
+    return responseToServersList(resp);
+  } catch {
+    return [];
+  }
+};
+
 export const fetchServers = createAsyncThunk(
   'shlink/remoteServers/fetchServers',
   async (httpClient: HttpClient, { dispatch }): Promise<void> => {
-    const resp = await httpClient.jsonRequest<any>(`${pack.homepage}/servers.json`);
-    const result = responseToServersList(resp);
+    const pocketBaseServers = await fetchPocketBaseServers();
+    if (pocketBaseServers.length > 0) {
+      dispatch(createServers(pocketBaseServers));
+      return;
+    }
 
-    dispatch(createServers(result));
+    const staticServers = await fetchStaticServers(httpClient);
+    dispatch(createServers(staticServers));
   },
 );
 

@@ -8,7 +8,6 @@ import { AppUpdateBanner } from '../common/AppUpdateBanner';
 import { Home } from '../common/Home';
 import { MainHeader } from '../common/MainHeader';
 import { NotFound } from '../common/NotFound';
-import { ServerInfoFloating } from '../common/ServerInfoFloating';
 import { ShlinkVersionsContainer } from '../common/ShlinkVersionsContainer';
 import { ShlinkWebComponentContainer } from '../common/ShlinkWebComponentContainer';
 import { UnifiedSidebar } from '../common/UnifiedSidebar';
@@ -78,8 +77,6 @@ export const App: FC = () => {
           <ShlinkVersionsContainer />
         </div>
       </div>
-
-      <ServerInfoFloating />
 
       <AppUpdateBanner isOpen={appUpdated} onClose={resetAppUpdate} forceUpdate={forceUpdate} />
     </div>

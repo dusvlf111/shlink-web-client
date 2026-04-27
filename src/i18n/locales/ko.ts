@@ -91,6 +91,14 @@ export const koMessages = {
   // UTM 태그 관리
   'utm.tag.title': 'UTM 태그 관리',
 
+  // 홈 (서버 리스트)
+  'home.title': '서버 리스트',
+  'home.subtitle': '서버를 클릭해 단축 링크 관리를 시작하세요.',
+  'home.empty.title': '등록된 서버가 없습니다.',
+  'home.empty.action': '서버 추가하기',
+  'home.learnMore': 'Shlink에 대해 더 알아보기',
+  'home.editHint': '서버 정보를 수정하려면 서버 설정 메뉴를 이용하세요.',
+
   // 언어 옵션
   'language.ko': '한국어',
   'language.en': 'English',

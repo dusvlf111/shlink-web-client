@@ -20,9 +20,9 @@ describe('<Home />', () => {
     setUp({ '1a': fromPartial<ServerWithId>({ name: 'foo', id: '1' }) }),
   ));
 
-  it('renders title', () => {
+  it('renders the localised title', () => {
     setUp();
-    expect(screen.getByRole('heading', { name: 'Welcome!' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '서버 리스트' })).toBeInTheDocument();
   });
 
   it.each([
@@ -42,8 +42,8 @@ describe('<Home />', () => {
     expect(links).toHaveLength(expectedServers);
 
     if (Object.keys(servers).length === 0) {
-      expect(screen.getByText('This application will help you manage your Shlink servers.')).toBeInTheDocument();
-      expect(screen.getByText('Learn more about Shlink')).toBeInTheDocument();
+      expect(screen.getByText('등록된 서버가 없습니다.')).toBeInTheDocument();
+      expect(screen.getByText('Shlink에 대해 더 알아보기')).toBeInTheDocument();
     }
   });
 });
