@@ -43,6 +43,11 @@ type ShareStatsManagerPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
+type Notice = {
+  kind: 'success' | 'error';
+  message: string;
+};
+
 const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlinkApiClient }) => {
   const t = useT();
   const { user } = useAuth();
@@ -62,7 +67,8 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   const [expiryDays, setExpiryDays] = useState(7);
   const [submitting, setSubmitting] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [lastIssuedUrl, setLastIssuedUrl] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const apiClientForPicker = useMemo(
@@ -70,12 +76,13 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
     [activeServer, buildShlinkApiClient],
   );
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (): Promise<ShareToken[] | null> => {
     try {
       const list = await listShareTokens();
       setTokens(list);
+      return list;
     } catch {
-      setTokens([]);
+      return null;
     }
   }, []);
 
@@ -86,13 +93,13 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   }, [isAdmin, reload]);
 
   const handleCreate = async () => {
-    setError('');
+    setNotice(null);
     if (!isAdmin) {
-      setError(t('share.manager.create.adminOnly'));
+      setNotice({ kind: 'error', message: t('share.manager.create.adminOnly') });
       return;
     }
     if (!activeServer) {
-      setError(t('share.manager.create.serverMissing'));
+      setNotice({ kind: 'error', message: t('share.manager.create.serverMissing') });
       return;
     }
     if (!shortCode.trim()) {
@@ -102,19 +109,22 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
     setSubmitting(true);
     try {
       const apiClient = buildShlinkApiClient(activeServer);
-      await createShareToken({
+      const createdToken = await createShareToken({
         shortCode: shortCode.trim(),
         serverId: activeServer.id,
         label: label.trim() || undefined,
         expiresInDays: expiryDays > 0 ? expiryDays : undefined,
         apiClient,
       });
+      const createdShareUrl = buildShareUrl(window.location.origin, createdToken.id, createdToken.token);
+      setLastIssuedUrl(createdShareUrl);
+      setTokens((prev) => [createdToken, ...prev.filter((token) => token.id !== createdToken.id)]);
       setShortCode('');
       setLabel('');
-      await reload();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message ? `${t('share.manager.error.create')} (${message})` : t('share.manager.error.create'));
+      setNotice({ kind: 'success', message: t('share.manager.notice.createSuccess') });
+      void reload();
+    } catch {
+      setNotice({ kind: 'error', message: t('share.manager.notice.createError') });
     } finally {
       setSubmitting(false);
     }
@@ -129,18 +139,17 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
 
   const handleRefresh = async (token: ShareToken) => {
     if (!activeServer) {
-      setError(t('share.manager.create.serverMissing'));
+      setNotice({ kind: 'error', message: t('share.manager.create.serverMissing') });
       return;
     }
     setRefreshingId(token.id);
-    setError('');
+    setNotice(null);
     try {
       const apiClient = buildShlinkApiClient(activeServer);
       await refreshShareToken(token.id, token.shortCode, apiClient);
       await reload();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message ? `${t('share.manager.error.refresh')} (${message})` : t('share.manager.error.refresh'));
+    } catch {
+      setNotice({ kind: 'error', message: t('share.manager.notice.refreshError') });
     } finally {
       setRefreshingId(null);
     }
@@ -150,13 +159,12 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
     if (!window.confirm(t('share.manager.row.deleteConfirm'))) {
       return;
     }
-    setError('');
+    setNotice(null);
     try {
       await deleteShareToken(token.id);
       await reload();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message ? `${t('share.manager.error.delete')} (${message})` : t('share.manager.error.delete'));
+    } catch {
+      setNotice({ kind: 'error', message: t('share.manager.notice.deleteError') });
     }
   };
 
@@ -232,9 +240,17 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
               </div>
             </div>
 
-            {error && (
-              <p className="mt-3 text-xs text-red-600 dark:text-red-400">{error}</p>
-            )}
+            {notice ? (
+              <p className={`mt-3 text-xs ${notice.kind === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                {notice.message}
+              </p>
+            ) : null}
+
+            {lastIssuedUrl ? (
+              <p className="mt-2 break-all rounded bg-lm-primary/40 px-2 py-1 text-[11px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)">
+                {t('share.manager.create.issuedUrl')}: {lastIssuedUrl}
+              </p>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <button
@@ -279,11 +295,11 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                           </p>
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                             {t('share.manager.row.expires')}: {token.expiresAt ? formatDateTime(token.expiresAt) : t('share.manager.row.never')}
-                            {expired && (
+                            {expired ? (
                               <span className="ml-2 rounded bg-red-100 px-2 py-0.5 text-[11px] text-red-700 dark:bg-red-900 dark:text-red-200">
                                 {t('share.manager.row.expired')}
                               </span>
-                            )}
+                            ) : null}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('share.manager.row.snapshotAt')}: {formatDateTime(token.snapshotAt)}

@@ -51,6 +51,7 @@ export const koMessages = {
   'share.manager.create.adminOnly': '공유 링크 생성은 관리자만 가능합니다.',
   'share.manager.create.submit': '공유 링크 만들기',
   'share.manager.create.submitting': '만드는 중...',
+  'share.manager.create.issuedUrl': '발급된 링크',
   'share.manager.list.title': '발급된 공유 링크',
   'share.manager.list.empty': '아직 발급된 공유 링크가 없습니다.',
   'share.manager.row.expires': '만료',
@@ -66,6 +67,10 @@ export const koMessages = {
   'share.manager.error.create': '공유 링크 생성에 실패했습니다.',
   'share.manager.error.refresh': '데이터 갱신에 실패했습니다.',
   'share.manager.error.delete': '공유 링크 삭제에 실패했습니다.',
+  'share.manager.notice.createSuccess': '공유 링크가 생성되었습니다.',
+  'share.manager.notice.createError': '공유 링크 생성에 실패했습니다.',
+  'share.manager.notice.refreshError': '데이터 갱신에 실패했습니다.',
+  'share.manager.notice.deleteError': '공유 링크 삭제에 실패했습니다.',
 
   // 외부 공유 통계 보기 페이지
   'share.public.title': '단축 링크 통계',

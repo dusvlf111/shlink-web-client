@@ -48,6 +48,7 @@ export const enMessages: Messages = {
   'share.manager.create.adminOnly': 'Only admins can create share links.',
   'share.manager.create.submit': 'Create share link',
   'share.manager.create.submitting': 'Creating...',
+  'share.manager.create.issuedUrl': 'Issued link',
   'share.manager.list.title': 'Active share links',
   'share.manager.list.empty': 'No share links yet.',
   'share.manager.row.expires': 'Expires',
@@ -63,6 +64,10 @@ export const enMessages: Messages = {
   'share.manager.error.create': 'Could not create the share link.',
   'share.manager.error.refresh': 'Could not refresh the snapshot.',
   'share.manager.error.delete': 'Could not delete the share link.',
+  'share.manager.notice.createSuccess': 'Share link has been created.',
+  'share.manager.notice.createError': 'Could not create the share link.',
+  'share.manager.notice.refreshError': 'Could not refresh the snapshot.',
+  'share.manager.notice.deleteError': 'Could not delete the share link.',
 
   'share.public.title': 'Short URL stats',
   'share.public.snapshotAt': 'Snapshot taken at',
