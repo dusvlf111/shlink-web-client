@@ -22,6 +22,8 @@ const mockTemplates = [
 
 vi.mock('../../src/utm/useUtmData', () => ({
   UTM_CATEGORIES: ['source', 'medium', 'campaign', 'term', 'content'],
+  UTM_REQUIRED_FIELDS: ['source', 'medium'],
+  UTM_OPTIONAL_FIELDS: ['campaign', 'term', 'content'],
   useUtmTemplates: () => ({
     templates: mockTemplates,
     saveTemplate: saveTemplateMock,

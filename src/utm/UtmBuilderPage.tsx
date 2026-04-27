@@ -73,17 +73,24 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
 };
 
 const hasRequiredFields = (fields: UtmFields) =>
-  !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim() && !!fields.campaign.trim();
+  !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim();
+
+const pickFallbackServerId = (servers: Record<string, { id: string; autoConnect?: boolean }>): string | null => {
+  const list = Object.values(servers);
+  return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
+};
 
 type UtmBuilderPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
 const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) => {
-  const { serverId } = useParams<{ serverId: string }>();
+  const { serverId: paramServerId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
   const t = useT();
   const { servers } = useServers();
+  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
+  const serverId = paramServerId ?? fallbackServerId ?? undefined;
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -176,21 +183,23 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
       });
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
-    } catch {
-      setShortCreateMsg('단축링크 생성에 실패했습니다.');
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+      setShortCreateMsg(`단축링크 생성에 실패했습니다.${detail}`);
     } finally {
       setCreatingShortUrl(false);
     }
   };
 
-  const applyTemplate = (tpl: {
-    source: string;
-    medium: string;
-    campaign: string;
-    term: string;
-    content: string;
-  }) => {
-    setFields((prev) => ({ ...prev, ...tpl }));
+  const applyTemplate = (tpl: any) => {
+    const templateFields = {
+      source: tpl.source || '',
+      medium: tpl.medium || '',
+      campaign: tpl.campaign || '',
+      term: tpl.term || '',
+      content: tpl.content || '',
+    };
+    setFields((prev) => ({ ...prev, ...templateFields }));
   };
 
   const handleSaveAsTemplate = async () => {

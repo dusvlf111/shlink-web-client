@@ -30,6 +30,12 @@ vi.mock('../../src/utm/useUtmData', () => ({
   useUtmTemplates: () => ({
     templates: mockTemplates,
   }),
+  useUtmTags: () => ({
+    tags: [
+      { id: 'tag-1', category: 'source', value: 'google', description: '구글 검색' },
+      { id: 'tag-2', category: 'medium', value: 'cpc', description: 'CPC 광고' },
+    ],
+  }),
 }));
 
 describe('<UtmBulkBuilderPage />', () => {

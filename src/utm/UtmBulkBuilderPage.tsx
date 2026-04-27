@@ -8,7 +8,7 @@ import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useServers } from '../servers/reducers/servers';
 import { useT } from '../i18n';
-import { useUtmTemplates } from './useUtmData';
+import { useUtmTemplates, useUtmTags } from './useUtmData';
 
 type GeneratedRow = {
   id: string;
@@ -33,9 +33,9 @@ type UtmBulkBuilderPageProps = {
 type UtmTemplateFields = {
   source: string;
   medium: string;
-  campaign: string;
-  term: string;
-  content: string;
+  campaign?: string;
+  term?: string;
+  content?: string;
 };
 
 type OverrideFields = {
@@ -44,7 +44,7 @@ type OverrideFields = {
   content: string;
 };
 
-const pickOverride = (overrideValue: string | undefined, templateValue: string) => {
+const pickOverride = (overrideValue: string | undefined, templateValue: string | undefined) => {
   const trimmed = overrideValue?.trim();
   return trimmed ? trimmed : templateValue;
 };
@@ -102,12 +102,20 @@ const sanitizeSlugPart = (rawValue: string): string => rawValue
   .replace(/-+/g, '-')
   .replace(/^-|-$/g, '');
 
+const pickFallbackServerId = (servers: Record<string, { id: string; autoConnect?: boolean }>): string | null => {
+  const list = Object.values(servers);
+  return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
+};
+
 const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiClient }) => {
-  const { serverId } = useParams<{ serverId: string }>();
+  const { serverId: paramServerId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
   const t = useT();
   const { templates } = useUtmTemplates();
+  const { tags } = useUtmTags();
   const { servers } = useServers();
+  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
+  const serverId = paramServerId ?? fallbackServerId ?? undefined;
 
   const [baseUrl, setBaseUrl] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -308,8 +316,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       const successCount = rowsWithShortUrl.filter((row) => !!row.shortUrl).length;
       const failCount = rowsWithShortUrl.length - successCount;
       setActionMessage(t('utm.bulk.message.bulkResult', { success: successCount, fail: failCount }));
-    } catch {
-      setActionMessage(t('utm.bulk.message.bulkError'));
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+      setActionMessage(`${t('utm.bulk.message.bulkError')}${detail}`);
     } finally {
       setCreatingShortUrls(false);
     }
@@ -321,6 +330,41 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     }
 
     navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
+  };
+
+  const tagDescriptionMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    tags.forEach((tag) => {
+      if (!tag.description?.trim()) {
+        return;
+      }
+
+      const key = `${tag.category}|${tag.value.trim().toLowerCase()}`;
+      map.set(key, tag.description.trim());
+    });
+
+    return map;
+  }, [tags]);
+
+  const getTemplateTagsInfo = (template: any) => {
+    const result: Array<{ category: string; value: string; description?: string }> = [];
+
+    ['source', 'medium', 'campaign', 'term', 'content'].forEach((category) => {
+      const value = template[category]?.trim();
+      if (value) {
+        const key = `${category}|${value.toLowerCase()}`;
+        const description = tagDescriptionMap.get(key);
+
+        result.push({
+          category,
+          value,
+          description,
+        });
+      }
+    });
+
+    return result;
   };
 
   return (
@@ -430,6 +474,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {templates.map((template) => {
                   const checked = selectedIds.includes(template.id);
+                  const tagInfo = getTemplateTagsInfo(template);
+                  const hasCampaign = tagInfo.some((t) => t.category === 'campaign');
 
                   return (
                     <label
@@ -444,7 +490,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                         onChange={() => toggleSelected(template.id)}
                         className="mt-0.5"
                       />
-                      <span className="min-w-0">
+                      <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
                           {template.name}
                         </span>
@@ -454,8 +500,23 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                           </span>
                         )}
                         <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
-                          source={template.source || '-'} · medium={template.medium || '-'} · campaign={template.campaign || '-'}
+                          source={template.source || '-'} · medium={template.medium || '-'}
+                          {hasCampaign && ` · campaign=${template.campaign}`}
                         </span>
+                        {tagInfo.some((t) => t.description) && (
+                          <div className="mt-1 space-y-0.5">
+                            {tagInfo.map((tag) => (
+                              tag.description && (
+                                <span
+                                  key={`${template.id}-${tag.category}`}
+                                  className="block text-[10px] text-blue-600 dark:text-blue-400"
+                                >
+                                  <strong>{tag.category}:</strong> {tag.description}
+                                </span>
+                              )
+                            ))}
+                          </div>
+                        )}
                       </span>
                     </label>
                   );
@@ -547,61 +608,95 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
               </p>
             ) : (
               <div className="space-y-2">
-                {generatedRows.map((row) => (
-                  <div
-                    key={row.id}
-                    className="rounded border border-lm-border px-3 py-2 dark:border-dm-border"
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                          {row.name}
-                        </p>
-                        {row.description && (
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                            {row.description}
+                {generatedRows.map((row) => {
+                  const template = templates.find((t) => t.id === row.id);
+                  const tagInfo = template ? getTemplateTagsInfo(template) : [];
+                  const hasCampaign = tagInfo.some((t) => t.category === 'campaign');
+
+                  return (
+                    <div
+                      key={row.id}
+                      className="rounded border border-lm-border px-3 py-2 dark:border-dm-border"
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                            {row.name}
                           </p>
+                          {row.description && (
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                              {row.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Template Fields Info */}
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                          source: {template?.source || '-'}
+                        </span>
+                        <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                          medium: {template?.medium || '-'}
+                        </span>
+                        {hasCampaign && (
+                          <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            campaign: {template?.campaign || '-'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Tag Descriptions */}
+                      {tagInfo.some((t) => t.description) && (
+                        <div className="mb-2 space-y-0.5 rounded bg-amber-50 p-2 dark:bg-amber-900/20">
+                          {tagInfo.map((tag) => (
+                            tag.description && (
+                              <div key={`${row.id}-${tag.category}`} className="text-[10px] text-amber-900 dark:text-amber-200">
+                                <strong>{tag.category}:</strong> {tag.description}
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="break-all rounded bg-lm-primary/40 px-2 py-1 text-xs text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)">
+                        {row.utmUrl}
+                      </p>
+
+                      {row.shortUrl && (
+                        <p className="mt-1 break-all rounded bg-green-50 px-2 py-1 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                          {t('utm.bulk.row.shortLabel')}: {row.shortUrl}
+                        </p>
+                      )}
+                      {row.createError && (
+                        <p className="mt-1 text-xs text-red-500">
+                          {row.createError}
+                        </p>
+                      )}
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void copyText(row.shortUrl ?? row.utmUrl)}
+                          className="flex items-center gap-2 rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
+                        >
+                          <FontAwesomeIcon icon={faCopy} />
+                          {row.shortUrl ? t('utm.bulk.row.copyShort') : t('utm.bulk.row.copyUtm')}
+                        </button>
+                        {serverId && (
+                          <button
+                            type="button"
+                            onClick={() => openShortUrlCreatePage(row.utmUrl)}
+                            className="flex items-center gap-2 rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
+                          >
+                            <FontAwesomeIcon icon={faExternalLinkAlt} />
+                            {t('utm.bulk.row.openCreate')}
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    <p className="break-all rounded bg-lm-primary/40 px-2 py-1 text-xs text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)">
-                      {row.utmUrl}
-                    </p>
-
-                    {row.shortUrl && (
-                      <p className="mt-1 break-all rounded bg-green-50 px-2 py-1 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                        {t('utm.bulk.row.shortLabel')}: {row.shortUrl}
-                      </p>
-                    )}
-                    {row.createError && (
-                      <p className="mt-1 text-xs text-red-500">
-                        {row.createError}
-                      </p>
-                    )}
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void copyText(row.shortUrl ?? row.utmUrl)}
-                        className="flex items-center gap-2 rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
-                      >
-                        <FontAwesomeIcon icon={faCopy} />
-                        {row.shortUrl ? t('utm.bulk.row.copyShort') : t('utm.bulk.row.copyUtm')}
-                      </button>
-                      {serverId && (
-                        <button
-                          type="button"
-                          onClick={() => openShortUrlCreatePage(row.utmUrl)}
-                          className="flex items-center gap-2 rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
-                        >
-                          <FontAwesomeIcon icon={faExternalLinkAlt} />
-                          {t('utm.bulk.row.openCreate')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
