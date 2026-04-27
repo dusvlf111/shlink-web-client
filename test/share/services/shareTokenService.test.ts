@@ -2,6 +2,7 @@ import { fromPartial } from '@total-typescript/shoehorn';
 import {
   buildShareUrl,
   isShareTokenExpired,
+  normalizeShortCodeInput,
   type ShareToken,
 } from '../../../src/share/services/shareTokenService';
 
@@ -20,6 +21,19 @@ describe('shareTokenService', () => {
     it('encodes special characters in the token query value', () => {
       const url = buildShareUrl('https://app.example.com', 'abc123', 'a/b c+d');
       expect(url).toBe('https://app.example.com/share/stats/abc123?token=a%2Fb%20c%2Bd');
+    });
+  });
+
+  describe('normalizeShortCodeInput', () => {
+    it.each([
+      ['4ONyC', '4ONyC'],
+      ['/4ONyC/', '4ONyC'],
+      ['https://l.letscareer.co.kr/4ONyC', '4ONyC'],
+      ['https:/l.letscareer.co.kr/4ONyC', '4ONyC'],
+      ['l.letscareer.co.kr/4ONyC?foo=bar', '4ONyC'],
+      ['  https://l.letscareer.co.kr/4ONyC#fragment  ', '4ONyC'],
+    ])('normalizes %s into %s', (input, expected) => {
+      expect(normalizeShortCodeInput(input)).toBe(expected);
     });
   });
 

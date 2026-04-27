@@ -52,10 +52,49 @@ const generateToken = () => {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 };
 
+const extractShortCodeFromPath = (path: string): string => path.replace(/^\/+|\/+$/g, '');
+
+export const normalizeShortCodeInput = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const withoutQuery = trimmed.split('?')[0].split('#')[0];
+  const fixedProtocol = withoutQuery.replace(/^([a-z]+):\/(?!\/)/i, '$1://');
+
+  const tryParseAsUrl = (candidate: string): URL | null => {
+    try {
+      return new URL(candidate);
+    } catch {
+      return null;
+    }
+  };
+
+  const parsedFromAbsolute = tryParseAsUrl(fixedProtocol);
+  if (parsedFromAbsolute) {
+    const fromPath = extractShortCodeFromPath(parsedFromAbsolute.pathname);
+    return fromPath || extractShortCodeFromPath(withoutQuery);
+  }
+
+  // Handle values like "l.example.com/abc123" that don't include protocol.
+  const parsedFromHostPath = withoutQuery.includes('.') && withoutQuery.includes('/')
+    ? tryParseAsUrl(`https://${withoutQuery.replace(/^\/+/, '')}`)
+    : null;
+
+  if (parsedFromHostPath) {
+    const fromPath = extractShortCodeFromPath(parsedFromHostPath.pathname);
+    return fromPath || extractShortCodeFromPath(withoutQuery);
+  }
+
+  return extractShortCodeFromPath(withoutQuery);
+};
+
 const fetchSnapshotData = async (
   apiClient: ShlinkApiClient,
-  shortCode: string,
+  shortCodeOrUrl: string,
 ): Promise<ShareSnapshot> => {
+  const shortCode = normalizeShortCodeInput(shortCodeOrUrl);
   const data = await apiClient.getShortUrlVisits({ shortCode }, { itemsPerPage: 5000 });
   return { data, shortCode, fetchedAt: new Date().toISOString() };
 };
@@ -69,7 +108,7 @@ export type CreateShareTokenInput = {
 };
 
 export const createShareToken = async ({
-  shortCode,
+  shortCode: shortCodeOrUrl,
   serverId,
   label,
   expiresInDays,
@@ -80,6 +119,7 @@ export const createShareToken = async ({
     throw new Error('Authentication required to create a share token.');
   }
 
+  const shortCode = normalizeShortCodeInput(shortCodeOrUrl);
   const snapshot = await fetchSnapshotData(apiClient, shortCode);
   const expiresAt = expiresInDays
     ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
@@ -112,9 +152,10 @@ export const deleteShareToken = async (id: string): Promise<void> => {
 
 export const refreshShareToken = async (
   id: string,
-  shortCode: string,
+  shortCodeOrUrl: string,
   apiClient: ShlinkApiClient,
 ): Promise<ShareToken> => {
+  const shortCode = normalizeShortCodeInput(shortCodeOrUrl);
   const snapshot = await fetchSnapshotData(apiClient, shortCode);
   const updated = await pb.collection('public_tokens').update<ShareTokenRecord>(id, {
     snapshot,
