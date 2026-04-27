@@ -53,8 +53,8 @@ describe('<App />', () => {
   it('passes a11y checks', () => checkAccessibility(setUp()));
 
   it.each([
-    ['/settings/general', 'User interface'],
-    ['/settings/short-urls', 'Short URLs form'],
+    ['/settings/general', '사용자 인터페이스'],
+    ['/settings/short-urls', '단축 링크 폼'],
     ['/manage-servers', '서버 추가하기'],
     ['/server/create', '새 서버 추가'],
     ['/server/abc123/edit', '"abc123 server" 편집'],
