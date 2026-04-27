@@ -43,15 +43,16 @@ export const App: FC = () => {
 
   return (
     <div className="h-full">
-      <MainHeader onMenuClick={openMobileSidebar} />
-      <UnifiedSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
+      <MainHeader onMenuClick={isHome ? undefined : openMobileSidebar} />
+      {!isHome && (
+        <UnifiedSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
+      )}
 
       <div className="h-full pt-(--header-height)">
         <div
           data-testid="shlink-wrapper"
           className={clsx(
             'min-h-full pb-[calc(var(--footer-height)+var(--footer-margin))] -mb-[calc(var(--footer-height)+var(--footer-margin))]',
-            'md:pl-(--aside-menu-width)',
             { 'flex items-center pt-4': isHome },
           )}
         >
@@ -77,7 +78,10 @@ export const App: FC = () => {
           </Routes>
         </div>
 
-        <div className="h-(--footer-height) mt-(--footer-margin) md:px-4 md:pl-(--aside-menu-width)">
+        <div className={clsx(
+          'h-(--footer-height) mt-(--footer-margin) md:px-4',
+          { 'md:pl-(--aside-menu-width)': !isHome },
+        )}>
           <ShlinkVersionsContainer />
         </div>
       </div>

@@ -82,12 +82,18 @@ describe('<App />', () => {
     }
   });
 
-  it('renders the unified sidebar instead of the floating UTM button', async () => {
+  it('hides the unified sidebar on the home route', async () => {
     await setUp('/');
 
-    // Floating UTM toggle has been removed in favour of the left-side UnifiedSidebar
+    // Floating UTM toggle has been removed entirely
     expect(screen.queryByRole('button', { name: /utm 관리로 이동/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /overview로 이동/i })).toBeNull();
+    // Home is the server picker — no sidebar there
+    expect(screen.queryByTestId('unified-sidebar')).toBeNull();
+  });
+
+  it('shows the unified sidebar on non-home routes', async () => {
+    await setUp('/utm-builder');
     expect(screen.getByTestId('unified-sidebar')).toBeInTheDocument();
   });
 

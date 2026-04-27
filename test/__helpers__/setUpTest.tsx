@@ -63,7 +63,7 @@ export type RenderOptionsWithState = Omit<RenderOptions, 'wrapper'> & {
  */
 const buildAuthWrapper = (asUser: UserRecord | undefined): FC<PropsWithChildren> => {
   if (!asUser) {
-    return AuthProvider;
+    return ({ children }) => <AuthProvider>{children}</AuthProvider>;
   }
   const stubValue = {
     user: asUser,

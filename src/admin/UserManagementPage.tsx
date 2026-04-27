@@ -95,7 +95,8 @@ export const UserManagementPage: FC = () => {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div className="w-full md:pl-(--aside-menu-width)">
+      <div className="mx-auto max-w-4xl p-6">
       <h1 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">사용자 관리</h1>
 
       {/* 탭 */}
@@ -202,6 +203,7 @@ export const UserManagementPage: FC = () => {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 };
