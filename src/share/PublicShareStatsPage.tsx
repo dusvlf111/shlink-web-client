@@ -56,30 +56,12 @@ const hasValidShareParams = (tokenId: string, token: string): boolean =>
 const Metric: FC<{ label: string; value: string | number; icon: IconDefinition; tone: 'blue' | 'green' | 'purple' }> = ({
   label,
   value,
-  icon,
-  tone,
-}) => {
-  const toneClasses: Record<typeof tone, string> = {
-    blue: 'from-blue-500/10 to-blue-500/0 ring-blue-500/30 text-blue-600 dark:text-blue-300',
-    green: 'from-emerald-500/10 to-emerald-500/0 ring-emerald-500/30 text-emerald-600 dark:text-emerald-300',
-    purple: 'from-purple-500/10 to-purple-500/0 ring-purple-500/30 text-purple-600 dark:text-purple-300',
-  };
-  return (
-    <div className={clsx(
-      'rounded-xl border border-lm-border bg-gradient-to-br p-5 shadow-sm transition-shadow hover:shadow-md',
-      'dark:border-dm-border dark:bg-dm-primary',
-      toneClasses[tone],
-    )}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-        <span className={clsx('flex h-8 w-8 items-center justify-center rounded-full ring-1', toneClasses[tone])}>
-          <FontAwesomeIcon icon={icon} className="text-sm" />
-        </span>
-      </div>
-      <p className="mt-3 text-3xl font-bold tracking-tight text-(--light-text-color) dark:text-(--dark-text-color)">{value}</p>
-    </div>
-  );
-};
+}) => (
+  <div className="rounded-2xl bg-white px-6 py-5 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+    <p className="text-xs font-medium text-[#86868b]">{label}</p>
+    <p className="mt-2 text-3xl font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">{value}</p>
+  </div>
+);
 
 const computeMetrics = (snapshot: ShareSnapshot | undefined) => {
   const visits = snapshot?.data.data ?? [];
@@ -101,13 +83,13 @@ const TabButton: FC<{
     type="button"
     onClick={onClick}
     className={clsx(
-      'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-all',
+      'flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-full transition-all',
       active
-        ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-300'
-        : 'border-transparent text-gray-500 hover:text-(--light-text-color) hover:border-gray-300 dark:text-gray-400 dark:hover:text-(--dark-text-color)',
+        ? 'bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-[#2c2c2e] dark:text-[#f5f5f7]'
+        : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]',
     )}
   >
-    <FontAwesomeIcon icon={icon} /> {label}
+    <FontAwesomeIcon icon={icon} className="text-xs" /> {label}
   </button>
 );
 
@@ -189,14 +171,10 @@ const TimelineChart: FC<{ visits: ShareSnapshot['data']['data']; emptyLabel: str
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
-          총 {total.toLocaleString()}회
-        </span>
+      <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-[#86868b]">
+        <span>합계 <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span></span>
         {peak.value > 0 && (
-          <span className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-200">
-            최고치 {peak.value.toLocaleString()} ({peak.label})
-          </span>
+          <span>최고치 <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{peak.value.toLocaleString()}</span> · {peak.label}</span>
         )}
       </div>
       <div style={{ width: '100%', height: 260 }}>
@@ -305,25 +283,19 @@ export const PublicShareStatsPage: FC = () => {
   const cityBuckets = useMemo(() => visitsByCity(visits, unknownLabel), [visits, unknownLabel]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/40 to-(--light-body-color) dark:from-blue-950/20 dark:to-(--dark-body-color)">
-      <header className="border-b border-lm-border bg-white/90 px-6 py-5 backdrop-blur dark:border-dm-border dark:bg-dm-primary/90">
+    <div
+      className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] dark:bg-[#000] dark:text-[#f5f5f7]"
+      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif' }}
+    >
+      <header className="px-6 pt-12 pb-6">
         <div className="mx-auto max-w-5xl">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-300">
-            <FontAwesomeIcon icon={faChartLine} /> {t('share.public.poweredBy')}
-          </div>
-          <h1 className="mt-1 text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
             {share?.label || t('share.public.title')}
           </h1>
           {share && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-800">
-                {t('share.public.snapshotAt')} · {formatDateTime(share.snapshotAt)}
-              </span>
-              {share.expiresAt && (
-                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  {t('share.public.expiresAt')} · {formatDateTime(share.expiresAt)}
-                </span>
-              )}
+            <p className="mt-3 text-sm text-[#86868b]">
+              {formatDateTime(share.snapshotAt)} 기준
+              {share.expiresAt && <span className="ml-2">· {formatDateTime(share.expiresAt)} 까지</span>}
             </p>
           )}
         </div>
@@ -360,7 +332,7 @@ export const PublicShareStatsPage: FC = () => {
               <Metric label={t('share.public.metric.uniqueDays')} value={metrics.uniqueDays.toLocaleString()} icon={faGlobe} tone="purple" />
             </div>
 
-            <nav className="flex border-b border-lm-border dark:border-dm-border">
+            <nav className="inline-flex items-center gap-1 rounded-full bg-[#f2f2f7] p-1 dark:bg-[#1c1c1e]">
               <TabButton
                 active={activeSection === 'byTime'}
                 icon={faChartLine}
@@ -388,8 +360,8 @@ export const PublicShareStatsPage: FC = () => {
             </nav>
 
             {activeSection === 'byTime' && (
-              <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+              <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                   {t('share.public.section.byTime')}
                 </h2>
                 <TimelineChart visits={visits} emptyLabel={t('share.public.byTime.empty')} />
@@ -398,20 +370,20 @@ export const PublicShareStatsPage: FC = () => {
 
             {activeSection === 'byContext' && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                  <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                  <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.referer')}
                   </h2>
                   <HorizontalBars buckets={refererBuckets} emptyLabel={t('share.public.empty')} tone="purple" />
                 </section>
-                <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                  <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                  <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.os')}
                   </h2>
                   <HorizontalBars buckets={osBuckets} emptyLabel={t('share.public.empty')} tone="green" />
                 </section>
-                <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                  <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                  <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.browser')}
                   </h2>
                   <HorizontalBars buckets={browserBuckets} emptyLabel={t('share.public.empty')} />
@@ -421,14 +393,14 @@ export const PublicShareStatsPage: FC = () => {
 
             {activeSection === 'byLocation' && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                  <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                  <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.country')}
                   </h2>
                   <HorizontalBars buckets={countryBuckets} emptyLabel={t('share.public.empty')} tone="green" />
                 </section>
-                <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                  <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                  <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.city')}
                   </h2>
                   <HorizontalBars buckets={cityBuckets} emptyLabel={t('share.public.empty')} tone="purple" />
@@ -437,8 +409,8 @@ export const PublicShareStatsPage: FC = () => {
             )}
 
             {activeSection === 'list' && (
-              <section className="rounded-xl border border-lm-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:border-dm-border dark:bg-dm-primary">
-                <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+              <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                   {t('share.public.recent')}
                 </h2>
                 {recentVisits.length === 0 ? (
@@ -478,9 +450,8 @@ export const PublicShareStatsPage: FC = () => {
         )}
       </main>
 
-      <footer className="border-t border-lm-border px-6 py-4 text-center text-[11px] text-gray-400 dark:border-dm-border dark:text-gray-500">
-        {t('share.public.poweredBy')}
-      </footer>
+      {/* Apple-style minimal footer with no brand text */}
+      <div className="h-12" />
     </div>
   );
 };

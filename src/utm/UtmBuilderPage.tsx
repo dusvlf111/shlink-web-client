@@ -101,6 +101,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   const [shortCreateMsg, setShortCreateMsg] = useState('');
   const [showShortOptions, setShowShortOptions] = useState(false);
   const [shortOptions, setShortOptions] = useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
+  const [appliedTemplateName, setAppliedTemplateName] = useState('');
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
@@ -208,11 +209,16 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
       const customSlug = shortOptions.customSlug.trim() || undefined;
+      // 벌크 생성과 동일하게: 사용자가 입력한 제목 뒤에 적용된 템플릿 이름을 붙인다.
+      const composedTitle = [shortOptions.title.trim(), appliedTemplateName.trim()]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
       const created = await Promise.race([
         apiClient.createShortUrl({
           longUrl: utmUrl,
           customSlug,
-          title: shortOptions.title.trim() || undefined,
+          title: composedTitle || undefined,
           tags: parseTags(shortOptions.tags),
           findIfExists: true,
         }),
@@ -239,6 +245,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
       content: tpl.content || '',
     };
     setFields((prev) => ({ ...prev, ...templateFields }));
+    setAppliedTemplateName(typeof tpl?.name === 'string' ? tpl.name : '');
   };
 
   const handleSaveAsTemplate = async () => {
@@ -362,6 +369,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
+                {appliedTemplateName && (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    저장 시 제목 뒤에 적용된 템플릿 이름 <strong>{appliedTemplateName}</strong> 이 자동으로 붙습니다.
+                  </p>
+                )}
                 <button
                   onClick={() => void handleCreateShortInOneClick()}
                   disabled={!shortOptions.title.trim() || parseTags(shortOptions.tags).length === 0 || creatingShortUrl}
