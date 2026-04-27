@@ -176,9 +176,12 @@ export const UtmTemplateManager: FC = () => {
 
   const renderFieldInput = (category: UtmCategory, isRequired: boolean) => (
     <div key={category} className="relative">
-      <label htmlFor={`template-${category}`} className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
-        utm_{category} {isRequired && <span className="text-red-500">*</span>}
-      </label>
+      <div className="mb-1 flex items-center gap-1">
+        <label htmlFor={`template-${category}`} className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+          utm_{category}
+        </label>
+        {isRequired && <span className="text-red-500" aria-hidden="true">*</span>}
+      </div>
       <input
         id={`template-${category}`}
         type="text"
@@ -280,6 +283,7 @@ export const UtmTemplateManager: FC = () => {
             <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={handleSave}
+                disabled={!name.trim()}
                 className="flex items-center justify-center gap-2 rounded bg-lm-main px-3 py-1.5 text-xs text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
               >
                 <FontAwesomeIcon icon={faSave} /> {editingTemplateId ? '템플릿 수정 저장' : '템플릿 저장'}

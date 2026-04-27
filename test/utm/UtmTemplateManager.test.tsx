@@ -101,6 +101,8 @@ describe('<UtmTemplateManager />', () => {
     const { user } = setUp();
 
     await user.type(screen.getByLabelText(/템플릿 이름/i), '테스트');
+    await user.type(screen.getByLabelText('utm_source'), 'naver');
+    await user.type(screen.getByLabelText('utm_medium'), 'organic');
     await user.click(screen.getByRole('button', { name: /템플릿 저장/i }));
 
     await waitFor(() => {
