@@ -42,6 +42,7 @@ export const ShortUrlPicker: FC<ShortUrlPickerProps> = ({
   useEffect(() => {
     if (!apiClient) {
       setResults([]);
+      setError(t('share.manager.create.serverMissing'));
       return undefined;
     }
     setLoading(true);
@@ -54,9 +55,10 @@ export const ShortUrlPicker: FC<ShortUrlPickerProps> = ({
           searchTerm: query.trim() || undefined,
         });
         setResults(list.data.filter((url) => matchScore(url, query) > 0));
-      } catch {
+      } catch (err) {
         setResults([]);
-        setError(t('share.manager.create.shortCode.error'));
+        const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
+        setError(`${t('share.manager.create.shortCode.error')}${detail}`);
       } finally {
         setLoading(false);
       }

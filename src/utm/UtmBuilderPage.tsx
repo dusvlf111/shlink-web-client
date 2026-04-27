@@ -138,7 +138,18 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   };
 
   const handleGoToShorten = () => {
-    if (!canGenerate || !serverId) return;
+    if (!canGenerate) {
+      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
+      return;
+    }
+    if (!serverId) {
+      setShortCreateMsg('연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.');
+      return;
+    }
+    if (!servers[serverId]) {
+      setShortCreateMsg('선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
 
     navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
   };
@@ -149,12 +160,16 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     }
 
     if (!canGenerate) {
-      setShortCreateMsg('URL과 필수 UTM 값을 먼저 입력해 주세요.');
+      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
       return;
     }
 
     if (!selectedServer) {
-      setShortCreateMsg('선택된 서버를 찾을 수 없습니다.');
+      setShortCreateMsg(
+        serverId
+          ? '서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요.'
+          : '연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.',
+      );
       return;
     }
 
@@ -278,25 +293,20 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                 <FontAwesomeIcon icon={faCopy} />
                 {copied ? '복사됨!' : '복사'}
               </button>
-              {serverId && (
-                <button
-                  onClick={() => setShowShortOptions((prev) => !prev)}
-                  className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                >
-                  <FontAwesomeIcon icon={faExternalLinkAlt} />
-                  한번에 링크 만들기
-                </button>
-              )}
-              {serverId && (
-                <button
-                  onClick={handleGoToShorten}
-                  disabled={!canGenerate}
-                  className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
-                >
-                  <FontAwesomeIcon icon={faExternalLinkAlt} />
-                  단축링크 만들기
-                </button>
-              )}
+              <button
+                onClick={() => setShowShortOptions((prev) => !prev)}
+                className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                한번에 링크 만들기
+              </button>
+              <button
+                onClick={handleGoToShorten}
+                className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
+              >
+                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                단축링크 만들기
+              </button>
             </div>
 
             {shortCreateMsg && (

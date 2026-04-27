@@ -76,12 +76,17 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
     [activeServer, buildShlinkApiClient],
   );
 
+  const [loadError, setLoadError] = useState('');
+
   const reload = useCallback(async (): Promise<ShareToken[] | null> => {
     try {
       const list = await listShareTokens();
       setTokens(list);
+      setLoadError('');
       return list;
-    } catch {
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+      setLoadError(`발급된 공유 링크를 불러오지 못했습니다. PocketBase 권한 또는 schema 적용 상태를 확인해 주세요.${detail}`);
       return null;
     }
   }, []);
@@ -282,6 +287,11 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                 </p>
               )}
             </div>
+            {loadError && (
+              <p className="mb-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+                {loadError}
+              </p>
+            )}
             {tokens.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">{t('share.manager.list.empty')}</p>
             ) : (
