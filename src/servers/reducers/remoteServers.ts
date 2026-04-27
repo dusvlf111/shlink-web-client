@@ -8,7 +8,7 @@ import { hasServerData } from '../data';
 import type { ServerWithId } from '../data';
 import { ensureUniqueIds } from '../helpers';
 import { fetchServerConfigs, isPocketBaseLoggedIn } from '../services/serverConfigsService';
-import { createServers, useServers } from './servers';
+import { createServers, replaceServers, useServers } from './servers';
 
 const responseToServersList = (data: any) => ensureUniqueIds(
   {},
@@ -40,12 +40,20 @@ export const fetchServers = createAsyncThunk(
   async (httpClient: HttpClient, { dispatch }): Promise<void> => {
     const pocketBaseServers = await fetchPocketBaseServers();
     if (pocketBaseServers.length > 0) {
-      dispatch(createServers(pocketBaseServers));
+      // PocketBase is the canonical source — replace the cache so renames
+      // and removals propagate, instead of merging on top of stale rows.
+      dispatch(replaceServers(pocketBaseServers));
       return;
     }
 
     const staticServers = await fetchStaticServers(httpClient);
-    dispatch(createServers(staticServers));
+    if (staticServers.length > 0) {
+      dispatch(replaceServers(staticServers));
+    } else {
+      // No remote source returned anything — keep whatever was already in
+      // redux so users do not lose their manually-imported list.
+      dispatch(createServers([]));
+    }
   },
 );
 
@@ -63,9 +71,11 @@ export const useLoadRemoteServers = () => {
   const initialServers = useRef(servers);
 
   useEffect(() => {
-    // Try to fetch the remote servers if the list is empty during first render.
-    // We use a ref because we don't care if the servers list becomes empty later.
-    if (Object.keys(initialServers.current).length === 0) {
+    // Always re-sync from the remote source on app mount when PocketBase is
+    // available — otherwise renames in the DB never reach a user whose
+    // localStorage already has the old value. Static servers.json is only a
+    // first-time bootstrap and stays gated on the empty check.
+    if (isPocketBaseLoggedIn() || Object.keys(initialServers.current).length === 0) {
       fetchServers();
     }
   }, [fetchServers]);
