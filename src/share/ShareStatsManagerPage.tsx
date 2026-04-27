@@ -62,7 +62,16 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   const activeServerId = paramServerId ?? fallbackServerId ?? null;
   const activeServer = activeServerId ? servers[activeServerId] : null;
 
-  const [tokens, setTokens] = useState<ShareToken[]>([]);
+  const [tokens, setTokensRaw] = useState<ShareToken[]>([]);
+  // Defensive newest-first sort: PocketBase already returns rows sorted by -id,
+  // but explicit createdAt-desc here protects the UI from any future schema or
+  // cursor changes, and keeps optimistic prepends ordered when timestamps drift.
+  const setTokens = useCallback((updater: ShareToken[] | ((prev: ShareToken[]) => ShareToken[])) => {
+    setTokensRaw((prev) => {
+      const next = typeof updater === 'function' ? (updater as (p: ShareToken[]) => ShareToken[])(prev) : updater;
+      return [...next].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+    });
+  }, []);
   const [shortCode, setShortCode] = useState('');
   const [label, setLabel] = useState('');
   const [expiryDays, setExpiryDays] = useState(7);
@@ -274,9 +283,16 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
         {isAdmin && (
           <section className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                {t('share.manager.list.title')}
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('share.manager.list.title')}
+                </h2>
+                {tokens.length > 0 && (
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+                    {t('share.manager.list.sortNewest')}
+                  </span>
+                )}
+              </div>
               {tokens.length > 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
@@ -337,6 +353,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                             {shareUrl}
                           </p>
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            {t('share.manager.row.createdAt')}: {formatDateTime(token.createdAt)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('share.manager.row.expires')}: {token.expiresAt ? formatDateTime(token.expiresAt) : t('share.manager.row.never')}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">

@@ -54,6 +54,8 @@ export const koMessages = {
   'share.manager.create.issuedUrl': '발급된 링크',
   'share.manager.list.title': '발급된 공유 링크',
   'share.manager.list.empty': '아직 발급된 공유 링크가 없습니다.',
+  'share.manager.list.sortNewest': '최신순',
+  'share.manager.row.createdAt': '등록일',
   'share.manager.row.expires': '만료',
   'share.manager.row.never': '만료 없음',
   'share.manager.row.expired': '만료됨',
