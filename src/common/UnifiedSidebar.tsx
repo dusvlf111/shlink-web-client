@@ -14,9 +14,12 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
+import { useMemo } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
+import type { ServersMap } from '../servers/data';
+import { useServers } from '../servers/reducers/servers';
 
 type SidebarItem = {
   /** Path appended to the optional server prefix. */
@@ -54,6 +57,12 @@ const UTM_ITEMS: readonly SidebarItem[] = [
 
 const buildHref = (item: SidebarItem, prefix: string) =>
   item.scoped ? `${prefix}${item.to}` : item.to;
+
+const pickFallbackServerId = (servers: ServersMap): string | null => {
+  const serverList = Object.values(servers);
+  const autoConnect = serverList.find((server) => server.autoConnect);
+  return autoConnect?.id ?? serverList[0]?.id ?? null;
+};
 
 const isActive = (pathname: string, href: string, matchPrefix?: string) => {
   if (matchPrefix && pathname.includes(matchPrefix)) {
@@ -112,8 +121,11 @@ export const UnifiedSidebar: FC = () => {
   const t = useT();
   const { pathname } = useLocation();
   const { serverId } = useParams<{ serverId: string }>();
-  const serverPrefix = serverId ? `/server/${serverId}` : '';
-  const hasServer = !!serverId;
+  const { servers } = useServers();
+  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
+  const effectiveServerId = serverId ?? fallbackServerId;
+  const serverPrefix = effectiveServerId ? `/server/${effectiveServerId}` : '';
+  const hasServer = !!effectiveServerId;
 
   return (
     <aside

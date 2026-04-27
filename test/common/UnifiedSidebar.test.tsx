@@ -1,16 +1,26 @@
 import { screen } from '@testing-library/react';
+import { fromPartial } from '@total-typescript/shoehorn';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { UnifiedSidebar } from '../../src/common/UnifiedSidebar';
+import type { ServerWithId } from '../../src/servers/data';
+import type { RenderOptionsWithState } from '../__helpers__/setUpTest';
 import { renderWithStore } from '../__helpers__/setUpTest';
 
-const renderAt = (initialPath: string) => renderWithStore(
+const renderAt = (initialPath: string, options: RenderOptionsWithState = {}) => renderWithStore(
   <MemoryRouter initialEntries={[initialPath]}>
     <Routes>
       <Route path="/server/:serverId/*" element={<UnifiedSidebar />} />
       <Route path="*" element={<UnifiedSidebar />} />
     </Routes>
   </MemoryRouter>,
+  options,
 );
+
+const serversState = (servers: ServerWithId[]): RenderOptionsWithState => ({
+  initialState: {
+    servers: Object.fromEntries(servers.map((server) => [server.id, server])),
+  },
+});
 
 describe('<UnifiedSidebar />', () => {
   it('renders all 9 menu items in Korean by default', () => {
@@ -45,7 +55,7 @@ describe('<UnifiedSidebar />', () => {
     expect(activeLink).toHaveAttribute('aria-current', 'page');
   });
 
-  it('disables short-url menus when no server is selected', () => {
+  it('disables short-url menus when no server is registered', () => {
     renderAt('/');
 
     // Disabled items render as <span aria-disabled> instead of <a>
@@ -56,6 +66,33 @@ describe('<UnifiedSidebar />', () => {
 
     // UTM items remain reachable from the no-server scope
     expect(screen.getByRole('link', { name: /UTM 빌더/ })).toHaveAttribute('href', '/utm-builder');
+  });
+
+  it('falls back to the first registered server when the URL has no serverId', () => {
+    renderAt('/', serversState([
+      fromPartial<ServerWithId>({ id: 'first', name: 'First server' }),
+      fromPartial<ServerWithId>({ id: 'second', name: 'Second server' }),
+    ]));
+
+    expect(screen.getByRole('link', { name: /대시보드/ })).toHaveAttribute('href', '/server/first/overview');
+    expect(screen.getByRole('link', { name: /단축 링크 목록/ })).toHaveAttribute('href', '/server/first/list-short-urls/1');
+  });
+
+  it('prefers the autoConnect server over the first registered one', () => {
+    renderAt('/utm-builder', serversState([
+      fromPartial<ServerWithId>({ id: 'first', name: 'First' }),
+      fromPartial<ServerWithId>({ id: 'preferred', name: 'Preferred', autoConnect: true }),
+    ]));
+
+    expect(screen.getByRole('link', { name: /대시보드/ })).toHaveAttribute('href', '/server/preferred/overview');
+  });
+
+  it('keeps the URL serverId over any fallback when both exist', () => {
+    renderAt('/server/from-url/utm-builder', serversState([
+      fromPartial<ServerWithId>({ id: 'fallback', name: 'Fallback', autoConnect: true }),
+    ]));
+
+    expect(screen.getByRole('link', { name: /대시보드/ })).toHaveAttribute('href', '/server/from-url/overview');
   });
 
   it('renders English labels when locale is en', () => {
