@@ -18,6 +18,7 @@ import {
   refreshShareToken,
   type ShareToken,
 } from './services/shareTokenService';
+import { ShortUrlPicker } from './ShortUrlPicker';
 
 const EXPIRY_OPTIONS = [
   { days: 1, labelKey: 'share.manager.create.expiry.day1' },
@@ -63,6 +64,11 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const apiClientForPicker = useMemo(
+    () => (activeServer ? buildShlinkApiClient(activeServer) : null),
+    [activeServer, buildShlinkApiClient],
+  );
 
   const reload = useCallback(async () => {
     try {
@@ -180,13 +186,17 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                 <label htmlFor="share-short-code" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
                   {t('share.manager.create.shortCode.label')}
                 </label>
-                <input
-                  id="share-short-code"
-                  type="text"
-                  value={shortCode}
-                  onChange={(e) => setShortCode(e.target.value)}
-                  placeholder={t('share.manager.create.shortCode.placeholder')}
-                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                <ShortUrlPicker
+                  inputId="share-short-code"
+                  apiClient={apiClientForPicker}
+                  selectedShortCode={shortCode}
+                  onSelect={({ shortCode: code, title }) => {
+                    setShortCode(code);
+                    if (!label.trim() && title) {
+                      setLabel(title);
+                    }
+                  }}
+                  onClear={() => setShortCode('')}
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('share.manager.create.shortCode.help')}</p>
               </div>
