@@ -6,14 +6,19 @@ import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
 
 const RESULT_LIMIT = 8;
-const DEBOUNCE_MS = 250;
+// Shlink's `searchTerm` only checks longUrl + title + tags, so users typing a
+// shortCode like "4ONyC" or a partial URL like "letscareer-team" might get
+// nothing back. Pull a wider page once and filter client-side instead.
+const FETCH_PAGE_SIZE = 200;
+const FETCH_DEBOUNCE_MS = 0;
 
-const matchScore = (url: ShlinkShortUrl, term: string) => {
-  if (!term) {
-    return 1;
-  }
-  const haystack = `${url.shortCode} ${url.title ?? ''} ${url.longUrl}`.toLowerCase();
-  return haystack.includes(term.toLowerCase()) ? 1 : 0;
+const tokenize = (input: string) => input.toLowerCase().split(/\s+/).filter(Boolean);
+
+const matchesAllTokens = (url: ShlinkShortUrl, tokens: string[]) => {
+  if (tokens.length === 0) return true;
+  const tags = (url.tags ?? []).join(' ');
+  const haystack = `${url.shortCode} ${url.title ?? ''} ${url.longUrl ?? ''} ${tags}`.toLowerCase();
+  return tokens.every((token) => haystack.includes(token));
 };
 
 export type ShortUrlPickerProps = {
@@ -33,38 +38,52 @@ export const ShortUrlPicker: FC<ShortUrlPickerProps> = ({
 }) => {
   const t = useT();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ShlinkShortUrl[]>([]);
+  const [allShortUrls, setAllShortUrls] = useState<ShlinkShortUrl[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Fetch a single wide page when the apiClient is ready; we then filter
+  // client-side as the user types so shortCode and partial-URL searches work.
   useEffect(() => {
     if (!apiClient) {
-      setResults([]);
+      setAllShortUrls([]);
       setError(t('share.manager.create.serverMissing'));
       return undefined;
     }
     setLoading(true);
     setError('');
+    let cancelled = false;
     const handle = window.setTimeout(async () => {
       try {
         const list = await apiClient.listShortUrls({
           page: '1',
-          itemsPerPage: RESULT_LIMIT,
-          searchTerm: query.trim() || undefined,
+          itemsPerPage: FETCH_PAGE_SIZE,
         });
-        setResults(list.data.filter((url) => matchScore(url, query) > 0));
+        if (!cancelled) {
+          setAllShortUrls(list.data);
+        }
       } catch (err) {
-        setResults([]);
-        const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
-        setError(`${t('share.manager.create.shortCode.error')}${detail}`);
+        if (!cancelled) {
+          setAllShortUrls([]);
+          const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
+          setError(`${t('share.manager.create.shortCode.error')}${detail}`);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    }, DEBOUNCE_MS);
-    return () => window.clearTimeout(handle);
-  }, [apiClient, query, t]);
+    }, FETCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [apiClient, t]);
+
+  const tokens = tokenize(query);
+  const filtered = allShortUrls.filter((url) => matchesAllTokens(url, tokens)).slice(0, RESULT_LIMIT);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -115,10 +134,10 @@ export const ShortUrlPicker: FC<ShortUrlPickerProps> = ({
           {!loading && error && (
             <p className="px-3 py-2 text-xs text-red-600 dark:text-red-400">{error}</p>
           )}
-          {!loading && !error && results.length === 0 && (
+          {!loading && !error && filtered.length === 0 && (
             <p className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">{t('share.manager.create.shortCode.empty')}</p>
           )}
-          {!loading && !error && results.map((url) => (
+          {!loading && !error && filtered.map((url) => (
             <button
               key={url.shortCode}
               type="button"

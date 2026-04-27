@@ -8,13 +8,14 @@ import { useParams, useSearchParams } from 'react-router';
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  CartesianGrid,
 } from 'recharts';
 import { useT } from '../i18n';
 import {
@@ -93,67 +94,159 @@ const TabButton: FC<{
   </button>
 );
 
-const TONE_COLORS: Record<'blue' | 'green' | 'purple', string> = {
-  blue: '#3b82f6',
-  green: '#10b981',
-  purple: '#a855f7',
+// Apple system colour palette (iOS / macOS) — restrained, high-contrast.
+const APPLE_PALETTE = [
+  '#007aff', // System Blue
+  '#34c759', // System Green
+  '#ff9500', // System Orange
+  '#af52de', // System Purple
+  '#ff2d55', // System Pink
+  '#5ac8fa', // System Teal
+  '#ffcc00', // System Yellow
+  '#a2845e', // System Brown
+];
+
+type DonutDatum = Bucket & { share: number; color: string };
+
+const buildDonutData = (buckets: Bucket[], maxSlices: number): DonutDatum[] => {
+  if (buckets.length === 0) return [];
+  const total = buckets.reduce((acc, b) => acc + b.count, 0);
+  const top = buckets.slice(0, maxSlices);
+  const otherCount = buckets.slice(maxSlices).reduce((acc, b) => acc + b.count, 0);
+  const data = top.map((bucket, index) => ({
+    ...bucket,
+    share: total === 0 ? 0 : Math.round((bucket.count / total) * 100),
+    color: APPLE_PALETTE[index % APPLE_PALETTE.length],
+  }));
+  if (otherCount > 0) {
+    data.push({
+      key: '기타',
+      count: otherCount,
+      share: total === 0 ? 0 : Math.round((otherCount / total) * 100),
+      color: '#c7c7cc',
+    });
+  }
+  return data;
 };
 
-const HorizontalBars: FC<{ buckets: Bucket[]; emptyLabel: string; tone?: 'blue' | 'green' | 'purple'; max?: number }> = ({
+const DonutChart: FC<{ buckets: Bucket[]; emptyLabel: string; maxSlices?: number }> = ({
   buckets,
   emptyLabel,
-  tone = 'blue',
-  max = 10,
+  maxSlices = 6,
 }) => {
   if (buckets.length === 0) {
-    return <p className="text-sm text-gray-500 dark:text-gray-400">{emptyLabel}</p>;
+    return <p className="text-sm text-[#86868b]">{emptyLabel}</p>;
   }
-  const slice = buckets.slice(0, max);
-  const fill = TONE_COLORS[tone];
-  const total = buckets.reduce((acc, bucket) => acc + bucket.count, 0);
+
+  const data = buildDonutData(buckets, maxSlices);
+  const total = data.reduce((acc, d) => acc + d.count, 0);
+  const top = data[0];
 
   return (
-    <div style={{ width: '100%', height: Math.max(slice.length * 36, 120) }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={slice.map((bucket) => ({
-            ...bucket,
-            share: total === 0 ? 0 : Math.round((bucket.count / total) * 100),
-          }))}
-          layout="vertical"
-          margin={{ top: 4, right: 32, bottom: 4, left: 8 }}
-        >
-          <CartesianGrid horizontal={false} stroke="currentColor" strokeOpacity={0.06} />
-          <XAxis type="number" hide />
-          <YAxis
-            type="category"
-            dataKey="key"
-            width={120}
-            tick={{ fontSize: 12, fill: 'currentColor', fillOpacity: 0.75 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <Tooltip
-            cursor={{ fill: 'currentColor', fillOpacity: 0.04 }}
-            contentStyle={{
-              borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.3)',
-              fontSize: 12,
-            }}
-            formatter={(value, _name, payload) => {
-              const numericValue = typeof value === 'number' ? value : Number(value);
-              const point = (payload as { payload?: { key?: string; share?: number } } | undefined)?.payload;
-              return [
-                `${numericValue.toLocaleString()}회 (${point?.share ?? 0}%)`,
-                point?.key ?? '',
-              ];
-            }}
-            labelFormatter={() => ''}
-          />
-          <Bar dataKey="count" radius={[0, 6, 6, 0]} fill={fill} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[180px_1fr]">
+      <div className="relative" style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="count"
+              nameKey="key"
+              innerRadius={56}
+              outerRadius={84}
+              paddingAngle={1.5}
+              startAngle={90}
+              endAngle={-270}
+              stroke="none"
+            >
+              {data.map((entry) => (
+                <Cell key={entry.key} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                borderRadius: 8,
+                border: '1px solid rgba(148,163,184,0.3)',
+                fontSize: 12,
+              }}
+              formatter={(value, _name, payload) => {
+                const numeric = typeof value === 'number' ? value : Number(value);
+                const point = (payload as { payload?: DonutDatum } | undefined)?.payload;
+                return [`${numeric.toLocaleString()}회 · ${point?.share ?? 0}%`, point?.key ?? ''];
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span className="text-[10px] uppercase tracking-widest text-[#86868b]">합계</span>
+          <span className="text-xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span>
+        </div>
+      </div>
+      <ul className="space-y-2">
+        {data.map((entry) => (
+          <li key={entry.key} className="flex items-center justify-between gap-3 text-sm">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="truncate text-[#1d1d1f] dark:text-[#f5f5f7]" title={entry.key}>{entry.key}</span>
+            </span>
+            <span className="flex items-baseline gap-2 whitespace-nowrap text-[#86868b]">
+              <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{entry.count.toLocaleString()}</span>
+              <span className="text-xs">{entry.share}%</span>
+            </span>
+          </li>
+        ))}
+        {top && data.length > 1 && (
+          <li className="border-t border-[#e5e5ea] pt-2 text-xs text-[#86868b] dark:border-[#2c2c2e]">
+            가장 큰 비중: <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{top.key}</span> ({top.share}%)
+          </li>
+        )}
+      </ul>
     </div>
+  );
+};
+
+const CityRanking: FC<{ buckets: Bucket[]; emptyLabel: string; max?: number }> = ({
+  buckets,
+  emptyLabel,
+  max = 8,
+}) => {
+  if (buckets.length === 0) {
+    return <p className="text-sm text-[#86868b]">{emptyLabel}</p>;
+  }
+  const slice = buckets.slice(0, max);
+  const top = slice[0];
+  const maxCount = top?.count ?? 1;
+
+  return (
+    <ol className="space-y-3">
+      {slice.map((bucket, index) => {
+        const percent = maxCount === 0 ? 0 : (bucket.count / maxCount) * 100;
+        const rankBadge = ['1', '2', '3'][index] ?? `${index + 1}`;
+        return (
+          <li key={bucket.key} className="flex items-center gap-3">
+            <span
+              className={clsx(
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums',
+                index === 0 && 'bg-[#007aff] text-white',
+                index === 1 && 'bg-[#5ac8fa] text-white',
+                index === 2 && 'bg-[#34c759] text-white',
+                index > 2 && 'bg-[#f2f2f7] text-[#1d1d1f] dark:bg-[#2c2c2e] dark:text-[#f5f5f7]',
+              )}
+            >
+              {rankBadge}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate text-[#1d1d1f] dark:text-[#f5f5f7]" title={bucket.key}>{bucket.key}</span>
+                <span className="font-medium tabular-nums text-[#1d1d1f] dark:text-[#f5f5f7]">{bucket.count.toLocaleString()}</span>
+              </div>
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-[#f2f2f7] dark:bg-[#2c2c2e]">
+                <div className="h-full rounded-full bg-[#007aff]" style={{ width: `${percent}%` }} />
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 };
 
@@ -182,8 +275,8 @@ const TimelineChart: FC<{ visits: ShareSnapshot['data']['data']; emptyLabel: str
           <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="visits-area-fill" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                <stop offset="0%" stopColor="#007aff" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#007aff" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.08} />
@@ -215,10 +308,10 @@ const TimelineChart: FC<{ visits: ShareSnapshot['data']['data']; emptyLabel: str
             <Area
               type="monotone"
               dataKey="count"
-              stroke="#3b82f6"
+              stroke="#007aff"
               strokeWidth={2.5}
               fill="url(#visits-area-fill)"
-              dot={{ r: 3, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }}
+              dot={{ r: 3, stroke: '#007aff', strokeWidth: 2, fill: '#fff' }}
               activeDot={{ r: 5 }}
             />
           </AreaChart>
@@ -374,36 +467,36 @@ export const PublicShareStatsPage: FC = () => {
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.referer')}
                   </h2>
-                  <HorizontalBars buckets={refererBuckets} emptyLabel={t('share.public.empty')} tone="purple" />
+                  <DonutChart buckets={refererBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
                 <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.os')}
                   </h2>
-                  <HorizontalBars buckets={osBuckets} emptyLabel={t('share.public.empty')} tone="green" />
+                  <DonutChart buckets={osBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
                 <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.browser')}
                   </h2>
-                  <HorizontalBars buckets={browserBuckets} emptyLabel={t('share.public.empty')} />
+                  <DonutChart buckets={browserBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
               </div>
             )}
 
             {activeSection === 'byLocation' && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-3">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.country')}
                   </h2>
-                  <HorizontalBars buckets={countryBuckets} emptyLabel={t('share.public.empty')} tone="green" />
+                  <DonutChart buckets={countryBuckets} emptyLabel={t('share.public.empty')} maxSlices={6} />
                 </section>
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-2">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.city')}
                   </h2>
-                  <HorizontalBars buckets={cityBuckets} emptyLabel={t('share.public.empty')} tone="purple" />
+                  <CityRanking buckets={cityBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
               </div>
             )}
