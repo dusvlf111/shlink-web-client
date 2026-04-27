@@ -58,9 +58,9 @@ const Metric: FC<{ label: string; value: string | number; icon: IconDefinition; 
   label,
   value,
 }) => (
-  <div className="rounded-2xl bg-white px-6 py-5 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
-    <p className="text-xs font-medium text-[#86868b]">{label}</p>
-    <p className="mt-2 text-3xl font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">{value}</p>
+  <div className="rounded-2xl bg-white px-3 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 dark:bg-[#1c1c1e] dark:shadow-none">
+    <p className="text-[10px] font-medium text-[#86868b] sm:text-xs">{label}</p>
+    <p className="mt-1 text-xl font-semibold tracking-tight text-[#1d1d1f] sm:mt-2 sm:text-3xl dark:text-[#f5f5f7]">{value}</p>
   </div>
 );
 
@@ -84,13 +84,13 @@ const TabButton: FC<{
     type="button"
     onClick={onClick}
     className={clsx(
-      'flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-full transition-all',
+      'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:text-sm',
       active
         ? 'bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-[#2c2c2e] dark:text-[#f5f5f7]'
         : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]',
     )}
   >
-    <FontAwesomeIcon icon={icon} className="text-xs" /> {label}
+    <FontAwesomeIcon icon={icon} className="text-xs" /> <span className="whitespace-nowrap">{label}</span>
   </button>
 );
 
@@ -143,16 +143,18 @@ const DonutChart: FC<{ buckets: Bucket[]; emptyLabel: string; maxSlices?: number
   const top = data[0];
 
   return (
-    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[180px_1fr]">
-      <div className="relative" style={{ height: 180 }}>
+    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[200px_1fr]">
+      <div className="relative mx-auto" style={{ width: 200, height: 200 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey="count"
               nameKey="key"
-              innerRadius={56}
-              outerRadius={84}
+              cx="50%"
+              cy="50%"
+              innerRadius="62%"
+              outerRadius="92%"
               paddingAngle={1.5}
               startAngle={90}
               endAngle={-270}
@@ -176,9 +178,12 @@ const DonutChart: FC<{ buckets: Bucket[]; emptyLabel: string; maxSlices?: number
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] uppercase tracking-widest text-[#86868b]">합계</span>
-          <span className="text-xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span>
+        {/* Centre label sits inside the donut hole. The hole has radius 62% of 200px ≈ 124px diameter, so we cap the inner content to fit. */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="flex max-w-[100px] flex-col items-center justify-center text-center leading-tight">
+            <span className="text-[10px] uppercase tracking-widest text-[#86868b]">합계</span>
+            <span className="text-lg font-semibold tabular-nums text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span>
+          </div>
         </div>
       </div>
       <ul className="space-y-2">
@@ -380,21 +385,21 @@ export const PublicShareStatsPage: FC = () => {
       className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] dark:bg-[#000] dark:text-[#f5f5f7]"
       style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif' }}
     >
-      <header className="px-6 pt-12 pb-6">
+      <header className="px-4 pt-8 pb-4 md:px-6 md:pt-12 md:pb-6">
         <div className="mx-auto max-w-5xl">
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">
             {share?.label || t('share.public.title')}
           </h1>
           {share && (
-            <p className="mt-3 text-sm text-[#86868b]">
-              {formatDateTime(share.snapshotAt)} 기준
-              {share.expiresAt && <span className="ml-2">· {formatDateTime(share.expiresAt)} 까지</span>}
+            <p className="mt-2 flex flex-col gap-x-2 gap-y-1 text-xs text-[#86868b] md:mt-3 md:flex-row md:flex-wrap md:text-sm">
+              <span>{formatDateTime(share.snapshotAt)} 기준</span>
+              {share.expiresAt && <span className="md:before:mr-2 md:before:content-['·']">{formatDateTime(share.expiresAt)} 까지</span>}
             </p>
           )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-4 pb-8 md:px-6">
         {status === 'loading' && (
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">…</p>
         )}
@@ -419,13 +424,13 @@ export const PublicShareStatsPage: FC = () => {
 
         {status === 'ready' && share && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <Metric label={t('share.public.metric.total')} value={metrics.total.toLocaleString()} icon={faEye} tone="blue" />
               <Metric label={t('share.public.metric.nonBots')} value={metrics.nonBots.toLocaleString()} icon={faRobot} tone="green" />
               <Metric label={t('share.public.metric.uniqueDays')} value={metrics.uniqueDays.toLocaleString()} icon={faGlobe} tone="purple" />
             </div>
 
-            <nav className="inline-flex items-center gap-1 rounded-full bg-[#f2f2f7] p-1 dark:bg-[#1c1c1e]">
+            <nav className="-mx-4 flex items-center gap-1 overflow-x-auto rounded-full bg-[#f2f2f7] p-1 px-4 dark:bg-[#1c1c1e] md:mx-0 md:inline-flex md:overflow-visible md:px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <TabButton
                 active={activeSection === 'byTime'}
                 icon={faChartLine}
@@ -453,7 +458,7 @@ export const PublicShareStatsPage: FC = () => {
             </nav>
 
             {activeSection === 'byTime' && (
-              <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+              <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                 <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                   {t('share.public.section.byTime')}
                 </h2>
@@ -463,19 +468,19 @@ export const PublicShareStatsPage: FC = () => {
 
             {activeSection === 'byContext' && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.referer')}
                   </h2>
                   <DonutChart buckets={refererBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.os')}
                   </h2>
                   <DonutChart buckets={osBuckets} emptyLabel={t('share.public.empty')} />
                 </section>
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+                <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byContext.browser')}
                   </h2>
@@ -486,13 +491,13 @@ export const PublicShareStatsPage: FC = () => {
 
             {activeSection === 'byLocation' && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-3">
+                <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-3">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.country')}
                   </h2>
                   <DonutChart buckets={countryBuckets} emptyLabel={t('share.public.empty')} maxSlices={6} />
                 </section>
-                <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-2">
+                <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none md:col-span-2">
                   <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                     {t('share.public.byLocation.city')}
                   </h2>
@@ -502,7 +507,7 @@ export const PublicShareStatsPage: FC = () => {
             )}
 
             {activeSection === 'list' && (
-              <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
+              <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.04)] dark:bg-[#1c1c1e] dark:shadow-none">
                 <h2 className="mb-4 text-base font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                   {t('share.public.recent')}
                 </h2>
