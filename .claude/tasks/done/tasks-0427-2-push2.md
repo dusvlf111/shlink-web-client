@@ -2,7 +2,7 @@
 
 > PRD: .claude/0427-2.md
 > Push 범위: UTM 템플릿/벌크 생성 UX 개선 (source+medium 필수, 나머지 선택)
-> 상태: 🔲 진행 중
+> 상태: ✅ 완료
 
 ---
 
@@ -82,39 +82,39 @@ PRD에 명시된 참조 이미지 없음.
 
 ## 작업
 
-- [ ] 2.0 UTM 템플릿/벌크 생성 필수값 정책 개선
-  - [ ] 2.1 템플릿 데이터 구조와 검증 규칙 정리 (커밋 단위)
+- [x] 2.0 UTM 템플릿/벌크 생성 필수값 정책 개선
+  - [x] 2.1 템플릿 데이터 구조와 검증 규칙 정리 (커밋 단위)
     **작업 상세:**
     - source, medium은 필수
     - campaign, term, content는 선택값으로 모델/검증 반영
     - 기존 데이터와 호환되는 마이그레이션 분기(빈 문자열 허용) 추가
     **참조:** 문서 src/utm/useUtmData.ts
-    - [ ] 2.1.T1 타입/검증 유닛 테스트 작성
-    - [ ] 2.1.T2 테스트 실행 및 검증
+    - [x] 2.1.T1 타입/검증 유닛 테스트 작성
+    - [x] 2.1.T2 테스트 실행 및 검증
 
-  - [ ] 2.2 UTM 템플릿 관리 폼 UX 개선 (커밋 단위)
+  - [x] 2.2 UTM 템플릿 관리 폼 UX 개선 (커밋 단위)
     **작업 상세:**
     - source와 medium 입력을 같은 줄 배치하고 required 표시
     - campaign/term/content는 optional 섹션으로 분리
     - 저장 시 필수값 누락 안내 문구 정비
     **참조:** 문서 src/utm/UtmTemplateManager.tsx, src/utm/UtmFieldInput.tsx
-    - [ ] 2.2.T1 템플릿 관리 화면 테스트 코드 작성
-    - [ ] 2.2.T2 테스트 실행 및 검증
+    - [x] 2.2.T1 템플릿 관리 화면 테스트 코드 작성
+    - [x] 2.2.T2 테스트 실행 및 검증
 
-  - [ ] 2.3 벌크 생성 템플릿 선택 UX 개선 (커밋 단위)
+  - [x] 2.3 벌크 생성 템플릿 선택 UX 개선 (커밋 단위)
     **작업 상세:**
     - 템플릿 선택에서도 source/medium만 필수 반영
     - campaign 값이 없는 템플릿은 campaign 표시 영역 숨김
     - 태그에 description이 있으면 선택/미리보기 영역에 함께 표시
     **참조:** 문서 src/utm/UtmBulkBuilderPage.tsx, src/utm/useUtmData.ts
-    - [ ] 2.3.T1 벌크 생성 선택/표시 분기 테스트 코드 작성
-    - [ ] 2.3.T2 테스트 실행 및 검증
+    - [x] 2.3.T1 벌크 생성 선택/표시 분기 테스트 코드 작성
+    - [x] 2.3.T2 테스트 실행 및 검증
 
-  - [ ] 2.4 문구/도움말 정리 및 회귀 테스트 (커밋 단위)
+  - [x] 2.4 문구/도움말 정리 및 회귀 테스트 (커밋 단위)
     **작업 상세:**
     - 변경된 폼 정책에 맞춰 ko/en locale 문구 업데이트
     - 필수/선택 정책 불일치 문구 제거
     - UTM 전체 테스트 스위트 실행
     **참조:** 문서 src/i18n/locales/ko.ts, src/i18n/locales/en.ts
-    - [ ] 2.4.T1 locale 키/텍스트 회귀 테스트 작성 또는 수정
-    - [ ] 2.4.T2 npx tsc --noEmit + npm run build + npm test test/utm 실행 및 검증
+    - [x] 2.4.T1 locale 키/텍스트 회귀 테스트 작성 또는 수정
+    - [x] 2.4.T2 npx tsc --noEmit + npm run build + npm test test/utm 실행 및 검증
