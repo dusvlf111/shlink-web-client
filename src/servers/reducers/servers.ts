@@ -62,10 +62,19 @@ export const { actions, reducer: serversReducer } = createSlice({
       prepare: (servers: ServerWithId[]) => ({ payload: serversListToMap(servers) }),
       reducer: (state, { payload: newServers }: PayloadAction<ServersMap>) => ({ ...state, ...newServers }),
     },
+    /**
+     * Replace the entire servers map with the supplied list. Use this when
+     * the remote source (PocketBase) is the source of truth, so renamed or
+     * removed servers do not linger from an earlier session's local cache.
+     */
+    replaceServers: {
+      prepare: (servers: ServerWithId[]) => ({ payload: serversListToMap(servers) }),
+      reducer: (_state, { payload: newServers }: PayloadAction<ServersMap>) => newServers,
+    },
   },
 });
 
-export const { editServer, deleteServer, setAutoConnect, createServers } = actions;
+export const { editServer, deleteServer, setAutoConnect, createServers, replaceServers } = actions;
 
 export const useServers = () => {
   const dispatch = useAppDispatch();
