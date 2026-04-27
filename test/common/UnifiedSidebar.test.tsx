@@ -38,6 +38,9 @@ describe('<UnifiedSidebar />', () => {
     expect(screen.getByRole('link', { name: /UTM 벌크 생성/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /UTM 템플릿 관리/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /UTM 태그 관리/ })).toBeInTheDocument();
+
+    // Share section
+    expect(screen.getByRole('link', { name: /통계 공유/ })).toBeInTheDocument();
   });
 
   it('prefixes scoped routes with the active serverId', () => {

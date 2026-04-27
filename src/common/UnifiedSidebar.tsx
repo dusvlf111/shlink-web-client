@@ -6,6 +6,7 @@ import {
   faLayerGroup,
   faLink,
   faList,
+  faShareNodes,
   faTag,
   faTags,
   faWandMagicSparkles,
@@ -53,6 +54,10 @@ const UTM_ITEMS: readonly SidebarItem[] = [
   { to: '/utm-bulk-builder', labelKey: 'sidebar.utm.bulk', icon: faLayerGroup, scoped: true },
   { to: '/utm-template-manager', labelKey: 'sidebar.utm.templates', icon: faClipboardList, scoped: true },
   { to: '/utm-tag-manager', labelKey: 'sidebar.utm.tags', icon: faTag, scoped: true },
+];
+
+const SHARE_ITEMS: readonly SidebarItem[] = [
+  { to: '/share-stats', labelKey: 'sidebar.share.stats', icon: faShareNodes },
 ];
 
 const buildHref = (item: SidebarItem, prefix: string) =>
@@ -196,6 +201,23 @@ export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({ isOpen = false, onClos
             {t('sidebar.section.utm')}
           </SectionLabel>
           {UTM_ITEMS.map((item) => {
+            const href = buildHref(item, serverPrefix);
+            return (
+              <NavRow
+                key={item.to}
+                item={item}
+                serverPrefix={serverPrefix}
+                hasServer={hasServer}
+                active={isActive(pathname, href, item.matchPrefix)}
+                label={t(item.labelKey)}
+              />
+            );
+          })}
+
+          <SidebarDivider />
+
+          <SectionLabel>{t('sidebar.section.share')}</SectionLabel>
+          {SHARE_ITEMS.map((item) => {
             const href = buildHref(item, serverPrefix);
             return (
               <NavRow

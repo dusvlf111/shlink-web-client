@@ -18,6 +18,7 @@ import { ManageServers } from '../servers/ManageServers';
 import { useLoadRemoteServers } from '../servers/reducers/remoteServers';
 import { useSettings } from '../settings/reducers/settings';
 import { Settings } from '../settings/Settings';
+import { ShareStatsManagerPage } from '../share/ShareStatsManagerPage';
 import { forceUpdate } from '../utils/helpers/sw';
 import { UtmBuilderPage } from '../utm/UtmBuilderPage';
 import { UtmBulkBuilderPage } from '../utm/UtmBulkBuilderPage';
@@ -63,6 +64,8 @@ export const App: FC = () => {
             </Route>
             <Route path="/manage-servers" element={<ManageServers />} />
             <Route path="/admin/users" element={<UserManagementPage />} />
+            <Route path="/share-stats" element={<AdminOnlyRoute><ShareStatsManagerPage /></AdminOnlyRoute>} />
+            <Route path="/server/:serverId/share-stats" element={<AdminOnlyRoute><ShareStatsManagerPage /></AdminOnlyRoute>} />
             <Route path="/utm-builder" element={<UtmBuilderPage />} />
             <Route path="/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
             <Route path="/utm-template-manager" element={<UtmTemplateManager />} />
