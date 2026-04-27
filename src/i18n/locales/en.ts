@@ -6,6 +6,8 @@ export const enMessages: Messages = {
   'header.userManagement.pendingBadge': '{count} pending',
   'header.logout': 'Log out',
   'header.languageToggle': 'Language',
+  'header.openSidebar': 'Open menu',
+  'header.closeSidebar': 'Close menu',
 
   'sidebar.section.shortUrls': 'Short URLs',
   'sidebar.shortUrls.overview': 'Overview',

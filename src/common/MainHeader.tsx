@@ -1,4 +1,4 @@
-import { faCogs as cogsIcon, faLanguage, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faCogs as cogsIcon, faLanguage, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
@@ -12,7 +12,11 @@ import { ShlinkLogo } from './img/ShlinkLogo';
 
 const NEXT_LOCALE: Record<Locale, Locale> = { ko: 'en', en: 'ko' };
 
-export const MainHeader: FC = () => {
+export type MainHeaderProps = {
+  onMenuClick?: () => void;
+};
+
+export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const t = useT();
@@ -26,9 +30,22 @@ export const MainHeader: FC = () => {
     <NavBar
       className="[&]:fixed top-0 z-900"
       brand={(
-        <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
-          <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
-        </Link>
+        <div className="flex items-center gap-2">
+          {onMenuClick && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              aria-label={t('header.openSidebar')}
+              data-testid="mobile-menu-toggle"
+              className="md:hidden flex items-center justify-center w-9 h-9 -ml-2 text-white/90 hover:text-white"
+            >
+              <FontAwesomeIcon icon={faBars} />
+            </button>
+          )}
+          <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
+            <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
+          </Link>
+        </div>
       )}
     >
       <NavBar.MenuItem

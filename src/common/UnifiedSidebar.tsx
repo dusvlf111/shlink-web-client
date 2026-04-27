@@ -14,7 +14,7 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
@@ -117,7 +117,14 @@ const SidebarDivider: FC = () => (
   <div className="my-2 border-t border-lm-border dark:border-dm-border" aria-hidden="true" />
 );
 
-export const UnifiedSidebar: FC = () => {
+export type UnifiedSidebarProps = {
+  /** Whether the sidebar is currently shown on mobile. Desktop ignores this and is always visible. */
+  isOpen?: boolean;
+  /** Called when the user dismisses the mobile sidebar (backdrop click, link click, etc.). */
+  onClose?: () => void;
+};
+
+export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({ isOpen = false, onClose }) => {
   const t = useT();
   const { pathname } = useLocation();
   const { serverId } = useParams<{ serverId: string }>();
@@ -127,57 +134,82 @@ export const UnifiedSidebar: FC = () => {
   const serverPrefix = effectiveServerId ? `/server/${effectiveServerId}` : '';
   const hasServer = !!effectiveServerId;
 
+  // Auto-close the mobile sidebar whenever the route changes.
+  const lastPathnameRef = useRef(pathname);
+  useEffect(() => {
+    if (lastPathnameRef.current !== pathname) {
+      lastPathnameRef.current = pathname;
+      if (isOpen) {
+        onClose?.();
+      }
+    }
+  }, [pathname, isOpen, onClose]);
+
   return (
-    <aside
-      data-testid="unified-sidebar"
-      className={clsx(
-        'w-(--aside-menu-width) bg-lm-primary dark:bg-dm-primary',
-        'pt-[15px] md:pt-[30px] pb-[10px]',
-        'fixed bottom-0 top-(--header-height) z-890',
-        'shadow-aside-menu-mobile md:shadow-aside-menu',
-        'overflow-y-auto',
-        'max-md:hidden',
+    <>
+      {isOpen && (
+        <button
+          type="button"
+          data-testid="unified-sidebar-backdrop"
+          aria-label={t('header.closeSidebar')}
+          onClick={onClose}
+          className="fixed inset-0 top-(--header-height) z-880 bg-black/40 md:hidden"
+        />
       )}
-    >
-      <nav
-        aria-label={`${t('sidebar.section.shortUrls')} / ${t('sidebar.section.utm')}`}
-        className="flex flex-col h-full"
+      <aside
+        data-testid="unified-sidebar"
+        data-mobile-open={isOpen ? 'true' : 'false'}
+        className={clsx(
+          'w-(--aside-menu-width) bg-lm-primary dark:bg-dm-primary',
+          'pt-[15px] md:pt-[30px] pb-[10px]',
+          'fixed bottom-0 top-(--header-height) left-0 z-890',
+          'shadow-aside-menu-mobile md:shadow-aside-menu',
+          'overflow-y-auto',
+          'transition-transform duration-300',
+          isOpen ? 'translate-x-0' : 'max-md:-translate-x-full',
+          'md:translate-x-0',
+        )}
       >
-        <SectionLabel>{t('sidebar.section.shortUrls')}</SectionLabel>
-        {SHORT_URL_ITEMS.map((item) => {
-          const href = buildHref(item, serverPrefix);
-          return (
-            <NavRow
-              key={item.to}
-              item={item}
-              serverPrefix={serverPrefix}
-              hasServer={hasServer}
-              active={isActive(pathname, href, item.matchPrefix)}
-              label={t(item.labelKey)}
-            />
-          );
-        })}
+        <nav
+          aria-label={`${t('sidebar.section.shortUrls')} / ${t('sidebar.section.utm')}`}
+          className="flex flex-col h-full"
+        >
+          <SectionLabel>{t('sidebar.section.shortUrls')}</SectionLabel>
+          {SHORT_URL_ITEMS.map((item) => {
+            const href = buildHref(item, serverPrefix);
+            return (
+              <NavRow
+                key={item.to}
+                item={item}
+                serverPrefix={serverPrefix}
+                hasServer={hasServer}
+                active={isActive(pathname, href, item.matchPrefix)}
+                label={t(item.labelKey)}
+              />
+            );
+          })}
 
-        <SidebarDivider />
+          <SidebarDivider />
 
-        <SectionLabel>
-          <FontAwesomeIcon icon={faChartLine} className="mr-1.5 text-[10px]" />
-          {t('sidebar.section.utm')}
-        </SectionLabel>
-        {UTM_ITEMS.map((item) => {
-          const href = buildHref(item, serverPrefix);
-          return (
-            <NavRow
-              key={item.to}
-              item={item}
-              serverPrefix={serverPrefix}
-              hasServer={hasServer}
-              active={isActive(pathname, href, item.matchPrefix)}
-              label={t(item.labelKey)}
-            />
-          );
-        })}
-      </nav>
-    </aside>
+          <SectionLabel>
+            <FontAwesomeIcon icon={faChartLine} className="mr-1.5 text-[10px]" />
+            {t('sidebar.section.utm')}
+          </SectionLabel>
+          {UTM_ITEMS.map((item) => {
+            const href = buildHref(item, serverPrefix);
+            return (
+              <NavRow
+                key={item.to}
+                item={item}
+                serverPrefix={serverPrefix}
+                hasServer={hasServer}
+                active={isActive(pathname, href, item.matchPrefix)}
+                label={t(item.labelKey)}
+              />
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 };

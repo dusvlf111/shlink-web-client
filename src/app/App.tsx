@@ -1,7 +1,7 @@
 import { changeThemeInMarkup, getSystemPreferredTheme } from '@shlinkio/shlink-frontend-kit';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { UserManagementPage } from '../admin/UserManagementPage';
 import { AppUpdateBanner } from '../common/AppUpdateBanner';
@@ -31,6 +31,9 @@ export const App: FC = () => {
 
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const openMobileSidebar = useCallback(() => setIsMobileSidebarOpen(true), []);
+  const closeMobileSidebar = useCallback(() => setIsMobileSidebarOpen(false), []);
 
   const { settings } = useSettings();
   useEffect(() => {
@@ -39,8 +42,8 @@ export const App: FC = () => {
 
   return (
     <div className="h-full">
-      <MainHeader />
-      <UnifiedSidebar />
+      <MainHeader onMenuClick={openMobileSidebar} />
+      <UnifiedSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
 
       <div className="h-full pt-(--header-height)">
         <div

@@ -108,4 +108,23 @@ describe('<UnifiedSidebar />', () => {
     expect(screen.getByRole('link', { name: /UTM builder/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Short URL list/ })).toBeInTheDocument();
   });
+
+  it('renders no backdrop when isOpen is false', () => {
+    renderAt('/');
+    expect(screen.queryByTestId('unified-sidebar-backdrop')).toBeNull();
+    expect(screen.getByTestId('unified-sidebar')).toHaveAttribute('data-mobile-open', 'false');
+  });
+
+  it('renders the backdrop and marks the sidebar open when isOpen is true', () => {
+    renderWithStore(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="*" element={<UnifiedSidebar isOpen onClose={() => {}} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('unified-sidebar-backdrop')).toBeInTheDocument();
+    expect(screen.getByTestId('unified-sidebar')).toHaveAttribute('data-mobile-open', 'true');
+  });
 });

@@ -5,6 +5,8 @@ export const koMessages = {
   'header.userManagement.pendingBadge': '승인 대기 {count}명',
   'header.logout': '로그아웃',
   'header.languageToggle': '언어',
+  'header.openSidebar': '메뉴 열기',
+  'header.closeSidebar': '메뉴 닫기',
 
   // 좌측 사이드바 — 단축링크 영역
   'sidebar.section.shortUrls': '단축 링크',
