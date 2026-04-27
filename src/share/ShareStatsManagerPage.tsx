@@ -267,9 +267,21 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
 
         {isAdmin && (
           <section className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
-            <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t('share.manager.list.title')}
-            </h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                {t('share.manager.list.title')}
+              </h2>
+              {tokens.length > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+                    {t('share.manager.summary.active', { count: tokens.filter((token) => !isShareTokenExpired(token)).length })}
+                  </span>
+                  <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    {t('share.manager.summary.expired', { count: tokens.filter((token) => isShareTokenExpired(token)).length })}
+                  </span>
+                </p>
+              )}
+            </div>
             {tokens.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">{t('share.manager.list.empty')}</p>
             ) : (
@@ -277,13 +289,30 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                 {tokens.map((token) => {
                   const expired = isShareTokenExpired(token);
                   const shareUrl = buildShareUrl(window.location.origin, token.id, token.token);
+                  const visitCount = token.snapshot?.data?.data?.length ?? 0;
                   return (
                     <li
                       key={token.id}
-                      className="rounded border border-lm-border p-3 dark:border-dm-border"
+                      className={`relative rounded border-l-4 border border-lm-border p-3 dark:border-dm-border ${
+                        expired
+                          ? 'border-l-gray-400 bg-gray-50 dark:bg-gray-900/40'
+                          : 'border-l-emerald-500 bg-white dark:bg-dm-primary'
+                      }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              expired
+                                ? 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+                            }`}>
+                              {expired ? t('share.manager.row.expired') : t('share.manager.row.statusActive')}
+                            </span>
+                            <span className="rounded bg-lm-primary/40 px-2 py-0.5 text-[11px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)">
+                              {t('share.manager.row.visitCount', { count: visitCount })}
+                            </span>
+                          </div>
                           <p className="truncate text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
                             {token.label || token.shortCode}
                           </p>
@@ -295,11 +324,6 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                           </p>
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                             {t('share.manager.row.expires')}: {token.expiresAt ? formatDateTime(token.expiresAt) : t('share.manager.row.never')}
-                            {expired ? (
-                              <span className="ml-2 rounded bg-red-100 px-2 py-0.5 text-[11px] text-red-700 dark:bg-red-900 dark:text-red-200">
-                                {t('share.manager.row.expired')}
-                              </span>
-                            ) : null}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('share.manager.row.snapshotAt')}: {formatDateTime(token.snapshotAt)}
