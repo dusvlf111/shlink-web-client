@@ -258,17 +258,60 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     setCreatingShortUrls(true);
     setActionMessage(t('utm.bulk.message.creating'));
 
-    const PER_REQUEST_TIMEOUT_MS = 15_000;
+    const PER_REQUEST_TIMEOUT_MS = 8_000;
+    const INTER_REQUEST_DELAY_MS = 750;
+
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     const withTimeout = <Result,>(promise: Promise<Result>): Promise<Result> => Promise.race<Result>([
       promise,
       new Promise<Result>((_, reject) => {
         setTimeout(
-          () => reject(new Error(`Shlink API 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (timeout)`)),
+          () => reject(new Error(`Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`)),
           PER_REQUEST_TIMEOUT_MS,
         );
       }),
     ]);
+
+    const extractShlinkErrorMessage = (raw: unknown): string => {
+      if (!raw) return '';
+      if (raw instanceof Error) return raw.message;
+      if (typeof raw === 'object') {
+        const obj = raw as Record<string, unknown> & {
+          detail?: string;
+          title?: string;
+          type?: string;
+          status?: number;
+          invalidElements?: string[];
+        };
+        const parts: string[] = [];
+        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === 'string' && obj.detail) parts.push(obj.detail);
+        if (Array.isArray(obj.invalidElements) && obj.invalidElements.length > 0) {
+          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
+        }
+        if (parts.length === 0) return JSON.stringify(raw);
+        return parts.join(' · ');
+      }
+      return String(raw);
+    };
+
+    const isSlugConflictError = (raw: unknown): boolean => {
+      if (!raw) return false;
+      if (raw instanceof Error) {
+        const m = raw.message;
+        return m.includes('slug') || m.includes('conflict') || m.includes('409');
+      }
+      if (typeof raw === 'object') {
+        const obj = raw as { status?: number; type?: string; detail?: string; invalidElements?: string[] };
+        if (obj.status === 409) return true;
+        if (typeof obj.type === 'string' && obj.type.toLowerCase().includes('slug')) return true;
+        if (typeof obj.detail === 'string' && obj.detail.toLowerCase().includes('slug')) return true;
+        if (Array.isArray(obj.invalidElements) && obj.invalidElements.includes('customSlug')) return true;
+      }
+      return false;
+    };
 
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
@@ -281,6 +324,12 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       for (let index = 0; index < generatedRows.length; index += 1) {
         const row = generatedRows[index];
         setActionMessage(`${t('utm.bulk.message.creating')} (${index + 1}/${generatedRows.length})`);
+
+        // Throttle between requests so Shlink does not rate-limit us.
+        if (index > 0) {
+          await sleep(INTER_REQUEST_DELAY_MS);
+        }
+
         try {
           const normalizedName = sanitizeSlugPart(row.name);
           const customSlug = basePrefix
@@ -304,10 +353,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
               customSlug,
             }));
           } catch (slugError) {
-            const isSlugConflict = slugError instanceof Error
-              && (slugError.message.includes('slug') || slugError.message.includes('conflict') || slugError.message.includes('409'));
-
-            if (customSlug && isSlugConflict) {
+            if (customSlug && isSlugConflictError(slugError)) {
               shortUrl = await withTimeout(apiClient.createShortUrl(createPayload));
             } else {
               throw slugError;
@@ -321,7 +367,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
             createError: undefined,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : t('utm.bulk.row.errorPrefix');
+          const message = extractShlinkErrorMessage(error) || t('utm.bulk.row.errorPrefix');
           rowsWithShortUrl.push({
             ...row,
             createError: `${t('utm.bulk.row.errorPrefix')}: ${message}`,

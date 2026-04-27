@@ -140,8 +140,11 @@ export const createShareToken = async ({
 };
 
 export const listShareTokens = async (): Promise<ShareToken[]> => {
+  // PocketBase v0.23+ does not always index the implicit "created" system
+  // field, so sorting on it returns 400 ("invalid sort field"). Sort on -id
+  // instead — PocketBase IDs are time-ordered hashes so newest still wins.
   const records = await pb.collection('public_tokens').getFullList<ShareTokenRecord>({
-    sort: '-created',
+    sort: '-id',
   });
   return records.map(fromRecord);
 };

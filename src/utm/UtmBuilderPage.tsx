@@ -186,7 +186,25 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     setCreatingShortUrl(true);
     setShortCreateMsg('단축링크 생성 중...');
 
-    const TIMEOUT_MS = 15_000;
+    const TIMEOUT_MS = 8_000;
+
+    const extractShlinkErrorMessage = (raw: unknown): string => {
+      if (!raw) return '';
+      if (raw instanceof Error) return raw.message;
+      if (typeof raw === 'object') {
+        const obj = raw as { status?: number; title?: string; detail?: string; invalidElements?: string[] };
+        const parts: string[] = [];
+        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === 'string' && obj.detail) parts.push(obj.detail);
+        if (Array.isArray(obj.invalidElements) && obj.invalidElements.length > 0) {
+          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
+        }
+        return parts.length > 0 ? parts.join(' · ') : JSON.stringify(raw);
+      }
+      return String(raw);
+    };
+
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
       const customSlug = shortOptions.customSlug.trim() || undefined;
@@ -199,14 +217,14 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
           findIfExists: true,
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Shlink API 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (timeout)`)), TIMEOUT_MS)
+          setTimeout(() => reject(new Error(`Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`)), TIMEOUT_MS)
         ),
       ]);
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
-      setShortCreateMsg(`단축링크 생성에 실패했습니다.${detail}`);
+      const detail = extractShlinkErrorMessage(error);
+      setShortCreateMsg(`단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ''}`);
     } finally {
       setCreatingShortUrl(false);
     }

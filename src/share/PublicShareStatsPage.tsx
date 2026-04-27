@@ -5,6 +5,17 @@ import { clsx } from 'clsx';
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { useT } from '../i18n';
 import {
   fetchPublicShareToken,
@@ -100,6 +111,12 @@ const TabButton: FC<{
   </button>
 );
 
+const TONE_COLORS: Record<'blue' | 'green' | 'purple', string> = {
+  blue: '#3b82f6',
+  green: '#10b981',
+  purple: '#a855f7',
+};
+
 const HorizontalBars: FC<{ buckets: Bucket[]; emptyLabel: string; tone?: 'blue' | 'green' | 'purple'; max?: number }> = ({
   buckets,
   emptyLabel,
@@ -109,45 +126,52 @@ const HorizontalBars: FC<{ buckets: Bucket[]; emptyLabel: string; tone?: 'blue' 
   if (buckets.length === 0) {
     return <p className="text-sm text-gray-500 dark:text-gray-400">{emptyLabel}</p>;
   }
-  const maxCount = buckets.reduce((acc, bucket) => Math.max(acc, bucket.count), 0);
-  const total = buckets.reduce((acc, bucket) => acc + bucket.count, 0);
   const slice = buckets.slice(0, max);
-  const gradient: Record<typeof tone, string> = {
-    blue: 'from-blue-500 to-cyan-400',
-    green: 'from-emerald-500 to-teal-400',
-    purple: 'from-purple-500 to-pink-400',
-  };
+  const fill = TONE_COLORS[tone];
+  const total = buckets.reduce((acc, bucket) => acc + bucket.count, 0);
+
   return (
-    <ul className="space-y-3">
-      {slice.map((bucket) => {
-        const percent = maxCount === 0 ? 0 : (bucket.count / maxCount) * 100;
-        const sharePercent = total === 0 ? 0 : Math.round((bucket.count / total) * 100);
-        return (
-          <li key={bucket.key} className="group">
-            <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-              <span className="truncate font-medium text-(--light-text-color) dark:text-(--dark-text-color)" title={bucket.key}>
-                {bucket.key}
-              </span>
-              <span className="flex items-baseline gap-2 whitespace-nowrap">
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">{sharePercent}%</span>
-                <span className="font-mono text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                  {bucket.count.toLocaleString()}
-                </span>
-              </span>
-            </div>
-            <div className="relative h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-              <div
-                className={clsx(
-                  'h-full rounded-full bg-gradient-to-r transition-all duration-500 group-hover:brightness-110',
-                  gradient[tone],
-                )}
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div style={{ width: '100%', height: Math.max(slice.length * 36, 120) }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={slice.map((bucket) => ({
+            ...bucket,
+            share: total === 0 ? 0 : Math.round((bucket.count / total) * 100),
+          }))}
+          layout="vertical"
+          margin={{ top: 4, right: 32, bottom: 4, left: 8 }}
+        >
+          <CartesianGrid horizontal={false} stroke="currentColor" strokeOpacity={0.06} />
+          <XAxis type="number" hide />
+          <YAxis
+            type="category"
+            dataKey="key"
+            width={120}
+            tick={{ fontSize: 12, fill: 'currentColor', fillOpacity: 0.75 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip
+            cursor={{ fill: 'currentColor', fillOpacity: 0.04 }}
+            contentStyle={{
+              borderRadius: 8,
+              border: '1px solid rgba(148,163,184,0.3)',
+              fontSize: 12,
+            }}
+            formatter={(value, _name, payload) => {
+              const numericValue = typeof value === 'number' ? value : Number(value);
+              const point = (payload as { payload?: { key?: string; share?: number } } | undefined)?.payload;
+              return [
+                `${numericValue.toLocaleString()}회 (${point?.share ?? 0}%)`,
+                point?.key ?? '',
+              ];
+            }}
+            labelFormatter={() => ''}
+          />
+          <Bar dataKey="count" radius={[0, 6, 6, 0]} fill={fill} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
 
@@ -157,41 +181,15 @@ const TimelineChart: FC<{ visits: ShareSnapshot['data']['data']; emptyLabel: str
     return <p className="text-sm text-gray-500 dark:text-gray-400">{emptyLabel}</p>;
   }
 
-  const width = 600;
-  const height = 220;
-  const padding = { top: 12, right: 12, bottom: 28, left: 36 };
-  const innerW = width - padding.left - padding.right;
-  const innerH = height - padding.top - padding.bottom;
-  const max = Math.max(...timeline.values, 1);
-  const niceMax = Math.ceil(max * 1.1);
-  const total = timeline.values.reduce((acc, v) => acc + v, 0);
-  const peak = timeline.values.reduce((acc, value, idx) =>
-    value > acc.value ? { value, label: timeline.labels[idx] } : acc,
+  const data = timeline.labels.map((label, index) => ({ label, count: timeline.values[index] }));
+  const total = timeline.values.reduce((acc, value) => acc + value, 0);
+  const peak = timeline.values.reduce((acc, value, index) =>
+    (value > acc.value ? { value, label: timeline.labels[index] } : acc),
   { value: -1, label: '' });
-
-  const stepX = timeline.values.length > 1 ? innerW / (timeline.values.length - 1) : innerW;
-  const points = timeline.values.map((value, index) => ({
-    x: padding.left + (timeline.values.length === 1 ? innerW / 2 : index * stepX),
-    y: padding.top + innerH - (value / niceMax) * innerH,
-    value,
-    label: timeline.labels[index],
-  }));
-
-  const pathD = points
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
-    .join(' ');
-  const areaD = points.length > 0
-    ? `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${(padding.top + innerH).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padding.top + innerH).toFixed(1)} Z`
-    : '';
-
-  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
-    y: padding.top + innerH - ratio * innerH,
-    label: Math.round(niceMax * ratio).toLocaleString(),
-  }));
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-4 text-xs">
+      <div className="mb-3 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
           총 {total.toLocaleString()}회
         </span>
@@ -201,85 +199,53 @@ const TimelineChart: FC<{ visits: ShareSnapshot['data']['data']; emptyLabel: str
           </span>
         )}
       </div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-56 overflow-visible"
-        role="img"
-        aria-label="visits-timeline"
-      >
-        <defs>
-          <linearGradient id="visits-area-gradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="visits-line-gradient" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#22d3ee" />
-          </linearGradient>
-        </defs>
-
-        {/* horizontal grid + axis labels */}
-        {gridLines.map((line) => (
-          <g key={line.y}>
-            <line
-              x1={padding.left}
-              x2={width - padding.right}
-              y1={line.y}
-              y2={line.y}
-              stroke="currentColor"
-              strokeOpacity="0.08"
-              strokeDasharray="2 4"
+      <div style={{ width: '100%', height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+            <defs>
+              <linearGradient id="visits-area-fill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.08} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: 'currentColor', fillOpacity: 0.7 }}
+              tickLine={false}
+              axisLine={{ stroke: 'currentColor', strokeOpacity: 0.1 }}
+              minTickGap={24}
             />
-            <text
-              x={padding.left - 8}
-              y={line.y + 3}
-              textAnchor="end"
-              fontSize="10"
-              className="fill-gray-400 dark:fill-gray-500"
-            >
-              {line.label}
-            </text>
-          </g>
-        ))}
-
-        {/* area under curve */}
-        <path d={areaD} fill="url(#visits-area-gradient)" />
-
-        {/* main curve */}
-        <path d={pathD} fill="none" stroke="url(#visits-line-gradient)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-
-        {/* points */}
-        {points.map((point) => (
-          <g key={point.label}>
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={3.5}
-              fill="white"
-              stroke="#6366f1"
-              strokeWidth="2"
-              className="dark:fill-gray-900"
+            <YAxis
+              tick={{ fontSize: 11, fill: 'currentColor', fillOpacity: 0.7 }}
+              tickLine={false}
+              axisLine={{ stroke: 'currentColor', strokeOpacity: 0.1 }}
+              allowDecimals={false}
+              width={36}
             />
-            <title>{`${point.label} — ${point.value.toLocaleString()}회`}</title>
-          </g>
-        ))}
-
-        {/* x-axis labels — first / middle / last */}
-        {[0, Math.floor(points.length / 2), points.length - 1]
-          .filter((idx, i, arr) => arr.indexOf(idx) === i && idx >= 0 && idx < points.length)
-          .map((idx) => (
-            <text
-              key={`x-${idx}`}
-              x={points[idx].x}
-              y={height - 8}
-              textAnchor="middle"
-              fontSize="10"
-              className="fill-gray-500 dark:fill-gray-400"
-            >
-              {points[idx].label}
-            </text>
-          ))}
-      </svg>
+            <Tooltip
+              contentStyle={{
+                borderRadius: 8,
+                border: '1px solid rgba(148,163,184,0.3)',
+                fontSize: 12,
+              }}
+              formatter={(value) => {
+                const numericValue = typeof value === 'number' ? value : Number(value);
+                return [`${numericValue.toLocaleString()}회`, '방문'];
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="count"
+              stroke="#3b82f6"
+              strokeWidth={2.5}
+              fill="url(#visits-area-fill)"
+              dot={{ r: 3, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }}
+              activeDot={{ r: 5 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
