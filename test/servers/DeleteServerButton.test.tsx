@@ -34,9 +34,9 @@ describe('<DeleteServerButton />', () => {
   it('displays modal when button is clicked', async () => {
     const { user } = setUp();
 
-    expect(screen.queryByText(/Are you sure you want to remove/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/정말/)).not.toBeInTheDocument();
     await user.click(screen.getByText('Remove this server'));
-    expect(screen.getByText(/Are you sure you want to remove/)).toBeInTheDocument();
+    expect(screen.getByText(/정말/)).toBeInTheDocument();
   });
 
   it('navigates to home when deletion is confirmed', async () => {
@@ -46,7 +46,7 @@ describe('<DeleteServerButton />', () => {
     await user.click(screen.getByText('Remove this server'));
 
     expect(history.location.pathname).toEqual('/foo');
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: '삭제' }));
     expect(history.location.pathname).toEqual('/');
   });
 });

@@ -45,6 +45,11 @@ services:
       - 'RESOLVE_TITLE=true'
       - 'SHORT_URL_MODE=path'
       - 'VISITS_WEBHOOKS=true'
+      # GeoLite2 City database license key (free MaxMind account).
+      # Without this, Shlink cannot resolve visitor IPs to country/city, so
+      # the share-stats page shows "(알 수 없음)" everywhere.
+      # See docs/geolite2-setup.md for the issuance + Coolify env steps.
+      - 'GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY:-}'
     volumes:
       - shlink-data:/etc/shlink/data
     expose:

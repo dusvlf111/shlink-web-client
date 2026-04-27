@@ -2,6 +2,7 @@ import type { ExitAction } from '@shlinkio/shlink-frontend-kit';
 import { CardModal } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { useCallback } from 'react';
+import { useT } from '../i18n';
 import type { ServerWithId } from './data';
 import { useServers } from './reducers/servers';
 
@@ -12,6 +13,7 @@ export type DeleteServerModalProps = {
 };
 
 export const DeleteServerModal: FC<DeleteServerModalProps> = ({ server, onClose, open }) => {
+  const t = useT();
   const { deleteServer } = useServers();
   const onClosed = useCallback((exitAction: ExitAction) => {
     if (exitAction === 'confirm') {
@@ -22,21 +24,16 @@ export const DeleteServerModal: FC<DeleteServerModalProps> = ({ server, onClose,
   return (
     <CardModal
       open={open}
-      title="Remove server"
+      title={t('servers.delete.title')}
       variant="danger"
       onClose={() => onClose(false)}
       onConfirm={() => onClose(true)}
       onClosed={onClosed}
-      confirmText="Delete"
+      confirmText={t('servers.delete.confirm')}
     >
       <div className="flex flex-col gap-y-4">
-        <p>Are you sure you want to remove <b>{server ? server.name : ''}</b>?</p>
-        <p>
-          <i>
-            No data will be deleted, only the access to this server will be removed from this device.
-            You can create it again at any moment.
-          </i>
-        </p>
+        <p>{t('servers.delete.question', { name: server?.name ?? '' })}</p>
+        <p><i>{t('servers.delete.note')}</i></p>
       </div>
     </CardModal>
   );

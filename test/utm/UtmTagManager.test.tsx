@@ -33,11 +33,9 @@ describe('<UtmTagManager />', () => {
     </MemoryRouter>,
   );
 
-  it('renders heading and management menu', () => {
+  it('renders heading using the i18n key', () => {
     setUp();
-    expect(screen.getByRole('heading', { name: '태그 관리' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '빌더' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '태그 관리' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'UTM 태그 관리' })).toBeInTheDocument();
   });
 
   it('renders category select with all utm categories', () => {

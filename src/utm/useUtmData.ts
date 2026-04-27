@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { pb } from '../lib/pocketbase';
 
 export const UTM_CATEGORIES = ['source', 'medium', 'campaign', 'term', 'content'] as const;
+export const UTM_REQUIRED_FIELDS = ['source', 'medium'] as const;
+export const UTM_OPTIONAL_FIELDS = ['campaign', 'term', 'content'] as const;
+
 export type UtmCategory = (typeof UTM_CATEGORIES)[number];
+export type UtmRequiredField = (typeof UTM_REQUIRED_FIELDS)[number];
+export type UtmOptionalField = (typeof UTM_OPTIONAL_FIELDS)[number];
 
 export type UtmTag = {
   id: string;
@@ -15,12 +20,28 @@ export type UtmTemplate = {
   id: string;
   name: string;
   description?: string;
-  source: string;
-  medium: string;
-  campaign: string;
-  term: string;
-  content: string;
+  source: string;      // required
+  medium: string;      // required
+  campaign?: string;   // optional
+  term?: string;       // optional
+  content?: string;    // optional
 };
+
+// Validation helper
+export const isValidTemplate = (template: Partial<UtmTemplate>): boolean => {
+  return !!(template.name?.trim() && template.source?.trim() && template.medium?.trim());
+};
+
+// Migration helper: coerce empty strings to undefined for optional fields
+export const normalizeTemplate = (data: Record<string, string>): Partial<UtmTemplate> => ({
+  name: data.name,
+  description: data.description || undefined,
+  source: data.source,
+  medium: data.medium,
+  campaign: data.campaign?.trim() || undefined,
+  term: data.term?.trim() || undefined,
+  content: data.content?.trim() || undefined,
+});
 
 const currentUserId = () => pb.authStore.record?.id;
 
@@ -116,8 +137,13 @@ export const useUtmTemplates = () => {
       return;
     }
 
+    const normalized = normalizeTemplate(data as Record<string, string>);
+    if (!isValidTemplate(normalized)) {
+      return;
+    }
+
     await pb.collection('utm_templates').create({
-      ...data,
+      ...normalized,
       user: userId,
     });
     await fetch();
@@ -129,8 +155,13 @@ export const useUtmTemplates = () => {
       return;
     }
 
+    const normalized = normalizeTemplate(data as Record<string, string>);
+    if (!isValidTemplate(normalized)) {
+      return;
+    }
+
     await pb.collection('utm_templates').update(id, {
-      ...data,
+      ...normalized,
       user: userId,
     });
     await fetch();

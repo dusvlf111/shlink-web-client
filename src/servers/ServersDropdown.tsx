@@ -2,25 +2,34 @@ import { faPlus as plusIcon, faServer as serverIcon } from '@fortawesome/free-so
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Dropdown, NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { useT } from '../i18n';
 import { getServerId } from './data';
 import { useSelectedServer } from './reducers/selectedServer';
 import { useServers } from './reducers/servers';
 
 export const ServersDropdown: FC = () => {
+  const { user } = useAuth();
+  const t = useT();
+  const canManageServers = user?.role === 'admin';
   const { servers } = useServers();
   const serversList = Object.values(servers);
   const { selectedServer } = useSelectedServer();
 
   return (
     <NavBar.Dropdown buttonContent={(
-      <span className="flex items-center gap-1.5">
-        <FontAwesomeIcon icon={serverIcon} /> Servers
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <FontAwesomeIcon icon={serverIcon} /> {t('servers.dropdown.label')}
       </span>
     )}>
       {serversList.length === 0 ? (
-        <Dropdown.Item to="/server/create">
-          <FontAwesomeIcon icon={plusIcon} /> Add a server
-        </Dropdown.Item>
+        canManageServers ? (
+          <Dropdown.Item to="/server/create">
+            <FontAwesomeIcon icon={plusIcon} /> {t('servers.dropdown.add')}
+          </Dropdown.Item>
+        ) : (
+          <Dropdown.Item disabled>{t('home.empty.contactAdmin')}</Dropdown.Item>
+        )
       ) : (
         <>
           {serversList.map(({ name, id }) => (
@@ -30,7 +39,7 @@ export const ServersDropdown: FC = () => {
           ))}
           <Dropdown.Separator />
           <Dropdown.Item to="/manage-servers">
-            <FontAwesomeIcon icon={serverIcon} /> Manage servers
+            <FontAwesomeIcon icon={serverIcon} /> {t('servers.dropdown.manage')}
           </Dropdown.Item>
         </>
       )}

@@ -5,10 +5,10 @@ import { MemoryRouter } from 'react-router';
 import type { ServerWithId } from '../../src/servers/data';
 import { ManageServersRowDropdown } from '../../src/servers/ManageServersRowDropdown';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, MEMBER_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 describe('<ManageServersRowDropdown />', () => {
-  const setUp = (autoConnect = false) => {
+  const setUp = (autoConnect = false, asUser = ADMIN_USER) => {
     const server = fromPartial<ServerWithId>({ id: 'abc123', autoConnect });
     return renderWithStore(
       <MemoryRouter>
@@ -18,6 +18,7 @@ describe('<ManageServersRowDropdown />', () => {
         initialState: {
           servers: { [server.id]: server },
         },
+        asUser,
       },
     );
   };
@@ -39,15 +40,15 @@ describe('<ManageServersRowDropdown />', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
     expect(screen.getAllByRole('menuitem')).toHaveLength(4);
-    expect(screen.getByRole('menuitem', { name: 'Connect' })).toHaveAttribute('href', '/server/abc123');
-    expect(screen.getByRole('menuitem', { name: 'Edit server' })).toHaveAttribute('href', '/server/abc123/edit');
+    expect(screen.getByRole('menuitem', { name: '연결' })).toHaveAttribute('href', '/server/abc123');
+    expect(screen.getByRole('menuitem', { name: '서버 편집' })).toHaveAttribute('href', '/server/abc123/edit');
   });
 
   it.each([true, false])('allows toggling auto-connect', async (autoConnect) => {
     const { user, store } = setUp(autoConnect);
 
     await toggleDropdown(user);
-    await user.click(screen.getByRole('menuitem', { name: autoConnect ? 'Do not auto-connect' : 'Auto-connect' }));
+    await user.click(screen.getByRole('menuitem', { name: autoConnect ? '자동 연결 해제' : '자동 연결 사용' }));
 
     expect(Object.values(store.getState().servers)[0].autoConnect).toEqual(!autoConnect);
   });
@@ -58,7 +59,7 @@ describe('<ManageServersRowDropdown />', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await toggleDropdown(user);
-    await user.click(screen.getByRole('menuitem', { name: 'Remove server' }));
+    await user.click(screen.getByRole('menuitem', { name: '서버 삭제' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -66,5 +67,15 @@ describe('<ManageServersRowDropdown />', () => {
   it.each([[true], [false]])('renders expected size and icon', (autoConnect) => {
     const { container } = setUp(autoConnect);
     expect(container).toMatchSnapshot();
+  });
+
+  it('hides edit and remove items for non-admin users', async () => {
+    const { user } = setUp(false, MEMBER_USER);
+
+    await toggleDropdown(user);
+
+    expect(screen.queryByRole('menuitem', { name: '서버 편집' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: '서버 삭제' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: '연결' })).toBeInTheDocument();
   });
 });

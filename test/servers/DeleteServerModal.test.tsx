@@ -26,14 +26,14 @@ describe('<DeleteServerModal />', () => {
     setUp();
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading')).toHaveTextContent('Remove server');
+    expect(screen.getByRole('heading')).toHaveTextContent('서버 삭제');
   });
 
   it('displays the name of the server as part of the content', () => {
     setUp();
 
-    expect(screen.getByText(/^Are you sure you want to remove/)).toBeInTheDocument();
-    expect(screen.getByText(serverName)).toBeInTheDocument();
+    expect(screen.getByText(/정말/)).toBeInTheDocument();
+    expect(screen.getByText(/the_server_name/)).toBeInTheDocument();
   });
 
   it.each([
@@ -54,7 +54,7 @@ describe('<DeleteServerModal />', () => {
     const { user, store } = setUp();
 
     expect(Object.keys(store.getState().servers)).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: '삭제' }));
     expect(Object.keys(store.getState().servers)).toHaveLength(0);
   });
 });

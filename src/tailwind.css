@@ -10,3 +10,26 @@
         --footer-margin: .8rem;
     }
 }
+
+/*
+ * UnifiedSidebar replaces the @shlinkio/shlink-web-component built-in sidebar.
+ * The package does not expose an option to hide its <aside>, so we suppress it
+ * via CSS scoped to the wrapper test id.
+ */
+[data-testid="shlink-wrapper"] aside.bg-lm-primary {
+    display: none !important;
+}
+
+/*
+ * NavBar from @shlinkio/shlink-frontend-kit collapses to flex-col under md.
+ * Korean labels like "서버" sometimes break per-character when the dropdown
+ * button width gets tight. Force the menu items, dropdown buttons, and their
+ * inner spans to keep words on one line.
+ */
+nav[role="navigation"] button,
+nav[role="navigation"] a,
+nav[role="navigation"] li,
+nav[role="navigation"] li > * {
+    white-space: nowrap;
+    word-break: keep-all;
+}

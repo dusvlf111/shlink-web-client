@@ -1,25 +1,51 @@
-import { faCogs as cogsIcon, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faCogs as cogsIcon, faLanguage, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { Link, useLocation } from 'react-router';
+import { usePendingUsersCount } from '../admin/usePendingUsersCount';
 import { useAuth } from '../auth/AuthContext';
+import type { Locale } from '../i18n';
+import { useLocale, useT } from '../i18n';
 import { ServersDropdown } from '../servers/ServersDropdown';
 import { ShlinkLogo } from './img/ShlinkLogo';
 
-export const MainHeader: FC = () => {
+const NEXT_LOCALE: Record<Locale, Locale> = { ko: 'en', en: 'ko' };
+
+export type MainHeaderProps = {
+  onMenuClick?: () => void;
+};
+
+export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
+  const t = useT();
+  const { locale, setLocale } = useLocale();
+  const { count: pendingUsersCount } = usePendingUsersCount();
 
   const settingsPath = '/settings';
+  const localeLabelKey = locale === 'ko' ? 'language.en' : 'language.ko';
 
   return (
     <NavBar
       className="[&]:fixed top-0 z-900"
       brand={(
-        <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
-          <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
-        </Link>
+        <div className="flex items-center gap-2">
+          {onMenuClick && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              aria-label={t('header.openSidebar')}
+              data-testid="mobile-menu-toggle"
+              className="md:hidden flex items-center justify-center w-9 h-9 -ml-2 text-white/90 hover:text-white"
+            >
+              <FontAwesomeIcon icon={faBars} />
+            </button>
+          )}
+          <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
+            <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
+          </Link>
+        </div>
       )}
     >
       <NavBar.MenuItem
@@ -27,7 +53,7 @@ export const MainHeader: FC = () => {
         active={pathname.startsWith(settingsPath)}
         className="flex items-center gap-1.5 whitespace-nowrap"
       >
-        <FontAwesomeIcon icon={cogsIcon} /> Settings
+        <FontAwesomeIcon icon={cogsIcon} /> {t('header.settings')}
       </NavBar.MenuItem>
       <ServersDropdown />
       {user?.role === 'admin' && (
@@ -36,17 +62,42 @@ export const MainHeader: FC = () => {
           active={pathname.startsWith('/admin/users')}
           className="flex items-center gap-1.5 whitespace-nowrap text-sm"
         >
-          <FontAwesomeIcon icon={usersIcon} /> 사용자 관리
+          <FontAwesomeIcon icon={usersIcon} /> {t('header.userManagement')}
+          {pendingUsersCount > 0 && (
+            <span
+              data-testid="pending-users-badge"
+              aria-label={t('header.userManagement.pendingBadge', { count: pendingUsersCount })}
+              className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white"
+            >
+              {pendingUsersCount}
+            </span>
+          )}
         </NavBar.MenuItem>
       )}
-      {user && (
+      <li role="none" className="flex">
         <button
-          onClick={logout}
+          type="button"
+          role="menuitem"
+          onClick={() => setLocale(NEXT_LOCALE[locale])}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white/80 hover:text-white whitespace-nowrap"
-          title={user.email}
+          title={t('header.languageToggle')}
+          aria-label={t('header.languageToggle')}
         >
-          <FontAwesomeIcon icon={logoutIcon} /> 로그아웃
+          <FontAwesomeIcon icon={faLanguage} /> {t(localeLabelKey)}
         </button>
+      </li>
+      {user && (
+        <li role="none" className="flex">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={logout}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white/80 hover:text-white whitespace-nowrap"
+            title={user.email}
+          >
+            <FontAwesomeIcon icon={logoutIcon} /> {t('header.logout')}
+          </button>
+        </li>
       )}
     </NavBar>
   );

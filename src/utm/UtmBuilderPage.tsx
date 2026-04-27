@@ -7,9 +7,9 @@ import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuil
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useServers } from '../servers/reducers/servers';
+import { useT } from '../i18n';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
-import { UtmManagementMenu } from './UtmManagementMenu';
 
 type UtmFields = {
   baseUrl: string;
@@ -73,16 +73,24 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
 };
 
 const hasRequiredFields = (fields: UtmFields) =>
-  !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim() && !!fields.campaign.trim();
+  !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim();
+
+const pickFallbackServerId = (servers: Record<string, { id: string; autoConnect?: boolean }>): string | null => {
+  const list = Object.values(servers);
+  return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
+};
 
 type UtmBuilderPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
 const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) => {
-  const { serverId } = useParams<{ serverId: string }>();
+  const { serverId: paramServerId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
+  const t = useT();
   const { servers } = useServers();
+  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
+  const serverId = paramServerId ?? fallbackServerId ?? undefined;
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -93,6 +101,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   const [shortCreateMsg, setShortCreateMsg] = useState('');
   const [showShortOptions, setShowShortOptions] = useState(false);
   const [shortOptions, setShortOptions] = useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
+  const [appliedTemplateName, setAppliedTemplateName] = useState('');
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
@@ -130,7 +139,18 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   };
 
   const handleGoToShorten = () => {
-    if (!canGenerate || !serverId) return;
+    if (!canGenerate) {
+      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
+      return;
+    }
+    if (!serverId) {
+      setShortCreateMsg('연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.');
+      return;
+    }
+    if (!servers[serverId]) {
+      setShortCreateMsg('선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
 
     navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
   };
@@ -141,12 +161,16 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     }
 
     if (!canGenerate) {
-      setShortCreateMsg('URL과 필수 UTM 값을 먼저 입력해 주세요.');
+      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
       return;
     }
 
     if (!selectedServer) {
-      setShortCreateMsg('선택된 서버를 찾을 수 없습니다.');
+      setShortCreateMsg(
+        serverId
+          ? '서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요.'
+          : '연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.',
+      );
       return;
     }
 
@@ -163,33 +187,65 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     setCreatingShortUrl(true);
     setShortCreateMsg('단축링크 생성 중...');
 
+    const TIMEOUT_MS = 8_000;
+
+    const extractShlinkErrorMessage = (raw: unknown): string => {
+      if (!raw) return '';
+      if (raw instanceof Error) return raw.message;
+      if (typeof raw === 'object') {
+        const obj = raw as { status?: number; title?: string; detail?: string; invalidElements?: string[] };
+        const parts: string[] = [];
+        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === 'string' && obj.detail) parts.push(obj.detail);
+        if (Array.isArray(obj.invalidElements) && obj.invalidElements.length > 0) {
+          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
+        }
+        return parts.length > 0 ? parts.join(' · ') : JSON.stringify(raw);
+      }
+      return String(raw);
+    };
+
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
       const customSlug = shortOptions.customSlug.trim() || undefined;
-      const created = await apiClient.createShortUrl({
-        longUrl: utmUrl,
-        customSlug,
-        title: shortOptions.title.trim() || undefined,
-        tags: parseTags(shortOptions.tags),
-        findIfExists: true,
-      });
+      // 벌크 생성과 동일하게: 사용자가 입력한 제목 뒤에 적용된 템플릿 이름을 붙인다.
+      const composedTitle = [shortOptions.title.trim(), appliedTemplateName.trim()]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      const created = await Promise.race([
+        apiClient.createShortUrl({
+          longUrl: utmUrl,
+          customSlug,
+          title: composedTitle || undefined,
+          tags: parseTags(shortOptions.tags),
+          findIfExists: true,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`)), TIMEOUT_MS)
+        ),
+      ]);
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
-    } catch {
-      setShortCreateMsg('단축링크 생성에 실패했습니다.');
+    } catch (error) {
+      const detail = extractShlinkErrorMessage(error);
+      setShortCreateMsg(`단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ''}`);
     } finally {
       setCreatingShortUrl(false);
     }
   };
 
-  const applyTemplate = (tpl: {
-    source: string;
-    medium: string;
-    campaign: string;
-    term: string;
-    content: string;
-  }) => {
-    setFields((prev) => ({ ...prev, ...tpl }));
+  const applyTemplate = (tpl: any) => {
+    const templateFields = {
+      source: tpl.source || '',
+      medium: tpl.medium || '',
+      campaign: tpl.campaign || '',
+      term: tpl.term || '',
+      content: tpl.content || '',
+    };
+    setFields((prev) => ({ ...prev, ...templateFields }));
+    setAppliedTemplateName(typeof tpl?.name === 'string' ? tpl.name : '');
   };
 
   const handleSaveAsTemplate = async () => {
@@ -211,10 +267,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">UTM 빌더</h1>
+          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.builder.title')}</h1>
         </div>
-
-        <UtmManagementMenu />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* 왼쪽: 빌더 */}
@@ -270,25 +324,20 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                 <FontAwesomeIcon icon={faCopy} />
                 {copied ? '복사됨!' : '복사'}
               </button>
-              {serverId && (
-                <button
-                  onClick={() => setShowShortOptions((prev) => !prev)}
-                  className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                >
-                  <FontAwesomeIcon icon={faExternalLinkAlt} />
-                  한번에 링크 만들기
-                </button>
-              )}
-              {serverId && (
-                <button
-                  onClick={handleGoToShorten}
-                  disabled={!canGenerate}
-                  className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
-                >
-                  <FontAwesomeIcon icon={faExternalLinkAlt} />
-                  단축링크 만들기
-                </button>
-              )}
+              <button
+                onClick={() => setShowShortOptions((prev) => !prev)}
+                className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                한번에 링크 만들기
+              </button>
+              <button
+                onClick={handleGoToShorten}
+                className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
+              >
+                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                단축링크 만들기
+              </button>
             </div>
 
             {shortCreateMsg && (
@@ -320,6 +369,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
+                {appliedTemplateName && (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    저장 시 제목 뒤에 적용된 템플릿 이름 <strong>{appliedTemplateName}</strong> 이 자동으로 붙습니다.
+                  </p>
+                )}
                 <button
                   onClick={() => void handleCreateShortInOneClick()}
                   disabled={!shortOptions.title.trim() || parseTags(shortOptions.tags).length === 0 || creatingShortUrl}

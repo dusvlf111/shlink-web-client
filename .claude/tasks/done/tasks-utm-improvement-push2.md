@@ -1,8 +1,10 @@
-# Tasks: UTM 개선 - Push 2 (벌크 생성 campaign/term/content 즉석 입력)
+# Tasks: UTM 개선 - Push 2 (벌크 생성 즉석 입력 + i18n 적용)
 
 > PRD: `.claude/tasks/todo/prd-utm-improvement.md`
-> Push 범위: 벌크 빌더에 campaign/term/content 공통 입력 필드 추가, 템플릿값 오버라이드
+> Push 범위: 벌크 빌더에 campaign/term/content 공통 입력 필드 추가, 템플릿값 오버라이드, **모든 신규 라벨은 i18n 키로 정의**
 > 상태: 🔲 대기 중 (Push 1 완료 후 진행)
+>
+> **선행 조건:** Push 1 에서 `src/i18n/` 시스템 + `useT()` 훅이 구축되어 있어야 함.
 
 ---
 
@@ -79,11 +81,17 @@
 
 - [ ] **2.0 벌크 생성 campaign/term/content 즉석 입력 (Push 2)**
 
-  - [ ] **2.1 공통 오버라이드 입력 필드 UI 추가**
+  - [ ] **2.1 공통 오버라이드 입력 필드 UI 추가 (i18n)**
     **작업 상세:**
     - `UtmBulkBuilderPage` 에 새 섹션 추가 (예: 단계 `1.5 캠페인 정보 입력` — 1단계 URL 입력과 2단계 템플릿 선택 사이)
     - 3개 입력 필드: `utm_campaign` / `utm_term` / `utm_content`
-    - 라벨/플레이스홀더는 한국어 + 친숙한 설명 (예: campaign placeholder: `예) mktchl3_dday`)
+    - 라벨/플레이스홀더는 모두 `useT()` 호출 — 신규 메시지 키 정의:
+      - `utm.bulk.overrideSection.title` (예: `1.5 캠페인 정보 (선택)`)
+      - `utm.bulk.overrideSection.help` (예: `비워두면 템플릿 값이 그대로 사용됩니다.`)
+      - `utm.bulk.override.campaign.label` / `.placeholder` (예: `예) mktchl3_dday`)
+      - `utm.bulk.override.term.label` / `.placeholder`
+      - `utm.bulk.override.content.label` / `.placeholder`
+    - ko/en 두 locale 파일 모두에 키 추가
     - 모바일에서는 세로 스택, 데스크톱에서는 3컬럼 그리드
     - 상태 변수: `overrideFields: { campaign: string; term: string; content: string }`
     - 입력 변경 시 기존 `setHasGenerated(false)` 흐름과 통합 (생성 결과 초기화)

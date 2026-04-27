@@ -22,6 +22,8 @@ const mockTemplates = [
 
 vi.mock('../../src/utm/useUtmData', () => ({
   UTM_CATEGORIES: ['source', 'medium', 'campaign', 'term', 'content'],
+  UTM_REQUIRED_FIELDS: ['source', 'medium'],
+  UTM_OPTIONAL_FIELDS: ['campaign', 'term', 'content'],
   useUtmTemplates: () => ({
     templates: mockTemplates,
     saveTemplate: saveTemplateMock,
@@ -50,10 +52,9 @@ describe('<UtmTemplateManager />', () => {
     </MemoryRouter>,
   );
 
-  it('renders heading and management menu', () => {
+  it('renders heading using the i18n key', () => {
     setUp();
-    expect(screen.getByRole('heading', { name: '템플릿 관리' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '템플릿 관리' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'UTM 템플릿 관리' })).toBeInTheDocument();
   });
 
   it('renders the form inputs', () => {
@@ -100,6 +101,8 @@ describe('<UtmTemplateManager />', () => {
     const { user } = setUp();
 
     await user.type(screen.getByLabelText(/템플릿 이름/i), '테스트');
+    await user.type(screen.getByLabelText('utm_source'), 'naver');
+    await user.type(screen.getByLabelText('utm_medium'), 'organic');
     await user.click(screen.getByRole('button', { name: /템플릿 저장/i }));
 
     await waitFor(() => {

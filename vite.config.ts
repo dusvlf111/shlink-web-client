@@ -27,6 +27,15 @@ export default defineConfig({
     outDir: 'build',
   },
 
+  // We post-process @shlinkio/shlink-web-component's bundle to translate
+  // user-facing strings into Korean (see scripts/patch-shlink-i18n.mjs).
+  // Vite caches optimized deps in node_modules/.vite by hashing the package,
+  // not its contents, so we force-rebuild that cache on every start to make
+  // sure the patched output is what actually ships to the browser.
+  optimizeDeps: {
+    force: true,
+  },
+
   server: {
     port: 3000,
     watch: {

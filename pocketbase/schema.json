@@ -255,8 +255,8 @@
     "type": "base",
     "system": false,
     "listRule": "@request.auth.id != '' && created_by = @request.auth.id",
-    "viewRule": "@request.auth.id != '' && created_by = @request.auth.id",
-    "createRule": "@request.auth.id != ''",
+    "viewRule": "(@request.auth.id != '' && created_by = @request.auth.id) || (@request.query.token != '' && @request.query.token = token && (expires_at = '' || expires_at > @now))",
+    "createRule": "@request.auth.id != '' && @request.auth.role = 'admin'",
     "updateRule": "@request.auth.id != '' && created_by = @request.auth.id",
     "deleteRule": "@request.auth.id != '' && created_by = @request.auth.id",
     "fields": [
@@ -296,6 +296,45 @@
       {
         "id": "date_expires_at",
         "name": "expires_at",
+        "type": "date",
+        "required": false,
+        "presentable": false,
+        "min": "",
+        "max": ""
+      },
+      {
+        "id": "text_share_label",
+        "name": "label",
+        "type": "text",
+        "required": false,
+        "presentable": true,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 200,
+        "pattern": ""
+      },
+      {
+        "id": "text_share_server_id",
+        "name": "server_id",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "json_share_snapshot",
+        "name": "snapshot",
+        "type": "json",
+        "required": false,
+        "presentable": false,
+        "maxSize": 5000000
+      },
+      {
+        "id": "date_share_snapshot_at",
+        "name": "snapshot_at",
         "type": "date",
         "required": false,
         "presentable": false,

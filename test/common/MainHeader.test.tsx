@@ -21,7 +21,7 @@ describe('<MainHeader />', () => {
 
   it('renders ServersDropdown', () => {
     setUp();
-    expect(screen.getByRole('button', { name: 'Servers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '서버' })).toBeInTheDocument();
   });
 
   it.each([
@@ -32,7 +32,7 @@ describe('<MainHeader />', () => {
     ['/settings/bar', true],
   ])('sets link to settings as active only when current path is settings', (currentPath, isActive) => {
     setUp(currentPath);
-    expect(screen.getByRole('menuitem', { name: /Settings$/ })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: /설정$/ })).toHaveAttribute(
       'data-active', isActive ? 'true' : 'false',
     );
   });

@@ -6,7 +6,7 @@ import { App } from '../../src/app/App';
 import { ContainerProvider } from '../../src/container/context';
 import type { ServerWithId } from '../../src/servers/data';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 vi.mock(import('../../src/common/ShlinkWebComponentContainer'), () => ({
   ShlinkWebComponentContainer: () => <span>ShlinkWebComponentContainer</span>,
@@ -46,18 +46,19 @@ describe('<App />', () => {
         settings: fromPartial({}),
         appUpdated: false,
       },
+      asUser: ADMIN_USER,
     },
   ));
 
   it('passes a11y checks', () => checkAccessibility(setUp()));
 
   it.each([
-    ['/settings/general', 'User interface'],
-    ['/settings/short-urls', 'Short URLs form'],
-    ['/manage-servers', 'Add a server'],
-    ['/server/create', 'Add new server'],
-    ['/server/abc123/edit', 'Edit "abc123 server"'],
-    ['/server/def456/edit', 'Edit "def456 server"'],
+    ['/settings/general', '사용자 인터페이스'],
+    ['/settings/short-urls', '단축 링크 폼'],
+    ['/manage-servers', '서버 추가하기'],
+    ['/server/create', '새 서버 추가'],
+    ['/server/abc123/edit', '"abc123 server" 편집'],
+    ['/server/def456/edit', '"def456 server" 편집'],
     ['/server/abc123/foo', 'ShlinkWebComponentContainer'],
     ['/server/def456/bar', 'ShlinkWebComponentContainer'],
     ['/other', 'Oops! We could not find requested route.'],
@@ -81,34 +82,23 @@ describe('<App />', () => {
     }
   });
 
-  it('toggles the floating UTM button between UTM management and overview', async () => {
+  it('hides the unified sidebar on the home route', async () => {
     await setUp('/');
 
-    expect(screen.getByRole('button', { name: /utm 관리로 이동/i })).toBeInTheDocument();
-
-    await act(async () => {
-      screen.getByRole('button', { name: /utm 관리로 이동/i }).click();
-    });
-
-    expect(screen.getByText('UtmBuilderPage')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /overview로 이동/i })).toBeInTheDocument();
-
-    await act(async () => {
-      screen.getByRole('button', { name: /overview로 이동/i }).click();
-    });
-
-    expect(screen.getByText('Welcome!')).toBeInTheDocument();
+    // Floating UTM toggle has been removed entirely
+    expect(screen.queryByRole('button', { name: /utm 관리로 이동/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /overview로 이동/i })).toBeNull();
+    // Home is the server picker — no sidebar there
+    expect(screen.queryByTestId('unified-sidebar')).toBeNull();
   });
 
-  it('moves to root overview when clicking the floating button from a server UTM route', async () => {
-    await setUp('/server/abc123/utm-builder');
+  it('shows the unified sidebar on non-home routes', async () => {
+    await setUp('/utm-builder');
+    expect(screen.getByTestId('unified-sidebar')).toBeInTheDocument();
+  });
 
-    expect(screen.getByRole('button', { name: /overview로 이동/i })).toBeInTheDocument();
-
-    await act(async () => {
-      screen.getByRole('button', { name: /overview로 이동/i }).click();
-    });
-
-    expect(screen.getByText('Welcome!')).toBeInTheDocument();
+  it('routes to the UTM builder via the unified sidebar link', async () => {
+    await setUp('/utm-builder');
+    expect(screen.getByText('UtmBuilderPage')).toBeInTheDocument();
   });
 });

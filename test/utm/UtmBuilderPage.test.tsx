@@ -120,10 +120,8 @@ describe('<UtmBuilderPage />', () => {
     });
   });
 
-  it('renders UTM management menu links', () => {
+  it('renders the heading using the i18n key', () => {
     setUp();
-    expect(screen.getByRole('link', { name: /빌더/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /템플릿 관리/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /태그 관리/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'UTM 빌더' })).toBeInTheDocument();
   });
 });
