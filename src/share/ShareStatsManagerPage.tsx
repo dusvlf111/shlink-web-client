@@ -9,6 +9,7 @@ import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
+import { describePocketBaseError } from './services/pocketBaseErrors';
 import {
   buildShareUrl,
   createShareToken,
@@ -85,8 +86,8 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
       setLoadError('');
       return list;
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
-      setLoadError(`발급된 공유 링크를 불러오지 못했습니다. PocketBase 권한 또는 schema 적용 상태를 확인해 주세요.${detail}`);
+      const detail = describePocketBaseError(error);
+      setLoadError(`발급된 공유 링크를 불러오지 못했습니다. PocketBase schema/권한 확인이 필요합니다.${detail}`);
       return null;
     }
   }, []);
@@ -288,9 +289,12 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
               )}
             </div>
             {loadError && (
-              <p className="mb-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
-                {loadError}
-              </p>
+              <div className="mb-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+                <p>{loadError}</p>
+                <p className="mt-1 text-[11px] text-red-600 dark:text-red-300">
+                  점검 항목: ① <code>public_tokens</code> 콜렉션이 존재하는지 ② <code>created_by</code>, <code>token</code>, <code>label</code>, <code>server_id</code>, <code>snapshot</code>, <code>snapshot_at</code> 필드가 모두 있는지 ③ listRule 이 <code>@request.auth.id != '' && created_by = @request.auth.id</code> 인지 ④ 본인이 admin 으로 로그인했는지. 정확한 원인은 PocketBase Admin → Logs 탭에서 확인.
+                </p>
+              </div>
             )}
             {tokens.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">{t('share.manager.list.empty')}</p>

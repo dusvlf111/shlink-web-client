@@ -186,16 +186,22 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     setCreatingShortUrl(true);
     setShortCreateMsg('단축링크 생성 중...');
 
+    const TIMEOUT_MS = 15_000;
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
       const customSlug = shortOptions.customSlug.trim() || undefined;
-      const created = await apiClient.createShortUrl({
-        longUrl: utmUrl,
-        customSlug,
-        title: shortOptions.title.trim() || undefined,
-        tags: parseTags(shortOptions.tags),
-        findIfExists: true,
-      });
+      const created = await Promise.race([
+        apiClient.createShortUrl({
+          longUrl: utmUrl,
+          customSlug,
+          title: shortOptions.title.trim() || undefined,
+          tags: parseTags(shortOptions.tags),
+          findIfExists: true,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Shlink API 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (timeout)`)), TIMEOUT_MS)
+        ),
+      ]);
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
     } catch (error) {

@@ -258,12 +258,29 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     setCreatingShortUrls(true);
     setActionMessage(t('utm.bulk.message.creating'));
 
+    const PER_REQUEST_TIMEOUT_MS = 15_000;
+
+    const withTimeout = <Result,>(promise: Promise<Result>): Promise<Result> => Promise.race<Result>([
+      promise,
+      new Promise<Result>((_, reject) => {
+        setTimeout(
+          () => reject(new Error(`Shlink API 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (timeout)`)),
+          PER_REQUEST_TIMEOUT_MS,
+        );
+      }),
+    ]);
+
     try {
       const apiClient = buildShlinkApiClient(selectedServer);
       const basePrefix = sanitizeSlugPart(shortOptions.slugPrefix);
       const additionalTags = parseTags(shortOptions.additionalTags);
 
-      const rowsWithShortUrl = await Promise.all(generatedRows.map(async (row, index) => {
+      // Process rows sequentially so we never queue 50 hanging requests at
+      // once and so the user sees progress instead of an indefinite spinner.
+      const rowsWithShortUrl: GeneratedRow[] = [];
+      for (let index = 0; index < generatedRows.length; index += 1) {
+        const row = generatedRows[index];
+        setActionMessage(`${t('utm.bulk.message.creating')} (${index + 1}/${generatedRows.length})`);
         try {
           const normalizedName = sanitizeSlugPart(row.name);
           const customSlug = basePrefix
@@ -282,35 +299,35 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
           let shortUrl;
 
           try {
-            shortUrl = await apiClient.createShortUrl({
+            shortUrl = await withTimeout(apiClient.createShortUrl({
               ...createPayload,
               customSlug,
-            });
+            }));
           } catch (slugError) {
             const isSlugConflict = slugError instanceof Error
               && (slugError.message.includes('slug') || slugError.message.includes('conflict') || slugError.message.includes('409'));
 
             if (customSlug && isSlugConflict) {
-              shortUrl = await apiClient.createShortUrl(createPayload);
+              shortUrl = await withTimeout(apiClient.createShortUrl(createPayload));
             } else {
               throw slugError;
             }
           }
 
-          return {
+          rowsWithShortUrl.push({
             ...row,
             shortUrl: shortUrl.shortUrl,
             shortCode: shortUrl.shortCode,
             createError: undefined,
-          };
+          });
         } catch (error) {
           const message = error instanceof Error ? error.message : t('utm.bulk.row.errorPrefix');
-          return {
+          rowsWithShortUrl.push({
             ...row,
             createError: `${t('utm.bulk.row.errorPrefix')}: ${message}`,
-          };
+          });
         }
-      }));
+      }
 
       setGeneratedRows(rowsWithShortUrl);
       const successCount = rowsWithShortUrl.filter((row) => !!row.shortUrl).length;
