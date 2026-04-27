@@ -264,6 +264,42 @@ const REPLACEMENTS = [
   ['"Visits:"', '"방문:"'],
   ['"Short URLs:"', '"단축 링크:"'],
   ['"Bots:"', '"봇:"'],
+
+  // ===== Short URL row dropdown items =====
+  // The bundle stores these with a leading space because they sit next to a
+  // FontAwesomeIcon: <span><Icon/> Label</span>. Match the exact literal.
+  ['" Visit stats"', '" 방문 통계"'],
+  ['" Compare visits"', '" 방문 비교"'],
+  ['" Edit short URL"', '" 단축 링크 편집"'],
+  ['" Edit redirects"', '" 리다이렉트 편집"'],
+  ['" Manage redirect rules"', '" 리다이렉트 규칙 관리"'],
+  ['" Delete short URL"', '" 단축 링크 삭제"'],
+  ['" Delete tag"', '" 태그 삭제"'],
+  ['" QR code"', '" QR 코드"'],
+  ['" Short URLs"', '" 단축 링크"'],
+  ['" Add rule"', '" 규칙 추가"'],
+  ['" Clear tags"', '" 태그 초기화"'],
+  ['" Edit"', '" 편집"'],
+  ['" All"', '" 전체"'],
+  ['" Any"', '" 모두"'],
+
+  // ===== Table column headers =====
+  // Stored as columnName="Created at:" in the table primitives.
+  ['columnName: "Created at:"', 'columnName: "생성 시각:"'],
+  ['columnName: "Created at"', 'columnName: "생성 시각"'],
+  ['columnName: "Short URL"', 'columnName: "단축 링크"'],
+  ['columnName: "Long URL"', 'columnName: "원본 URL"'],
+  ['columnName: "Title"', 'columnName: "제목"'],
+  ['columnName: "Tags"', 'columnName: "태그"'],
+  ['columnName: "Visits"', 'columnName: "방문"'],
+  ['columnName: "Domain"', 'columnName: "도메인"'],
+  ['columnName: "Status"', 'columnName: "상태"'],
+  ['"Created at "', '"생성 시각 "'],
+
+  // ===== Filter dropdown text fragments (leading space variants) =====
+  ['" Tags filtering mode"', '" 태그 필터 모드"'],
+  ['" Excluding bots"', '" 봇 제외"'],
+  ['" Including bots"', '" 봇 포함"'],
 ];
 
 const isJsBundle = (file) => /\.(?:js|mjs)$/.test(file) && !file.endsWith('.map');
