@@ -19,13 +19,13 @@ export const ServersDropdown: FC = () => {
   return (
     <NavBar.Dropdown buttonContent={(
       <span className="flex items-center gap-1.5">
-        <FontAwesomeIcon icon={serverIcon} /> Servers
+        <FontAwesomeIcon icon={serverIcon} /> {t('servers.dropdown.label')}
       </span>
     )}>
       {serversList.length === 0 ? (
         canManageServers ? (
           <Dropdown.Item to="/server/create">
-            <FontAwesomeIcon icon={plusIcon} /> Add a server
+            <FontAwesomeIcon icon={plusIcon} /> {t('servers.dropdown.add')}
           </Dropdown.Item>
         ) : (
           <Dropdown.Item disabled>{t('home.empty.contactAdmin')}</Dropdown.Item>
@@ -39,7 +39,7 @@ export const ServersDropdown: FC = () => {
           ))}
           <Dropdown.Separator />
           <Dropdown.Item to="/manage-servers">
-            <FontAwesomeIcon icon={serverIcon} /> Manage servers
+            <FontAwesomeIcon icon={serverIcon} /> {t('servers.dropdown.manage')}
           </Dropdown.Item>
         </>
       )}

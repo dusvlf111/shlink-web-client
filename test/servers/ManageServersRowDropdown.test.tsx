@@ -40,15 +40,15 @@ describe('<ManageServersRowDropdown />', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
     expect(screen.getAllByRole('menuitem')).toHaveLength(4);
-    expect(screen.getByRole('menuitem', { name: 'Connect' })).toHaveAttribute('href', '/server/abc123');
-    expect(screen.getByRole('menuitem', { name: 'Edit server' })).toHaveAttribute('href', '/server/abc123/edit');
+    expect(screen.getByRole('menuitem', { name: '연결' })).toHaveAttribute('href', '/server/abc123');
+    expect(screen.getByRole('menuitem', { name: '서버 편집' })).toHaveAttribute('href', '/server/abc123/edit');
   });
 
   it.each([true, false])('allows toggling auto-connect', async (autoConnect) => {
     const { user, store } = setUp(autoConnect);
 
     await toggleDropdown(user);
-    await user.click(screen.getByRole('menuitem', { name: autoConnect ? 'Do not auto-connect' : 'Auto-connect' }));
+    await user.click(screen.getByRole('menuitem', { name: autoConnect ? '자동 연결 해제' : '자동 연결 사용' }));
 
     expect(Object.values(store.getState().servers)[0].autoConnect).toEqual(!autoConnect);
   });
@@ -59,7 +59,7 @@ describe('<ManageServersRowDropdown />', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await toggleDropdown(user);
-    await user.click(screen.getByRole('menuitem', { name: 'Remove server' }));
+    await user.click(screen.getByRole('menuitem', { name: '서버 삭제' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -74,8 +74,8 @@ describe('<ManageServersRowDropdown />', () => {
 
     await toggleDropdown(user);
 
-    expect(screen.queryByRole('menuitem', { name: 'Edit server' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: 'Remove server' })).toBeNull();
-    expect(screen.getByRole('menuitem', { name: 'Connect' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: '서버 편집' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: '서버 삭제' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: '연결' })).toBeInTheDocument();
   });
 });

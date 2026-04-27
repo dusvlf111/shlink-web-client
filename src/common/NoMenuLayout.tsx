@@ -7,7 +7,10 @@ export type NoMenuLayoutProps = PropsWithChildren & {
 
 export const NoMenuLayout: FC<NoMenuLayoutProps> = ({ children, className }) => (
   <div className="w-full md:pl-(--aside-menu-width)">
-    <div className={clsx('container mx-auto p-5 pt-8 max-md:p-3 max-md:py-4', className)}>
+    {/* Match the spacing used by @shlinkio/shlink-web-component's main wrapper:
+        container mx-auto + horizontal px-3 + top padding 20/30px so our
+        in-house pages line up with the external short-url pages. */}
+    <div className={clsx('container mx-auto px-3 pt-[20px] md:pt-[30px] pb-[20px]', className)}>
       {children}
     </div>
   </div>

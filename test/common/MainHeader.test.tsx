@@ -21,7 +21,7 @@ describe('<MainHeader />', () => {
 
   it('renders ServersDropdown', () => {
     setUp();
-    expect(screen.getByRole('button', { name: 'Servers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '서버' })).toBeInTheDocument();
   });
 
   it.each([

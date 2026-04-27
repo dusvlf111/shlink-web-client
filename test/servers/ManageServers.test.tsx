@@ -5,7 +5,7 @@ import type { ServersMap, ServerWithId } from '../../src/servers/data';
 import { ManageServers } from '../../src/servers/ManageServers';
 import type { ServersExporter } from '../../src/servers/services/ServersExporter';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 describe('<ManageServers />', () => {
   const exportServers = vi.fn();
@@ -20,6 +20,7 @@ describe('<ManageServers />', () => {
     </MemoryRouter>,
     {
       initialState: { servers },
+      asUser: ADMIN_USER,
     },
   );
 
@@ -43,19 +44,19 @@ describe('<ManageServers />', () => {
     const expectRows = (amount: number) => expect(screen.getAllByRole('row')).toHaveLength(amount + 1);
 
     expectRows(3);
-    expect(screen.queryByText('No servers found.')).not.toBeInTheDocument();
+    expect(screen.queryByText('서버를 찾을 수 없습니다.')).not.toBeInTheDocument();
 
     await search('foo');
     await waitFor(() => expectRows(1));
-    expect(screen.queryByText('No servers found.')).not.toBeInTheDocument();
+    expect(screen.queryByText('서버를 찾을 수 없습니다.')).not.toBeInTheDocument();
 
     await search('Ba');
     await waitFor(() => expectRows(2));
-    expect(screen.queryByText('No servers found.')).not.toBeInTheDocument();
+    expect(screen.queryByText('서버를 찾을 수 없습니다.')).not.toBeInTheDocument();
 
     await search('invalid');
     await waitFor(() => expectRows(1));
-    expect(screen.getByText('No servers found.')).toBeInTheDocument();
+    expect(screen.getByText('서버를 찾을 수 없습니다.')).toBeInTheDocument();
   });
 
   it.each([
@@ -77,14 +78,14 @@ describe('<ManageServers />', () => {
     [{ foo: createServerMock('foo') }, 1],
   ])('shows export button if the list of servers is not empty', (servers, expectedButtons) => {
     setUp(servers);
-    expect(screen.queryAllByRole('button', { name: 'Export servers' })).toHaveLength(expectedButtons);
+    expect(screen.queryAllByRole('button', { name: '서버 내보내기' })).toHaveLength(expectedButtons);
   });
 
   it('allows exporting servers when clicking on button', async () => {
     const { user } = setUp({ foo: createServerMock('foo') });
 
     expect(exportServers).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Export servers' }));
+    await user.click(screen.getByRole('button', { name: '서버 내보내기' }));
     expect(exportServers).toHaveBeenCalled();
   });
 
@@ -95,11 +96,11 @@ describe('<ManageServers />', () => {
 
     if (hasError) {
       expect(
-        screen.getByText('The servers could not be imported. Make sure the format is correct.'),
+        screen.getByText('서버 정보를 가져오지 못했습니다. 형식이 올바른지 확인해 주세요.'),
       ).toBeInTheDocument();
     } else {
       expect(
-        screen.queryByText('The servers could not be imported. Make sure the format is correct.'),
+        screen.queryByText('서버 정보를 가져오지 못했습니다. 형식이 올바른지 확인해 주세요.'),
       ).not.toBeInTheDocument();
     }
   });

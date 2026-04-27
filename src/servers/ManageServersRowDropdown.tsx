@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { RowDropdown, useToggle } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { useT } from '../i18n';
 import type { ServerWithId } from './data';
 import { DeleteServerModal } from './DeleteServerModal';
 import { useServers } from './reducers/servers';
@@ -18,6 +19,7 @@ export type ManageServersRowDropdownProps = {
 };
 
 export const ManageServersRowDropdown: FC<ManageServersRowDropdownProps> = ({ server }) => {
+  const t = useT();
   const { user } = useAuth();
   const canManageServers = user?.role === 'admin';
   const { setAutoConnect } = useServers();
@@ -30,21 +32,21 @@ export const ManageServersRowDropdown: FC<ManageServersRowDropdownProps> = ({ se
     <>
       <RowDropdown menuAlignment="right">
         <RowDropdown.Item to={serverUrl} className="gap-1.5">
-          <FontAwesomeIcon icon={connectIcon} /> Connect
+          <FontAwesomeIcon icon={connectIcon} /> {t('servers.row.connect')}
         </RowDropdown.Item>
         {canManageServers && (
           <RowDropdown.Item to={`${serverUrl}/edit`} className="gap-1.5">
-            <FontAwesomeIcon icon={editIcon} /> Edit server
+            <FontAwesomeIcon icon={editIcon} /> {t('servers.row.edit')}
           </RowDropdown.Item>
         )}
         <RowDropdown.Item onClick={() => setAutoConnect(server, !isAutoConnect)} className="gap-1.5">
-          <FontAwesomeIcon icon={autoConnectIcon} /> {isAutoConnect ? 'Do not a' : 'A'}uto-connect
+          <FontAwesomeIcon icon={autoConnectIcon} /> {isAutoConnect ? t('servers.row.autoConnect.off') : t('servers.row.autoConnect.on')}
         </RowDropdown.Item>
         {canManageServers && (
           <>
             <RowDropdown.Separator />
             <RowDropdown.Item className="[&]:text-danger gap-1.5" onClick={showModal}>
-              <FontAwesomeIcon icon={deleteIcon} /> Remove server
+              <FontAwesomeIcon icon={deleteIcon} /> {t('servers.row.delete')}
             </RowDropdown.Item>
           </>
         )}

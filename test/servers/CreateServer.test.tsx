@@ -44,9 +44,9 @@ describe('<CreateServer />', () => {
   it('shows success message when imported is true', () => {
     setUp({ serversImported: true });
 
-    expect(screen.getByText('Servers properly imported. You can now select one from the list :)')).toBeInTheDocument();
+    expect(screen.getByText('서버 정보를 가져왔습니다. 이제 목록에서 선택할 수 있습니다.')).toBeInTheDocument();
     expect(
-      screen.queryByText('The servers could not be imported. Make sure the format is correct.'),
+      screen.queryByText('서버 정보를 가져오지 못했습니다. 형식이 올바른지 확인해 주세요.'),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('ImportServersBtn')).not.toBeInTheDocument();
   });
@@ -55,18 +55,18 @@ describe('<CreateServer />', () => {
     setUp({ importFailed: true });
 
     expect(
-      screen.queryByText('Servers properly imported. You can now select one from the list :)'),
+      screen.queryByText('서버 정보를 가져왔습니다. 이제 목록에서 선택할 수 있습니다.'),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('The servers could not be imported. Make sure the format is correct.')).toBeInTheDocument();
+    expect(screen.getByText('서버 정보를 가져오지 못했습니다. 형식이 올바른지 확인해 주세요.')).toBeInTheDocument();
   });
 
   it('creates server data when form is submitted', async () => {
     const { user, history, store } = setUp();
     const expectedServerId = 'the_name-the_url.com';
 
-    await user.type(screen.getByLabelText(/^Name/), 'the_name');
+    await user.type(screen.getByLabelText(/^이름/), 'the_name');
     await user.type(screen.getByLabelText(/^URL/), 'https://the_url.com');
-    await user.type(screen.getByLabelText(/^API key/), 'the_api_key');
+    await user.type(screen.getByLabelText(/^API 키/), 'the_api_key');
 
     expect(store.getState().servers[expectedServerId]).not.toBeDefined();
     fireEvent.submit(screen.getByRole('form'));
@@ -84,9 +84,9 @@ describe('<CreateServer />', () => {
   it('displays dialog when trying to create a duplicated server', async () => {
     const { user, history } = setUp();
 
-    await user.type(screen.getByLabelText(/^Name/), 'the_name');
+    await user.type(screen.getByLabelText(/^이름/), 'the_name');
     await user.type(screen.getByLabelText(/^URL/), 'https://existing_url.com');
-    await user.type(screen.getByLabelText(/^API key/), 'existing_api_key');
+    await user.type(screen.getByLabelText(/^API 키/), 'existing_api_key');
 
     fireEvent.submit(screen.getByRole('form'));
 
