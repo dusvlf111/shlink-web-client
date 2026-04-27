@@ -92,6 +92,7 @@ export const enMessages: Messages = {
   'home.subtitle': 'Click a server to start managing your short links.',
   'home.empty.title': 'No server registered yet.',
   'home.empty.action': 'Add a server',
+  'home.empty.contactAdmin': 'Please ask an admin to register a server.',
   'home.learnMore': 'Learn more about Shlink',
   'home.editHint': 'Use the server settings menu to edit server details.',
 

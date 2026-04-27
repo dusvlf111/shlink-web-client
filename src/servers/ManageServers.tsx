@@ -4,6 +4,7 @@ import type { TimeoutToggle } from '@shlinkio/shlink-frontend-kit';
 import { Button, Result, SearchInput, SimpleCard, Table } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { useMemo, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { ImportServersBtn } from './helpers/ImportServersBtn';
@@ -23,6 +24,8 @@ const ManageServersBase: FC<ManageServersProps> = withoutSelectedServer(({
   ServersExporter: serversExporter,
   useTimeoutToggle,
 }) => {
+  const { user } = useAuth();
+  const canManageServers = user?.role === 'admin';
   const { servers } = useServers();
   const [searchTerm, setSearchTerm] = useState('');
   const allServers = useMemo(() => Object.values(servers), [servers]);
@@ -40,16 +43,20 @@ const ManageServersBase: FC<ManageServersProps> = withoutSelectedServer(({
 
       <div className="flex flex-col md:flex-row gap-2">
         <div className="flex gap-2">
-          <ImportServersBtn className="grow" onError={setErrorImporting}>Import servers</ImportServersBtn>
+          {canManageServers && (
+            <ImportServersBtn className="grow" onError={setErrorImporting}>Import servers</ImportServersBtn>
+          )}
           {filteredServers.length > 0 && (
             <Button variant="secondary" className="grow" onClick={async () => serversExporter.exportServers()}>
               <FontAwesomeIcon icon={exportIcon} widthAuto /> Export servers
             </Button>
           )}
         </div>
-        <Button className="md:ml-auto" to="/server/create">
-          <FontAwesomeIcon icon={plusIcon} widthAuto /> Add a server
-        </Button>
+        {canManageServers && (
+          <Button className="md:ml-auto" to="/server/create">
+            <FontAwesomeIcon icon={plusIcon} widthAuto /> Add a server
+          </Button>
+        )}
       </div>
 
       <SimpleCard className="card">

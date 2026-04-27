@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { Home } from '../../src/common/Home';
 import type { ServersMap, ServerWithId } from '../../src/servers/data';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 describe('<Home />', () => {
   const setUp = (servers: ServersMap = {}) => renderWithStore(
@@ -13,6 +13,7 @@ describe('<Home />', () => {
     </MemoryRouter>,
     {
       initialState: { servers },
+      asUser: ADMIN_USER,
     },
   );
 

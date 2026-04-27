@@ -10,7 +10,7 @@ type AuthContextType = {
   register: (email: string, password: string, name: string) => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserRecord | null>(null);

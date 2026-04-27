@@ -99,6 +99,7 @@ export const koMessages = {
   'home.subtitle': '서버를 클릭해 단축 링크 관리를 시작하세요.',
   'home.empty.title': '등록된 서버가 없습니다.',
   'home.empty.action': '서버 추가하기',
+  'home.empty.contactAdmin': '관리자에게 서버 등록을 요청해 주세요.',
   'home.learnMore': 'Shlink에 대해 더 알아보기',
   'home.editHint': '서버 정보를 수정하려면 서버 설정 메뉴를 이용하세요.',
 

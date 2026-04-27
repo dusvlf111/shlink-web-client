@@ -6,7 +6,7 @@ import { App } from '../../src/app/App';
 import { ContainerProvider } from '../../src/container/context';
 import type { ServerWithId } from '../../src/servers/data';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 vi.mock(import('../../src/common/ShlinkWebComponentContainer'), () => ({
   ShlinkWebComponentContainer: () => <span>ShlinkWebComponentContainer</span>,
@@ -46,6 +46,7 @@ describe('<App />', () => {
         settings: fromPartial({}),
         appUpdated: false,
       },
+      asUser: ADMIN_USER,
     },
   ));
 

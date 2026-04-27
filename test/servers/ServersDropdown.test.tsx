@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router';
 import type { ServersMap } from '../../src/servers/data';
 import { ServersDropdown } from '../../src/servers/ServersDropdown';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, MEMBER_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 describe('<ServersDropdown />', () => {
   const fallbackServers: ServersMap = {
@@ -12,7 +12,10 @@ describe('<ServersDropdown />', () => {
     '2b': fromPartial({ name: 'bar', id: '2b' }),
     '3c': fromPartial({ name: 'baz', id: '3c' }),
   };
-  const setUp = (servers: ServersMap = fallbackServers) => renderWithStore(
+  const setUp = (
+    servers: ServersMap = fallbackServers,
+    asUser = ADMIN_USER,
+  ) => renderWithStore(
     <MemoryRouter>
       <ul role="menu">
         <ServersDropdown />
@@ -20,6 +23,7 @@ describe('<ServersDropdown />', () => {
     </MemoryRouter>,
     {
       initialState: { selectedServer: null, servers },
+      asUser,
     },
   );
 
@@ -57,10 +61,18 @@ describe('<ServersDropdown />', () => {
     expect(screen.getByRole('menuitem', { name: 'Manage servers' })).toHaveAttribute('href', '/manage-servers');
   });
 
-  it('shows only create link when no servers exist yet', async () => {
+  it('shows only create link when no servers exist yet (admin)', async () => {
     const { user } = setUp({});
 
     await user.click(screen.getByText('Servers'));
     expect(screen.getByRole('menuitem', { name: 'Add a server' })).toBeInTheDocument();
+  });
+
+  it('shows a contact-admin notice instead of the create link for non-admin users', async () => {
+    const { user } = setUp({}, MEMBER_USER);
+
+    await user.click(screen.getByText('Servers'));
+    expect(screen.queryByRole('menuitem', { name: 'Add a server' })).toBeNull();
+    expect(screen.getByText('관리자에게 서버 등록을 요청해 주세요.')).toBeInTheDocument();
   });
 });

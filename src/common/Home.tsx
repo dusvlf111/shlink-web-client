@@ -6,6 +6,7 @@ import type { FC } from 'react';
 import { useEffect } from 'react';
 import { ExternalLink } from 'react-external-link';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../auth/AuthContext';
 import { useT } from '../i18n';
 import { withoutSelectedServer } from '../servers/helpers/withoutSelectedServer';
 import { useServers } from '../servers/reducers/servers';
@@ -15,6 +16,8 @@ import { ShlinkLogo } from './img/ShlinkLogo';
 export const Home: FC = withoutSelectedServer(() => {
   const navigate = useNavigate();
   const t = useT();
+  const { user } = useAuth();
+  const canManageServers = user?.role === 'admin';
   const { servers } = useServers();
   const serversList = Object.values(servers);
   const hasServers = serversList.length > 0;
@@ -56,12 +59,14 @@ export const Home: FC = withoutSelectedServer(() => {
             ) : (
               <div className="p-6 text-center flex flex-col gap-12 text-xl">
                 <p>{t('home.empty.title')}</p>
-                <p>{t('home.subtitle')}</p>
-                <p>
-                  <Button to="/server/create" size="lg" inline>
-                    <FontAwesomeIcon icon={faPlus} widthAuto /> {t('home.empty.action')}
-                  </Button>
-                </p>
+                <p>{canManageServers ? t('home.subtitle') : t('home.empty.contactAdmin')}</p>
+                {canManageServers && (
+                  <p>
+                    <Button to="/server/create" size="lg" inline>
+                      <FontAwesomeIcon icon={faPlus} widthAuto /> {t('home.empty.action')}
+                    </Button>
+                  </p>
+                )}
                 <p>
                   <ExternalLink href="https://shlink.io/documentation">
                     <small>

@@ -5,10 +5,10 @@ import { MemoryRouter } from 'react-router';
 import type { ServerWithId } from '../../src/servers/data';
 import { ManageServersRowDropdown } from '../../src/servers/ManageServersRowDropdown';
 import { checkAccessibility } from '../__helpers__/accessibility';
-import { renderWithStore } from '../__helpers__/setUpTest';
+import { ADMIN_USER, MEMBER_USER, renderWithStore } from '../__helpers__/setUpTest';
 
 describe('<ManageServersRowDropdown />', () => {
-  const setUp = (autoConnect = false) => {
+  const setUp = (autoConnect = false, asUser = ADMIN_USER) => {
     const server = fromPartial<ServerWithId>({ id: 'abc123', autoConnect });
     return renderWithStore(
       <MemoryRouter>
@@ -18,6 +18,7 @@ describe('<ManageServersRowDropdown />', () => {
         initialState: {
           servers: { [server.id]: server },
         },
+        asUser,
       },
     );
   };
@@ -66,5 +67,15 @@ describe('<ManageServersRowDropdown />', () => {
   it.each([[true], [false]])('renders expected size and icon', (autoConnect) => {
     const { container } = setUp(autoConnect);
     expect(container).toMatchSnapshot();
+  });
+
+  it('hides edit and remove items for non-admin users', async () => {
+    const { user } = setUp(false, MEMBER_USER);
+
+    await toggleDropdown(user);
+
+    expect(screen.queryByRole('menuitem', { name: 'Edit server' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Remove server' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Connect' })).toBeInTheDocument();
   });
 });

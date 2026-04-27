@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { UserManagementPage } from '../admin/UserManagementPage';
+import { AdminOnlyRoute } from '../auth/AdminOnlyRoute';
 import { AppUpdateBanner } from '../common/AppUpdateBanner';
 import { Home } from '../common/Home';
 import { MainHeader } from '../common/MainHeader';
@@ -65,8 +66,8 @@ export const App: FC = () => {
             <Route path="/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
             <Route path="/utm-template-manager" element={<UtmTemplateManager />} />
             <Route path="/utm-tag-manager" element={<UtmTagManager />} />
-            <Route path="/server/create" element={<CreateServer />} />
-            <Route path="/server/:serverId/edit" element={<EditServer />} />
+            <Route path="/server/create" element={<AdminOnlyRoute><CreateServer /></AdminOnlyRoute>} />
+            <Route path="/server/:serverId/edit" element={<AdminOnlyRoute><EditServer /></AdminOnlyRoute>} />
             <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
             <Route path="/server/:serverId/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
             <Route path="/server/:serverId/utm-template-manager" element={<UtmTemplateManager />} />
