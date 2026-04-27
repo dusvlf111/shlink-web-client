@@ -10,6 +10,7 @@ import { ErrorHandler } from './common/ErrorHandler';
 import { ScrollToTop } from './common/ScrollToTop';
 import { container } from './container';
 import { ContainerProvider } from './container/context';
+import { I18nProvider } from './i18n';
 import { register as registerServiceWorker } from './serviceWorkerRegistration';
 import { setUpStore } from './store';
 import './tailwind.css';
@@ -19,17 +20,19 @@ const store = setUpStore();
 createRoot(document.getElementById('root')!).render(
   <ContainerProvider value={container}>
     <Provider store={store}>
-      <BrowserRouter basename={pack.homepage}>
-        <AuthProvider>
-          <AuthGuard>
-            <ErrorHandler>
-              <ScrollToTop>
-                <App />
-              </ScrollToTop>
-            </ErrorHandler>
-          </AuthGuard>
-        </AuthProvider>
-      </BrowserRouter>
+      <I18nProvider>
+        <BrowserRouter basename={pack.homepage}>
+          <AuthProvider>
+            <AuthGuard>
+              <ErrorHandler>
+                <ScrollToTop>
+                  <App />
+                </ScrollToTop>
+              </ErrorHandler>
+            </AuthGuard>
+          </AuthProvider>
+        </BrowserRouter>
+      </I18nProvider>
     </Provider>
   </ContainerProvider>,
 );

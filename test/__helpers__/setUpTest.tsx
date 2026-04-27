@@ -7,6 +7,8 @@ import type { PropsWithChildren, ReactElement } from 'react';
 import { Provider } from 'react-redux';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { ContainerProvider } from '../../src/container/context';
+import { I18nProvider } from '../../src/i18n';
+import type { Locale } from '../../src/i18n';
 import type { RootState } from '../../src/store';
 import { setUpStore } from '../../src/store';
 
@@ -27,21 +29,31 @@ export type RenderOptionsWithState = Omit<RenderOptions, 'wrapper'> & {
    * Defaults to vi.fn()
    */
   buildShlinkApiClient?: () => ShlinkApiClient;
+
+  /** Initial locale for the I18nProvider. Defaults to 'ko'. */
+  initialLocale?: Locale;
 };
 
 /**
- * Render provided ReactElement wrapped in a redux `Provider` and a `ContainerProvider` with a single
- * `buildShlinkApiClient` dependency.
+ * Render provided ReactElement wrapped in a redux `Provider`, an i18n `I18nProvider`, and a
+ * `ContainerProvider` with a single `buildShlinkApiClient` dependency.
  */
 export const renderWithStore = (
   element: ReactElement,
-  { initialState = {}, buildShlinkApiClient = vi.fn(), ...options }: RenderOptionsWithState = {},
+  {
+    initialState = {},
+    buildShlinkApiClient = vi.fn(),
+    initialLocale = 'ko',
+    ...options
+  }: RenderOptionsWithState = {},
 ) => {
   const store = setUpStore(initialState);
   const Wrapper = ({ children }: PropsWithChildren) => (
     <ContainerProvider value={fromPartial({ buildShlinkApiClient })}>
       <Provider store={store}>
-        <AuthProvider>{children}</AuthProvider>
+        <I18nProvider initialLocale={initialLocale}>
+          <AuthProvider>{children}</AuthProvider>
+        </I18nProvider>
       </Provider>
     </ContainerProvider>
   );

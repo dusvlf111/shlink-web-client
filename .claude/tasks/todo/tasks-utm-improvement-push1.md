@@ -1,8 +1,52 @@
-# Tasks: UTM 개선 - Push 1 (통합 좌측 사이드바 + 한국어 UI)
+# Tasks: UTM 개선 - Push 1 (통합 좌측 사이드바 + i18n 다국어)
 
 > PRD: `.claude/tasks/todo/prd-utm-improvement.md`
-> Push 범위: **방안 A** — 자체 통합 좌측 사이드바를 만들어 단축링크 5개 + UTM 4개 메뉴를 한 곳에 표시
+> Push 범위: **방안 A** — 자체 통합 좌측 사이드바 + **i18n(다국어) 시스템 도입** + 모든 UI 텍스트를 메시지 키로 분리
 > 상태: 🔲 진행 중
+
+---
+
+## ⭐ 추가 요구사항 — i18n (다국어) 시스템
+
+**한국어를 하드코딩하지 말고, 언어 설정으로 변경 가능하게 구성한다.**
+
+### 설계 원칙
+- 외부 라이브러리 의존 없이 **자체 경량 i18n** (의존성 추가 금지)
+- 메시지는 **타입 안전한 키-값 매핑** 으로 정의
+- 사용자 언어는 **localStorage** 에 영속 저장
+- 기본 언어: **`ko`** (한국어), 폴백: **`en`** (영어)
+- 모든 신규/수정 UI 텍스트는 메시지 키 경유
+
+### 디렉토리 구조 (신규)
+```
+src/i18n/
+├── index.ts              # 공개 API (useT, I18nProvider, etc.)
+├── types.ts              # MessageKey, Locale 타입
+├── I18nContext.tsx       # Context + Provider + useT 훅
+├── locales/
+│   ├── ko.ts             # 한국어 메시지 (기본)
+│   └── en.ts             # 영어 메시지 (폴백)
+└── messages.ts           # MessageKey 유니온 + 기본 추출
+```
+
+### 사용 예시
+```tsx
+import { useT } from '@/i18n';
+
+const Component = () => {
+  const t = useT();
+  return <h1>{t('utm.builder.title')}</h1>;
+};
+```
+
+### 메시지 키 규칙
+- 점(`.`)으로 영역 구분: `<도메인>.<페이지/컴포넌트>.<용도>`
+- 예: `sidebar.shortUrls.list`, `utm.bulk.title`, `header.settings`
+- 동적 값은 `{name}` 플레이스홀더 + `t('msg', { name: 'X' })` 형태
+
+### Settings 통합
+- `src/settings/` 의 기존 설정 패턴(redux-localstorage-simple) 따라 `language` 필드 추가
+- 헤더 메뉴 또는 설정 페이지에 언어 선택 UI 노출 (선택, 본 Push 에서는 토글 옵션 1.6 으로)
 
 ---
 
@@ -128,10 +172,30 @@
 
 ## 작업
 
-- [ ] **1.0 통합 좌측 사이드바 + 한국어 UI 정리 (Push 1)**
+- [ ] **1.0 통합 좌측 사이드바 + i18n 다국어 (Push 1)**
 
-  - [ ] **1.1 `UnifiedSidebar` 컴포넌트 신설**
+  - [ ] **1.0a i18n 기반 시스템 구축 (선행)**
     **작업 상세:**
+    - `src/i18n/` 신규 디렉토리 생성
+    - `types.ts` — `Locale = 'ko' | 'en'`, `MessageKey` 유니온, `Messages = Record<MessageKey, string>`
+    - `locales/ko.ts` — 한국어 메시지 객체 (기본)
+    - `locales/en.ts` — 영어 메시지 객체 (폴백)
+    - `messages.ts` — `defaultMessages` export, 키 누락 시 컴파일 에러 발생하도록 타입 강제
+    - `I18nContext.tsx` — React Context + `I18nProvider` + `useT()` 훅
+      - `useT()` 시그니처: `(key: MessageKey, params?: Record<string, string | number>) => string`
+      - 단순 `{name}` 치환 지원 (정규식 1줄)
+      - locale 변경 함수도 함께 제공: `useLocale(): { locale, setLocale }`
+    - `index.ts` — 공개 API 한꺼번에 export
+    - localStorage 영속화: 기존 `redux-localstorage-simple` 패턴은 store 와 결합되어 무거움 → 컨텍스트 자체에서 `localStorage.getItem('shlink-locale')` / `setItem` 단순 직접 사용
+    - `App.tsx` 최상위에 `<I18nProvider>` 추가
+    - 일단 메시지 키는 본 Push 에서 사용할 항목 30~50개 정도 정의 (사이드바 + 헤더 + UTM 페이지 핵심 텍스트)
+    **참조:** 없음 (신규 구축)
+    - [ ] 1.0a.T1 `test/i18n/I18nContext.test.tsx` — Provider 마운트 + useT 키 매칭 + 폴백 + 파라미터 치환 테스트
+    - [ ] 1.0a.T2 `npm test test/i18n` 통과
+
+  - [ ] **1.1 `UnifiedSidebar` 컴포넌트 신설 (i18n 적용)**
+    **작업 상세:**
+    - 메뉴 라벨은 모두 `useT()` 로 번역. 메뉴 정의 배열에는 `labelKey: MessageKey` 만 두고 컴포넌트 안에서 `t(labelKey)` 호출
     - `src/common/UnifiedSidebar.tsx` 생성
     - 외부 사이드바와 동일한 컨테이너 클래스 그대로 사용:
       ```
@@ -188,17 +252,30 @@
     - [ ] 1.4.T1 4개 UTM 테스트에서 `UtmManagementMenu` 가정 부분 제거/수정
     - [ ] 1.4.T2 `npm test test/utm` 통과
 
-  - [ ] **1.5 UI 영어 → 한국어 친화 라벨 정리**
+  - [ ] **1.5 UI 영어/한국어 텍스트 → i18n 키로 마이그레이션**
     **작업 상세:**
-    - `MainHeader.tsx`: `Settings` → `설정`
-    - 외부 패키지(ShlinkWebComponent) 내부 텍스트는 변경 대상 아님
-    - UTM 페이지 내 잔존 영어 라벨/플레이스홀더 점검 후 한국어로
-    - 마케팅팀 친화 표현 검토:
-      - `벌크 생성` → 그대로 두거나 `여러 개 한번에 만들기` 검토
-      - placeholder `https://example.com/path` 는 그대로 (URL 예시는 명확)
-    **참조:** `grep -nE 'Settings|Bulk|Builder|Template|Manager' src/utm src/common`
-    - [ ] 1.5.T1 변경된 라벨 기준으로 테스트 셀렉터 업데이트 (`getByText`, `getByRole('link')`)
+    - `MainHeader.tsx`: `Settings` 문자열 → `t('header.settings')` (`ko`: `설정`, `en`: `Settings`)
+    - 외부 패키지(ShlinkWebComponent) 내부 텍스트는 변경 대상 아님 — i18n 미적용
+    - UTM 4개 페이지 내 모든 사용자 가시 문자열 → i18n 키로 변환:
+      - 페이지 제목, 섹션 제목, 버튼 라벨, 안내 문구, 에러 메시지
+      - placeholder 문구도 i18n 대상 (`예) https://example.com/path`)
+    - 동적 메시지(`{count}개 URL이 생성되었습니다`)는 `t('utm.bulk.generated', { count })` 패턴
+    - 메시지 키 작성 시 한국어 ko 메시지를 마케팅팀 친화 표현으로:
+      - 짧고 명확한 동사형 (`만들기`, `복사`, `생성`)
+      - 결제·계약 같은 전문 용어 회피
+    - en 메시지는 1차로 ko 직역 또는 영어 단어로 채워두고, 추후 검토
+    **참조:** `grep -nE '한국어|영어' src/utm src/common` (이미 한글이 박혀있는 곳도 모두 i18n 화)
+    - [ ] 1.5.T1 변경된 라벨 기준으로 테스트 셀렉터 업데이트 — 가능하면 `data-testid` 또는 `getByRole` 우선
     - [ ] 1.5.T2 전체 회귀: `npm test`
+
+  - [ ] **1.6 (선택) 헤더에 언어 토글 드롭다운 추가**
+    **작업 상세:**
+    - `MainHeader.tsx` 에 한국어/English 토글
+    - `useLocale()` 의 `setLocale` 호출
+    - localStorage 자동 영속
+    - 본 Push 에서 시간 여유가 있으면 진행, 아니면 Push 2 또는 차후 push로 이연
+    - [ ] 1.6.T1 토글 클릭 → 사이드바 라벨 즉시 변경 통합 테스트
+    - [ ] 1.6.T2 `npm test` 통과
 
 ---
 
