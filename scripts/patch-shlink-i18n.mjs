@@ -5,11 +5,16 @@
  * on the published JS bundle.
  *
  * Run automatically via the `postinstall` script. Idempotent.
+ *
+ * After patching we also wipe Vite's optimized-dependency cache so the
+ * next dev server / build picks up the fresh source instead of serving
+ * the previously pre-bundled English copy out of node_modules/.vite/.
  */
-import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PKG_DIR = 'node_modules/@shlinkio/shlink-web-component/dist';
+const VITE_CACHE = 'node_modules/.vite';
 
 // Order matters — longer phrases first so they win before their shorter
 // substrings get replaced.
@@ -105,6 +110,19 @@ const patchFile = (filePath) => {
   return replaced;
 };
 
+const invalidateViteCache = () => {
+  if (!existsSync(VITE_CACHE)) {
+    return false;
+  }
+  try {
+    rmSync(VITE_CACHE, { recursive: true, force: true });
+    return true;
+  } catch (error) {
+    console.warn(`[patch-shlink-i18n] could not wipe ${VITE_CACHE}:`, error?.message ?? error);
+    return false;
+  }
+};
+
 const run = () => {
   if (!existsSync(PKG_DIR)) {
     console.warn(`[patch-shlink-i18n] ${PKG_DIR} not found, skipping.`);
@@ -115,7 +133,11 @@ const run = () => {
   for (const file of files) {
     totalReplacements += patchFile(join(PKG_DIR, file));
   }
-  console.log(`[patch-shlink-i18n] applied ${totalReplacements} replacements across ${files.length} bundle files.`);
+  const cacheWiped = invalidateViteCache();
+  console.log(
+    `[patch-shlink-i18n] applied ${totalReplacements} replacements across ${files.length} bundle files.`
+    + (cacheWiped ? ' Vite optimized-deps cache cleared.' : ''),
+  );
 };
 
 run();
