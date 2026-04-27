@@ -143,68 +143,68 @@ const DonutChart: FC<{ buckets: Bucket[]; emptyLabel: string; maxSlices?: number
   const top = data[0];
 
   return (
-    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[200px_1fr]">
-      <div className="relative mx-auto" style={{ width: 200, height: 200 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="count"
-              nameKey="key"
-              cx="50%"
-              cy="50%"
-              innerRadius="62%"
-              outerRadius="92%"
-              paddingAngle={1.5}
-              startAngle={90}
-              endAngle={-270}
-              stroke="none"
-            >
-              {data.map((entry) => (
-                <Cell key={entry.key} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.3)',
-                fontSize: 12,
-              }}
-              formatter={(value, _name, payload) => {
-                const numeric = typeof value === 'number' ? value : Number(value);
-                const point = (payload as { payload?: DonutDatum } | undefined)?.payload;
-                return [`${numeric.toLocaleString()}회 · ${point?.share ?? 0}%`, point?.key ?? ''];
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-        {/* Centre label sits inside the donut hole. The hole has radius 62% of 200px ≈ 124px diameter, so we cap the inner content to fit. */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="flex max-w-[100px] flex-col items-center justify-center text-center leading-tight">
-            <span className="text-[10px] uppercase tracking-widest text-[#86868b]">합계</span>
-            <span className="text-lg font-semibold tabular-nums text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-      <ul className="space-y-2">
-        {data.map((entry) => (
-          <li key={entry.key} className="flex items-center justify-between gap-3 text-sm">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="truncate text-[#1d1d1f] dark:text-[#f5f5f7]" title={entry.key}>{entry.key}</span>
-            </span>
-            <span className="flex items-baseline gap-2 whitespace-nowrap text-[#86868b]">
-              <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{entry.count.toLocaleString()}</span>
-              <span className="text-xs">{entry.share}%</span>
-            </span>
-          </li>
-        ))}
-        {top && data.length > 1 && (
-          <li className="border-t border-[#e5e5ea] pt-2 text-xs text-[#86868b] dark:border-[#2c2c2e]">
-            가장 큰 비중: <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{top.key}</span> ({top.share}%)
-          </li>
+    <div className="space-y-4">
+      {/* Total moves above the donut so the centre stays empty and never overflows. */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-[10px] uppercase tracking-widest text-[#86868b]">합계</span>
+        <span className="text-2xl font-semibold tabular-nums text-[#1d1d1f] dark:text-[#f5f5f7]">{total.toLocaleString()}</span>
+        {top && (
+          <span className="ml-auto text-xs text-[#86868b]">
+            <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{top.key}</span> {top.share}%
+          </span>
         )}
-      </ul>
+      </div>
+      <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[220px_1fr]">
+        <div className="relative mx-auto" style={{ width: 220, height: 220 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="count"
+                nameKey="key"
+                cx="50%"
+                cy="50%"
+                innerRadius="60%"
+                outerRadius="92%"
+                paddingAngle={1.5}
+                startAngle={90}
+                endAngle={-270}
+                stroke="none"
+              >
+                {data.map((entry) => (
+                  <Cell key={entry.key} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 8,
+                  border: '1px solid rgba(148,163,184,0.3)',
+                  fontSize: 12,
+                }}
+                formatter={(value, _name, payload) => {
+                  const numeric = typeof value === 'number' ? value : Number(value);
+                  const point = (payload as { payload?: DonutDatum } | undefined)?.payload;
+                  return [`${numeric.toLocaleString()}회 · ${point?.share ?? 0}%`, point?.key ?? ''];
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <ul className="space-y-2">
+          {data.map((entry) => (
+            <li key={entry.key} className="flex items-center justify-between gap-3 text-sm">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="truncate text-[#1d1d1f] dark:text-[#f5f5f7]" title={entry.key}>{entry.key}</span>
+              </span>
+              <span className="flex items-baseline gap-2 whitespace-nowrap text-[#86868b]">
+                <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{entry.count.toLocaleString()}</span>
+                <span className="text-xs">{entry.share}%</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
