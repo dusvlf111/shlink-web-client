@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { Link, useLocation } from 'react-router';
+import { usePendingUsersCount } from '../admin/usePendingUsersCount';
 import { useAuth } from '../auth/AuthContext';
 import type { Locale } from '../i18n';
 import { useLocale, useT } from '../i18n';
@@ -16,6 +17,7 @@ export const MainHeader: FC = () => {
   const { user, logout } = useAuth();
   const t = useT();
   const { locale, setLocale } = useLocale();
+  const { count: pendingUsersCount } = usePendingUsersCount();
 
   const settingsPath = '/settings';
   const localeLabelKey = locale === 'ko' ? 'language.en' : 'language.ko';
@@ -44,6 +46,15 @@ export const MainHeader: FC = () => {
           className="flex items-center gap-1.5 whitespace-nowrap text-sm"
         >
           <FontAwesomeIcon icon={usersIcon} /> {t('header.userManagement')}
+          {pendingUsersCount > 0 && (
+            <span
+              data-testid="pending-users-badge"
+              aria-label={t('header.userManagement.pendingBadge', { count: pendingUsersCount })}
+              className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white"
+            >
+              {pendingUsersCount}
+            </span>
+          )}
         </NavBar.MenuItem>
       )}
       <li role="none" className="flex">

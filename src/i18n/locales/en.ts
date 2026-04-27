@@ -3,6 +3,7 @@ import type { Messages } from './ko';
 export const enMessages: Messages = {
   'header.settings': 'Settings',
   'header.userManagement': 'User management',
+  'header.userManagement.pendingBadge': '{count} pending',
   'header.logout': 'Log out',
   'header.languageToggle': 'Language',
 
