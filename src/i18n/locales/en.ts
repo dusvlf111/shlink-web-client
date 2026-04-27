@@ -72,6 +72,7 @@ export const enMessages: Messages = {
   'share.public.title': 'Short URL stats',
   'share.public.snapshotAt': 'Snapshot taken at',
   'share.public.expiresAt': 'Share expires at',
+  'share.public.invalidLink': 'This share link format is invalid.',
   'share.public.expired': 'This share link has expired.',
   'share.public.notFound': 'Share link could not be loaded — token might be invalid.',
   'share.public.metric.total': 'Total visits',

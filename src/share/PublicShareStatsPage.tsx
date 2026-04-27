@@ -20,7 +20,14 @@ const formatDateTime = (iso?: string) => {
   return date.toLocaleString();
 };
 
-type Status = 'loading' | 'ready' | 'expired' | 'not-found';
+type Status = 'loading' | 'ready' | 'expired' | 'not-found' | 'invalid';
+
+const SHARE_TOKEN_ID_PATTERN = /^[a-z0-9]{10,20}$/i;
+const SHARE_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
+
+const hasValidShareParams = (tokenId: string, token: string): boolean => (
+  SHARE_TOKEN_ID_PATTERN.test(tokenId) && SHARE_TOKEN_PATTERN.test(token)
+);
 
 const Metric: FC<{ label: string; value: string | number }> = ({ label, value }) => (
   <div className="rounded border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
@@ -49,7 +56,11 @@ export const PublicShareStatsPage: FC = () => {
 
   useEffect(() => {
     if (!tokenId || !token) {
-      setStatus('not-found');
+      setStatus('invalid');
+      return;
+    }
+    if (!hasValidShareParams(tokenId, token)) {
+      setStatus('invalid');
       return;
     }
     let cancelled = false;
@@ -97,6 +108,12 @@ export const PublicShareStatsPage: FC = () => {
       <main className="mx-auto max-w-5xl px-6 py-8">
         {status === 'loading' && (
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">…</p>
+        )}
+
+        {status === 'invalid' && (
+          <div className="rounded border border-yellow-300 bg-yellow-50 p-4 text-center text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-200">
+            {t('share.public.invalidLink')}
+          </div>
         )}
 
         {status === 'not-found' && (

@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import type { ShlinkApiClient } from '@shlinkio/shlink-js-sdk/api-contract';
+import type { ShlinkApiClient } from '@shlinkio/shlink-js-sdk';
 import { fromPartial } from '@total-typescript/shoehorn';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ShareStatsManagerPage } from '../../src/share/ShareStatsManagerPage';

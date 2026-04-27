@@ -76,6 +76,7 @@ export const koMessages = {
   'share.public.title': '단축 링크 통계',
   'share.public.snapshotAt': '데이터 기준 시각',
   'share.public.expiresAt': '공유 만료',
+  'share.public.invalidLink': '공유 링크 형식이 올바르지 않습니다.',
   'share.public.expired': '이 공유 링크는 만료되었습니다.',
   'share.public.notFound': '공유 링크를 찾을 수 없거나 토큰이 올바르지 않습니다.',
   'share.public.metric.total': '총 방문',
