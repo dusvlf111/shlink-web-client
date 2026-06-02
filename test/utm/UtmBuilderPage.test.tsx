@@ -204,26 +204,64 @@ describe('<UtmBuilderPage />', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('switches to multi-link mode showing a textarea', async () => {
+  it('switches to multi-link mode showing a single row by default', async () => {
     const { user } = setUp();
 
     await user.click(screen.getByRole('button', { name: '다중 링크' }));
 
-    expect(
-      screen.getByLabelText('기본 URL (여러 개는 줄바꿈으로 구분) *'),
-    ).toBeInTheDocument();
+    // The single-mode base URL input is gone, replaced by row-based inputs.
     expect(screen.queryByLabelText('기본 URL *')).not.toBeInTheDocument();
+    // Exactly one URL row to start, and its remove button is hidden.
+    expect(
+      screen.getAllByPlaceholderText('https://example.com/page'),
+    ).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: '행 삭제' }),
+    ).not.toBeInTheDocument();
+    // The add-link button is present.
+    expect(
+      screen.getByRole('button', { name: '+ 링크 추가' }),
+    ).toBeInTheDocument();
+  });
+
+  it('adds rows and removes them, keeping at least one row', async () => {
+    const { user } = setUp();
+
+    await user.click(screen.getByRole('button', { name: '다중 링크' }));
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
+
+    // Two rows now -> remove buttons visible.
+    expect(
+      screen.getAllByPlaceholderText('https://example.com/page'),
+    ).toHaveLength(2);
+    const removeButtons = screen.getAllByRole('button', { name: '행 삭제' });
+    expect(removeButtons).toHaveLength(2);
+
+    await user.click(removeButtons[0]);
+
+    // Back to one row, remove button hidden again.
+    expect(
+      screen.getAllByPlaceholderText('https://example.com/page'),
+    ).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: '행 삭제' }),
+    ).not.toBeInTheDocument();
   });
 
   it('builds valid URLs and marks invalid ones as skipped in multi mode', async () => {
     const { user } = setUp();
 
     await user.click(screen.getByRole('button', { name: '다중 링크' }));
+    // Need three rows: valid / invalid / valid.
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
 
-    await user.type(
-      screen.getByLabelText('기본 URL (여러 개는 줄바꿈으로 구분) *'),
-      'https://a.com/p{enter}not-a-url{enter}https://b.com/q',
+    const urlInputs = screen.getAllByPlaceholderText(
+      'https://example.com/page',
     );
+    await user.type(urlInputs[0], 'https://a.com/p');
+    await user.type(urlInputs[1], 'not-a-url');
+    await user.type(urlInputs[2], 'https://b.com/q');
     await user.type(screen.getByLabelText(/utm_source/i), 'google');
     await user.type(screen.getByLabelText(/utm_medium/i), 'cpc');
 
@@ -234,7 +272,7 @@ describe('<UtmBuilderPage />', () => {
       expect(
         screen.getByText(/https:\/\/b\.com\/q\?utm_source=google/),
       ).toBeInTheDocument();
-      // Invalid line is shown as skipped, not built.
+      // Invalid row is shown as skipped, not built.
       expect(screen.getByText(/건너뜀 \(URL 형식 오류\)/)).toBeInTheDocument();
     });
   });
@@ -247,10 +285,13 @@ describe('<UtmBuilderPage />', () => {
     const { user } = setUp();
 
     await user.click(screen.getByRole('button', { name: '다중 링크' }));
-    await user.type(
-      screen.getByLabelText('기본 URL (여러 개는 줄바꿈으로 구분) *'),
-      'https://a.com/p{enter}https://b.com/q',
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
+
+    const urlInputs = screen.getAllByPlaceholderText(
+      'https://example.com/page',
     );
+    await user.type(urlInputs[0], 'https://a.com/p');
+    await user.type(urlInputs[1], 'https://b.com/q');
     await user.type(screen.getByLabelText(/utm_source/i), 'google');
     await user.type(screen.getByLabelText(/utm_medium/i), 'cpc');
 
@@ -285,20 +326,18 @@ describe('<UtmBuilderPage />', () => {
     });
 
     await user.click(screen.getByRole('button', { name: '다중 링크' }));
-    await user.type(
-      screen.getByLabelText('기본 URL (여러 개는 줄바꿈으로 구분) *'),
-      'https://a.com/p{enter}https://b.com/q',
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
+
+    const urlInputs = screen.getAllByPlaceholderText(
+      'https://example.com/page',
     );
+    await user.type(urlInputs[0], 'https://a.com/p');
+    await user.type(urlInputs[1], 'https://b.com/q');
     await user.type(screen.getByLabelText(/utm_source/i), 'google');
     await user.type(screen.getByLabelText(/utm_medium/i), 'cpc');
 
     await user.click(
       screen.getByRole('button', { name: /한번에 링크 만들기/ }),
-    );
-    await user.type(screen.getByPlaceholderText('제목 (필수)'), '제목');
-    await user.type(
-      screen.getByPlaceholderText('태그 (필수, 쉼표 구분)'),
-      'tag1',
     );
 
     await user.click(
@@ -310,6 +349,79 @@ describe('<UtmBuilderPage />', () => {
         expect(createShortUrl).toHaveBeenCalledTimes(2);
       },
       { timeout: 5000 },
+    );
+  });
+
+  it('passes per-row title and tags to createShortUrl in multi mode', async () => {
+    const createShortUrl = vi.fn(async ({ longUrl }: { longUrl: string }) => ({
+      shortUrl: `${longUrl}#short`,
+      shortCode: 'abc',
+    }));
+    const buildShlinkApiClient = vi.fn(() => ({ createShortUrl }) as any);
+
+    const { user } = setUp({
+      buildShlinkApiClient,
+      initialState: {
+        servers: {
+          'server-1': {
+            id: 'server-1',
+            name: 'S',
+            url: 'https://s',
+            apiKey: 'k',
+          },
+        } as any,
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: '다중 링크' }));
+    await user.click(screen.getByRole('button', { name: '+ 링크 추가' }));
+
+    const urlInputs = screen.getAllByPlaceholderText(
+      'https://example.com/page',
+    );
+    const titleInputs = screen.getAllByPlaceholderText('제목 (선택)');
+    const tagInputs = screen.getAllByPlaceholderText('태그 (선택, 쉼표 구분)');
+
+    await user.type(urlInputs[0], 'https://a.com/p');
+    await user.type(titleInputs[0], '첫번째');
+    await user.type(tagInputs[0], 'alpha, beta');
+
+    await user.type(urlInputs[1], 'https://b.com/q');
+    await user.type(titleInputs[1], '두번째');
+    await user.type(tagInputs[1], 'gamma');
+
+    await user.type(screen.getByLabelText(/utm_source/i), 'google');
+    await user.type(screen.getByLabelText(/utm_medium/i), 'cpc');
+
+    await user.click(
+      screen.getByRole('button', { name: /한번에 링크 만들기/ }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: '한번에 단축링크 만들기' }),
+    );
+
+    await waitFor(
+      () => {
+        expect(createShortUrl).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 5000 },
+    );
+
+    expect(createShortUrl).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        longUrl: expect.stringContaining('https://a.com/p'),
+        title: '첫번째',
+        tags: ['alpha', 'beta'],
+      }),
+    );
+    expect(createShortUrl).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        longUrl: expect.stringContaining('https://b.com/q'),
+        title: '두번째',
+        tags: ['gamma'],
+      }),
     );
   });
 });

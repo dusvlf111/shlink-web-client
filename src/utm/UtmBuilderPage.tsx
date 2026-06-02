@@ -2,10 +2,11 @@ import {
   faCopy,
   faExternalLinkAlt,
   faSave,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
@@ -57,10 +58,23 @@ const parseTags = (rawTags: string): string[] =>
 
 type BuilderMode = 'single' | 'multi';
 
+// Per-row input model for multi mode. Each row carries its own title/tags so
+// the bulk creation can apply them per link (not shared across rows). The UTM
+// fields stay shared (one set applied to every row).
+type LinkRow = {
+  id: number;
+  url: string;
+  title: string;
+  tags: string;
+};
+
 type MultiUrlResult = {
+  id: number;
   url: string;
   builtUrl: string;
   ok: boolean;
+  title: string;
+  tags: string;
 };
 
 const buildUtmUrl = (fields: UtmFields): string => {
@@ -80,23 +94,27 @@ const buildUtmUrl = (fields: UtmFields): string => {
   }
 };
 
-const parseMultiUrls = (raw: string): string[] =>
-  raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-// Apply a single set of UTM fields to each URL. The result is generalized so
-// callers (output / copy / short-url creation) only ever consume an array
-// (single mode == array of length 1).
-const buildUtmUrls = (
-  urls: string[],
+// Apply a single (shared) set of UTM fields to each row that has a non-empty
+// URL. Rows with empty URLs are skipped entirely; rows whose URL fails to build
+// (invalid format) are kept but flagged as not-ok so the UI can mark them as
+// skipped. Per-row title/tags are carried through untouched.
+const buildRowResults = (
+  rows: LinkRow[],
   fields: Omit<UtmFields, 'baseUrl'>,
 ): MultiUrlResult[] =>
-  urls.map((url) => {
-    const builtUrl = buildUtmUrl({ ...fields, baseUrl: url });
-    return { url, builtUrl, ok: !!builtUrl };
-  });
+  rows
+    .filter((row) => !!row.url.trim())
+    .map((row) => {
+      const builtUrl = buildUtmUrl({ ...fields, baseUrl: row.url.trim() });
+      return {
+        id: row.id,
+        url: row.url.trim(),
+        builtUrl,
+        ok: !!builtUrl,
+        title: row.title,
+        tags: row.tags,
+      };
+    });
 
 const extractUtmFieldsFromUrl = (
   baseUrl: string,
@@ -177,9 +195,12 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
     useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
   const [appliedTemplateName, setAppliedTemplateName] = useState('');
   const [mode, setMode] = useState<BuilderMode>('single');
-  const [multiBaseUrls, setMultiBaseUrls] = useState('');
+  const [linkRows, setLinkRows] = useState<LinkRow[]>([
+    { id: 0, url: '', title: '', tags: '' },
+  ]);
+  const nextRowId = useRef(1);
   const [copiedAll, setCopiedAll] = useState(false);
-  const [multiRows, setMultiRows] = useState<MultiUrlResult[]>([]);
+  const [bulkResults, setBulkResults] = useState<MultiUrlResult[]>([]);
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
@@ -188,7 +209,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
   const selectedServer = serverId ? servers[serverId] : null;
 
-  // Derived (not stored) list: each base URL gets the current single UTM set.
+  // Derived (not stored) list: each non-empty row URL gets the shared UTM set.
   // Single mode never touches this so its behavior is untouched.
   const multiResults = useMemo<MultiUrlResult[]>(() => {
     const utmOnly: Omit<UtmFields, 'baseUrl'> = {
@@ -198,8 +219,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       term: fields.term,
       content: fields.content,
     };
-    return buildUtmUrls(parseMultiUrls(multiBaseUrls), utmOnly);
-  }, [multiBaseUrls, fields]);
+    return buildRowResults(linkRows, utmOnly);
+  }, [linkRows, fields]);
   const multiValidCount = multiResults.filter((row) => row.ok).length;
   const multiSkippedCount = multiResults.length - multiValidCount;
   const canBuildMulti =
@@ -207,6 +228,26 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 
   const set = (key: keyof UtmFields) => (val: string) =>
     setFields((prev) => ({ ...prev, [key]: val }));
+
+  const addLinkRow = () =>
+    setLinkRows((prev) => [
+      ...prev,
+      { id: nextRowId.current++, url: '', title: '', tags: '' },
+    ]);
+
+  const removeLinkRow = (id: number) =>
+    setLinkRows((prev) =>
+      prev.length <= 1 ? prev : prev.filter((row) => row.id !== id),
+    );
+
+  const updateLinkRow = (
+    id: number,
+    key: 'url' | 'title' | 'tags',
+    value: string,
+  ) =>
+    setLinkRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, [key]: value } : row)),
+    );
 
   const handleBaseUrlChange = (baseUrl: string) => {
     setFields((prev) => {
@@ -381,7 +422,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   // resets the per-mode short-url results so stale output is not shown.
   const switchMode = (next: BuilderMode) => {
     setMode(next);
-    setMultiRows([]);
+    setBulkResults([]);
     setCopiedAll(false);
     setShortCreateMsg('');
   };
@@ -402,9 +443,9 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
-  // Bulk short-url creation: loop over the derived result array (single mode
-  // would be a length-1 array, but multi mode drives this). Reuses the same
-  // create options form as single mode.
+  // Bulk short-url creation: loop over the valid derived rows. Each row applies
+  // its OWN title/tags (not a shared set). Title/tags are optional per row, so a
+  // blank title becomes undefined and blank tags become an empty array.
   const handleCreateShortInBulk = async () => {
     if (creatingShortUrl) {
       return;
@@ -426,16 +467,6 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       return;
     }
 
-    if (!shortOptions.title.trim()) {
-      setShortCreateMsg('제목은 필수입니다.');
-      return;
-    }
-
-    if (parseTags(shortOptions.tags).length === 0) {
-      setShortCreateMsg('태그는 1개 이상 필수입니다.');
-      return;
-    }
-
     setCreatingShortUrl(true);
 
     const TIMEOUT_MS = 8_000;
@@ -444,13 +475,6 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       new Promise((resolve) => setTimeout(resolve, ms));
 
     const apiClient = buildShlinkApiClient(selectedServer);
-    const composedTitle = [
-      shortOptions.title.trim(),
-      appliedTemplateName.trim(),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
     const validRows = multiResults.filter((row) => row.ok);
     const resultRows: MultiUrlResult[] = [];
     let success = 0;
@@ -466,13 +490,20 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         await sleep(INTER_REQUEST_DELAY_MS);
       }
 
+      // Per-row title: the row's own title, with the applied template name
+      // appended (matching single-mode behavior). Blank => undefined.
+      const composedTitle = [row.title.trim(), appliedTemplateName.trim()]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
       try {
         const created = await Promise.race([
           apiClient.createShortUrl({
             longUrl: row.builtUrl,
             customSlug: undefined,
             title: composedTitle || undefined,
-            tags: parseTags(shortOptions.tags),
+            tags: parseTags(row.tags),
             findIfExists: true,
           }),
           new Promise<never>((_, reject) =>
@@ -495,7 +526,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       }
     }
 
-    setMultiRows(resultRows);
+    setBulkResults(resultRows);
     setShortCreateMsg(t('utm.builder.multi.bulkResult', { success, fail }));
     setCreatingShortUrl(false);
   };
@@ -581,21 +612,66 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
               </div>
             ) : (
               <div>
-                <label
-                  htmlFor="utm-multi-base-url"
-                  className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
-                >
+                <label className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
                   {t('utm.builder.multi.label')}{' '}
                   <span className="text-red-500">*</span>
                 </label>
-                <textarea
-                  id="utm-multi-base-url"
-                  rows={5}
-                  value={multiBaseUrls}
-                  onChange={(e) => setMultiBaseUrls(e.target.value)}
-                  placeholder={t('utm.builder.multi.placeholder')}
-                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
-                />
+                <div className="space-y-2">
+                  {linkRows.map((row) => (
+                    <div key={row.id} className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        aria-label={`${t('utm.builder.multi.row.urlPlaceholder')} ${row.id}`}
+                        value={row.url}
+                        onChange={(e) =>
+                          updateLinkRow(row.id, 'url', e.target.value)
+                        }
+                        placeholder={t('utm.builder.multi.row.urlPlaceholder')}
+                        className="min-w-0 flex-[2] rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                      />
+                      <input
+                        type="text"
+                        aria-label={`${t('utm.builder.multi.row.titlePlaceholder')} ${row.id}`}
+                        value={row.title}
+                        onChange={(e) =>
+                          updateLinkRow(row.id, 'title', e.target.value)
+                        }
+                        placeholder={t(
+                          'utm.builder.multi.row.titlePlaceholder',
+                        )}
+                        className="min-w-0 flex-1 rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                      />
+                      <input
+                        type="text"
+                        aria-label={`${t('utm.builder.multi.row.tagsPlaceholder')} ${row.id}`}
+                        value={row.tags}
+                        onChange={(e) =>
+                          updateLinkRow(row.id, 'tags', e.target.value)
+                        }
+                        placeholder={t('utm.builder.multi.row.tagsPlaceholder')}
+                        className="min-w-0 flex-1 rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                      />
+                      {linkRows.length > 1 && (
+                        <button
+                          type="button"
+                          aria-label={t('utm.builder.multi.row.removeLink')}
+                          title={t('utm.builder.multi.row.removeLink')}
+                          onClick={() => removeLinkRow(row.id)}
+                          className="shrink-0 rounded px-2 py-2 text-sm text-gray-500 hover:text-red-500 dark:text-gray-400"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addLinkRow}
+                  className="mt-2 rounded border border-lm-border px-3 py-1.5 text-xs font-semibold text-(--light-text-color) hover:border-lm-main dark:border-dm-border dark:text-(--dark-text-color)"
+                >
+                  {t('utm.builder.multi.row.addLink')}
+                </button>
                 {multiResults.length > 0 && (
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {t('utm.builder.multi.summary', {
@@ -653,10 +729,10 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {(multiRows.length > 0 ? multiRows : multiResults).map(
+                    {(bulkResults.length > 0 ? bulkResults : multiResults).map(
                       (row, index) => (
                         <div
-                          key={`${row.url}-${index}`}
+                          key={`${row.id}-${index}`}
                           className="break-all rounded border border-lm-border px-3 py-1.5 text-xs dark:border-dm-border"
                         >
                           {row.ok ? (
@@ -727,32 +803,34 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                 <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
                   단축링크 생성 옵션
                 </p>
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <input
-                    type="text"
-                    value={shortOptions.title}
-                    onChange={(e) =>
-                      setShortOptions((prev) => ({
-                        ...prev,
-                        title: e.target.value,
-                      }))
-                    }
-                    placeholder="제목 (필수)"
-                    className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
-                  />
-                  <input
-                    type="text"
-                    value={shortOptions.tags}
-                    onChange={(e) =>
-                      setShortOptions((prev) => ({
-                        ...prev,
-                        tags: e.target.value,
-                      }))
-                    }
-                    placeholder="태그 (필수, 쉼표 구분)"
-                    className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
-                  />
-                  {mode === 'single' && (
+                {/* In multi mode title/tags come from each row, so the shared
+                    title/tags inputs are only shown in single mode. */}
+                {mode === 'single' && (
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <input
+                      type="text"
+                      value={shortOptions.title}
+                      onChange={(e) =>
+                        setShortOptions((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      placeholder="제목 (필수)"
+                      className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
+                    />
+                    <input
+                      type="text"
+                      value={shortOptions.tags}
+                      onChange={(e) =>
+                        setShortOptions((prev) => ({
+                          ...prev,
+                          tags: e.target.value,
+                        }))
+                      }
+                      placeholder="태그 (필수, 쉼표 구분)"
+                      className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
+                    />
                     <input
                       type="text"
                       value={shortOptions.customSlug}
@@ -765,8 +843,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                       placeholder="슬러그 직접 입력 (선택)"
                       className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                     />
-                  )}
-                </div>
+                  </div>
+                )}
                 {appliedTemplateName && (
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
                     저장 시 제목 뒤에 적용된 템플릿 이름{' '}
@@ -780,9 +858,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                       : handleCreateShortInBulk())
                   }
                   disabled={
-                    !shortOptions.title.trim() ||
-                    parseTags(shortOptions.tags).length === 0 ||
-                    creatingShortUrl
+                    mode === 'single'
+                      ? !shortOptions.title.trim() ||
+                        parseTags(shortOptions.tags).length === 0 ||
+                        creatingShortUrl
+                      : !canBuildMulti || creatingShortUrl
                   }
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >

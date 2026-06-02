@@ -119,10 +119,14 @@ export const enMessages: Messages = {
     'Attach the same set of UTM parameters to several links at once',
   'utm.builder.mode.single': 'Single link',
   'utm.builder.mode.multi': 'Multiple links',
-  'utm.builder.multi.label':
-    'Base URLs (separate multiple ones with line breaks)',
+  'utm.builder.multi.label': 'Link list',
   'utm.builder.multi.placeholder':
     'https://example.com/page1\nhttps://example.com/page2',
+  'utm.builder.multi.row.urlPlaceholder': 'https://example.com/page',
+  'utm.builder.multi.row.titlePlaceholder': 'Title (optional)',
+  'utm.builder.multi.row.tagsPlaceholder': 'Tags (optional, comma separated)',
+  'utm.builder.multi.row.addLink': '+ Add link',
+  'utm.builder.multi.row.removeLink': 'Remove row',
   'utm.builder.multi.result.title': 'Generated URL list',
   'utm.builder.multi.result.empty': 'Enter a base URL',
   'utm.builder.multi.skipped': 'Skipped (invalid URL format)',
