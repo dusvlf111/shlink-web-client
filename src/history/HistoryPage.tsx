@@ -1,21 +1,21 @@
-import type { FC } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NoMenuLayout } from '../common/NoMenuLayout';
-import { useT } from '../i18n';
-import { useServers } from '../servers/reducers/servers';
+import type { FC } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { NoMenuLayout } from "../common/NoMenuLayout";
+import { useT } from "../i18n";
+import { useServers } from "../servers/reducers/servers";
 import {
   fetchShortUrlHistory,
   resolveHistoryAction,
   type ShortUrlHistoryRecord,
-} from './shortUrlHistoryService';
+} from "./shortUrlHistoryService";
 
-const ALL_SERVERS = '__all__';
+const ALL_SERVERS = "__all__";
 
 // Render the created date in a human-readable local format. Falls back to the
 // raw string if the value is not a parseable date.
 const formatCreatedAt = (raw: string): string => {
   if (!raw) {
-    return '-';
+    return "-";
   }
   const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? raw : date.toLocaleString();
@@ -25,7 +25,7 @@ const formatCreatedAt = (raw: string): string => {
 // their email, then to the raw relation id.
 const creatorLabel = (record: ShortUrlHistoryRecord): string => {
   const user = record.expand?.created_by;
-  return user?.name?.trim() || user?.email?.trim() || record.created_by || '-';
+  return user?.name?.trim() || user?.email?.trim() || record.created_by || "-";
 };
 
 // Only http(s) URLs may be rendered as clickable links. Anything else
@@ -77,9 +77,9 @@ const UtmCell: FC<{ record: ShortUrlHistoryRecord }> = ({ record }) => {
   return (
     <span
       className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-blue-700 dark:text-blue-300"
-      title={parts.join(' · ')}
+      title={parts.join(" · ")}
     >
-      {parts.join(' · ')}
+      {parts.join(" · ")}
     </span>
   );
 };
@@ -115,10 +115,10 @@ const HistoryPageComp: FC = () => {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t('history.title')}
+              {t("history.title")}
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t('history.subtitle')}
+              {t("history.subtitle")}
             </p>
           </div>
           <div className="flex flex-col gap-1">
@@ -126,17 +126,17 @@ const HistoryPageComp: FC = () => {
               htmlFor="history-server-filter"
               className="text-xs font-medium text-gray-500 dark:text-gray-400"
             >
-              {t('history.filter.label')}
+              {t("history.filter.label")}
             </label>
             <select
               id="history-server-filter"
-              aria-label={t('history.filter.label')}
+              aria-label={t("history.filter.label")}
               value={serverFilter}
               onChange={(e) => setServerFilter(e.target.value)}
               className="rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
             >
               <option value={ALL_SERVERS}>
-                {t('history.filter.allServers')}
+                {t("history.filter.allServers")}
               </option>
               {serverList.map((server) => (
                 <option key={server.id} value={server.id}>
@@ -149,11 +149,11 @@ const HistoryPageComp: FC = () => {
 
         {loading ? (
           <div className="py-12 text-center text-gray-400">
-            {t('history.loading')}
+            {t("history.loading")}
           </div>
         ) : records.length === 0 ? (
           <div className="py-12 text-center text-gray-400">
-            {t('history.empty')}
+            {t("history.empty")}
           </div>
         ) : (
           <div className="w-full overflow-x-auto rounded-lg border border-lm-border dark:border-dm-border">
@@ -161,31 +161,31 @@ const HistoryPageComp: FC = () => {
               <thead className="bg-lm-primary/40 dark:bg-dm-main">
                 <tr>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.action')}
+                    {t("history.col.action")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.server')}
+                    {t("history.col.server")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.shortUrl')}
+                    {t("history.col.shortUrl")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.longUrl')}
+                    {t("history.col.longUrl")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.title')}
+                    {t("history.col.title")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.tags')}
+                    {t("history.col.tags")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.utm')}
+                    {t("history.col.utm")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.createdBy')}
+                    {t("history.col.createdBy")}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
-                    {t('history.col.createdAt')}
+                    {t("history.col.createdAt")}
                   </th>
                 </tr>
               </thead>
@@ -198,13 +198,13 @@ const HistoryPageComp: FC = () => {
                       key={record.id}
                       className="bg-white align-middle dark:bg-dm-primary"
                     >
-                      <td className="px-3 py-2">
+                      <td className="whitespace-nowrap px-3 py-2">
                         <span
                           data-testid={`history-action-${action}`}
                           className={
-                            action === 'deleted'
-                              ? 'rounded bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                              : 'rounded bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            action === "deleted"
+                              ? "inline-block whitespace-nowrap rounded bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                              : "inline-block whitespace-nowrap rounded bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
                           }
                         >
                           {t(`history.action.${action}`)}
@@ -230,15 +230,15 @@ const HistoryPageComp: FC = () => {
                       </td>
                       <td
                         className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)"
-                        title={record.title?.trim() || ''}
+                        title={record.title?.trim() || ""}
                       >
-                        {record.title?.trim() || '-'}
+                        {record.title?.trim() || "-"}
                       </td>
                       <td className="max-w-[180px] px-3 py-2">
                         {record.tags && record.tags.length > 0 ? (
                           <span
                             className="block overflow-hidden text-ellipsis whitespace-nowrap"
-                            title={record.tags.join(', ')}
+                            title={record.tags.join(", ")}
                           >
                             {record.tags.map((tag) => (
                               <span
