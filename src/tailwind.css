@@ -33,3 +33,45 @@ nav[role="navigation"] li > * {
     white-space: nowrap;
     word-break: keep-all;
 }
+
+/*
+ * Visits table (@shlinkio/shlink-web-component, e.g. /non-orphan-visits/list).
+ * The last column ("방문 URL") renders the visited URL with no width cap. A long
+ * URL (utm/fbclid query strings) stretched that column and squeezed the date
+ * column into a 4-line cell, blowing up every row's height. `max-width` on a
+ * <td> is ignored by the CSS table algorithm, so the only reliable fix is
+ * `table-layout: fixed` with explicit column widths.
+ *
+ * Widths are pinned from the right (nth-last-child) so they stay correct
+ * regardless of the optional leading select/bot-status columns. The visited-URL
+ * column (last) is left unsized to absorb the remaining width and truncates
+ * with an ellipsis. Scoped to lg+ so the fixed column widths don't force a
+ * horizontal overflow on small screens.
+ */
+@media (min-width: 1024px) {
+    table.overflow-y-hidden {
+        table-layout: fixed;
+    }
+    table.overflow-y-hidden th,
+    table.overflow-y-hidden td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    table.overflow-y-hidden th:nth-child(1),
+    table.overflow-y-hidden td:nth-child(1) { width: 2.5rem; }
+    table.overflow-y-hidden th:nth-child(2),
+    table.overflow-y-hidden td:nth-child(2) { width: 2.5rem; }
+    table.overflow-y-hidden th:nth-last-child(7),
+    table.overflow-y-hidden td:nth-last-child(7) { width: 9.5rem; } /* date */
+    table.overflow-y-hidden th:nth-last-child(6),
+    table.overflow-y-hidden td:nth-last-child(6) { width: 6rem; }   /* country */
+    table.overflow-y-hidden th:nth-last-child(5),
+    table.overflow-y-hidden td:nth-last-child(5) { width: 7rem; }   /* city */
+    table.overflow-y-hidden th:nth-last-child(4),
+    table.overflow-y-hidden td:nth-last-child(4) { width: 6rem; }   /* browser */
+    table.overflow-y-hidden th:nth-last-child(3),
+    table.overflow-y-hidden td:nth-last-child(3) { width: 4.5rem; } /* os */
+    table.overflow-y-hidden th:nth-last-child(2),
+    table.overflow-y-hidden td:nth-last-child(2) { width: 9rem; }   /* referer */
+}

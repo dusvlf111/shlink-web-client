@@ -20,6 +20,7 @@ PocketBase 인스턴스에 직접 적용해야 통계 공유, 사용자 관리, 
 | `utm_tags` | UTM 카테고리별 태그(자동완성) |
 | `server_configs` | Shlink 서버 등록 정보 (admin 만 쓰기) |
 | `public_tokens` | 통계 공유 토큰 + 스냅샷 + 만료 |
+| `short_url_history` | 단축링크 생성 기록 — 서버/숏/롱/제목/태그/UTM/작성자 |
 
 ## `public_tokens` 가 갖춰야 할 필드 (수동 추가 시)
 

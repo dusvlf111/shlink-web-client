@@ -8,13 +8,15 @@ import { withDependencies } from '../container/context';
 import { useT } from '../i18n';
 import { useGoBack } from '../utils/helpers/hooks';
 import type { ServerData } from './data';
-import { ensureUniqueIds } from './helpers';
 import { DuplicatedServersModal } from './helpers/DuplicatedServersModal';
 import { ImportServersBtn } from './helpers/ImportServersBtn';
 import { ServerForm } from './helpers/ServerForm';
 import { withoutSelectedServer } from './helpers/withoutSelectedServer';
 import { useServers } from './reducers/servers';
-import { createServerConfig, isPocketBaseLoggedIn } from './services/serverConfigsService';
+import {
+  createServerConfig,
+  isPocketBaseLoggedIn,
+} from './services/serverConfigsService';
 
 const SHOW_IMPORT_MSG_TIME = 4000;
 
@@ -22,7 +24,11 @@ export type CreateServerProps = {
   useTimeoutToggle: TimeoutToggle;
 };
 
-const ImportResult = ({ variant, successText, errorText }: Pick<ResultProps, 'variant'> & {
+const ImportResult = ({
+  variant,
+  successText,
+  errorText,
+}: Pick<ResultProps, 'variant'> & {
   successText: string;
   errorText: string;
 }) => (
@@ -34,73 +40,118 @@ const ImportResult = ({ variant, successText, errorText }: Pick<ResultProps, 'va
   </div>
 );
 
-const CreateServerBase: FC<CreateServerProps> = withoutSelectedServer(({ useTimeoutToggle }) => {
-  const t = useT();
-  const { servers, createServers } = useServers();
-  const navigate = useNavigate();
-  const goBack = useGoBack();
-  const hasServers = !!Object.keys(servers).length;
-  const [serversImported, setServersImported] = useTimeoutToggle({ delay: SHOW_IMPORT_MSG_TIME });
-  const [errorImporting, setErrorImporting] = useTimeoutToggle({ delay: SHOW_IMPORT_MSG_TIME });
-  const { flag: isConfirmModalOpen, toggle: toggleConfirmModal } = useToggle();
-  const [serverData, setServerData] = useState<ServerData>();
-  const saveNewServer = useCallback(async (newServerData: ServerData) => {
-    let saved;
-    if (isPocketBaseLoggedIn()) {
-      try {
-        saved = await createServerConfig(newServerData);
-      } catch {
-        // Fall through to the local-only path so the user is never stuck if
-        // PocketBase is unreachable or the request is rejected.
-      }
-    }
+const CreateServerBase: FC<CreateServerProps> = withoutSelectedServer(
+  ({ useTimeoutToggle }) => {
+    const t = useT();
+    const { servers, createServers } = useServers();
+    const navigate = useNavigate();
+    const goBack = useGoBack();
+    const hasServers = !!Object.keys(servers).length;
+    const [serversImported, setServersImported] = useTimeoutToggle({
+      delay: SHOW_IMPORT_MSG_TIME,
+    });
+    const [errorImporting, setErrorImporting] = useTimeoutToggle({
+      delay: SHOW_IMPORT_MSG_TIME,
+    });
+    const { flag: isConfirmModalOpen, toggle: toggleConfirmModal } =
+      useToggle();
+    const [serverData, setServerData] = useState<ServerData>();
+    const [saveError, setSaveError] = useState<string>();
+    const saveNewServer = useCallback(
+      async (newServerData: ServerData) => {
+        // PocketBase is the single source of truth for the servers list.
+        // Creating a server locally would produce an id that does not exist in
+        // PocketBase, so it would silently disappear on the next
+        // `replaceServers()` sync and leave the user on an unreachable
+        // `/server/<id>` route. We therefore only persist through PocketBase and
+        // surface a clear error on failure / when there is no session.
+        if (!isPocketBaseLoggedIn()) {
+          setSaveError(t('servers.create.error.notLoggedIn'));
+          return;
+        }
 
-    if (!saved) {
-      const [withId] = ensureUniqueIds(servers, [newServerData]);
-      saved = withId;
-    }
+        try {
+          const saved = await createServerConfig(newServerData);
+          setSaveError(undefined);
+          createServers([saved]);
+          navigate(`/server/${saved.id}`);
+        } catch {
+          setSaveError(t('servers.create.error.saveFailed'));
+        }
+      },
+      [createServers, navigate, t],
+    );
+    const onSubmit = useCallback(
+      (newServerData: ServerData) => {
+        setServerData(newServerData);
 
-    createServers([saved]);
-    navigate(`/server/${saved.id}`);
-  }, [createServers, navigate, servers]);
-  const onSubmit = useCallback((newServerData: ServerData) => {
-    setServerData(newServerData);
+        const serverExists = Object.values(servers).some(
+          ({ url, apiKey }) =>
+            newServerData.url === url && newServerData.apiKey === apiKey,
+        );
 
-    const serverExists = Object.values(servers).some(
-      ({ url, apiKey }) => newServerData.url === url && newServerData.apiKey === apiKey,
+        if (serverExists) {
+          toggleConfirmModal();
+        } else {
+          void saveNewServer(newServerData);
+        }
+      },
+      [saveNewServer, servers, toggleConfirmModal],
     );
 
-    if (serverExists) {
-      toggleConfirmModal();
-    } else {
-      void saveNewServer(newServerData);
-    }
-  }, [saveNewServer, servers, toggleConfirmModal]);
+    const importSuccessText = t('servers.manage.import.success');
+    const importErrorText = t('servers.manage.import.error');
 
-  const importSuccessText = t('servers.manage.import.success');
-  const importErrorText = t('servers.manage.import.error');
+    return (
+      <NoMenuLayout>
+        <ServerForm title={t('servers.create.title')} onSubmit={onSubmit}>
+          {!hasServers && (
+            <ImportServersBtn
+              tooltipPlacement="top"
+              onImport={setServersImported}
+              onError={setErrorImporting}
+            />
+          )}
+          {hasServers && (
+            <Button variant="secondary" onClick={goBack}>
+              {t('servers.create.cancel')}
+            </Button>
+          )}
+          <Button type="submit">{t('servers.create.submit')}</Button>
+        </ServerForm>
 
-  return (
-    <NoMenuLayout>
-      <ServerForm title={t('servers.create.title')} onSubmit={onSubmit}>
-        {!hasServers && (
-          <ImportServersBtn tooltipPlacement="top" onImport={setServersImported} onError={setErrorImporting} />
+        {serversImported && (
+          <ImportResult
+            variant="success"
+            successText={importSuccessText}
+            errorText={importErrorText}
+          />
         )}
-        {hasServers && <Button variant="secondary" onClick={goBack}>{t('servers.create.cancel')}</Button>}
-        <Button type="submit">{t('servers.create.submit')}</Button>
-      </ServerForm>
+        {errorImporting && (
+          <ImportResult
+            variant="error"
+            successText={importSuccessText}
+            errorText={importErrorText}
+          />
+        )}
 
-      {serversImported && <ImportResult variant="success" successText={importSuccessText} errorText={importErrorText} />}
-      {errorImporting && <ImportResult variant="error" successText={importSuccessText} errorText={importErrorText} />}
+        {saveError && (
+          <div className="mt-4">
+            <Result variant="error">{saveError}</Result>
+          </div>
+        )}
 
-      <DuplicatedServersModal
-        open={isConfirmModalOpen}
-        duplicatedServers={serverData ? [serverData] : []}
-        onClose={goBack}
-        onConfirm={() => serverData && void saveNewServer(serverData)}
-      />
-    </NoMenuLayout>
-  );
-});
+        <DuplicatedServersModal
+          open={isConfirmModalOpen}
+          duplicatedServers={serverData ? [serverData] : []}
+          onClose={goBack}
+          onConfirm={() => serverData && void saveNewServer(serverData)}
+        />
+      </NoMenuLayout>
+    );
+  },
+);
 
-export const CreateServer = withDependencies(CreateServerBase, ['useTimeoutToggle']);
+export const CreateServer = withDependencies(CreateServerBase, [
+  'useTimeoutToggle',
+]);

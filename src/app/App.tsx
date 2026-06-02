@@ -1,4 +1,7 @@
-import { changeThemeInMarkup, getSystemPreferredTheme } from '@shlinkio/shlink-frontend-kit';
+import {
+  changeThemeInMarkup,
+  getSystemPreferredTheme,
+} from '@shlinkio/shlink-frontend-kit';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,6 +15,7 @@ import { NotFound } from '../common/NotFound';
 import { ShlinkVersionsContainer } from '../common/ShlinkVersionsContainer';
 import { ShlinkWebComponentContainer } from '../common/ShlinkWebComponentContainer';
 import { UnifiedSidebar } from '../common/UnifiedSidebar';
+import { HistoryPage } from '../history/HistoryPage';
 import { CreateServer } from '../servers/CreateServer';
 import { EditServer } from '../servers/EditServer';
 import { ManageServers } from '../servers/ManageServers';
@@ -35,7 +39,10 @@ export const App: FC = () => {
   const isHome = location.pathname === '/';
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const openMobileSidebar = useCallback(() => setIsMobileSidebarOpen(true), []);
-  const closeMobileSidebar = useCallback(() => setIsMobileSidebarOpen(false), []);
+  const closeMobileSidebar = useCallback(
+    () => setIsMobileSidebarOpen(false),
+    [],
+  );
 
   const { settings } = useSettings();
   useEffect(() => {
@@ -46,7 +53,10 @@ export const App: FC = () => {
     <div className="h-full">
       <MainHeader onMenuClick={isHome ? undefined : openMobileSidebar} />
       {!isHome && (
-        <UnifiedSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
+        <UnifiedSidebar
+          isOpen={isMobileSidebarOpen}
+          onClose={closeMobileSidebar}
+        />
       )}
 
       <div className="h-full pt-(--header-height)">
@@ -60,36 +70,90 @@ export const App: FC = () => {
           <Routes>
             <Route index element={<Home />} />
             <Route path="/settings">
-              {['', '*'].map((path) => <Route key={path} path={path} element={<Settings />} />)}
+              {['', '*'].map((path) => (
+                <Route key={path} path={path} element={<Settings />} />
+              ))}
             </Route>
             <Route path="/manage-servers" element={<ManageServers />} />
             <Route path="/admin/users" element={<UserManagementPage />} />
-            <Route path="/share-stats" element={<AdminOnlyRoute><ShareStatsManagerPage /></AdminOnlyRoute>} />
-            <Route path="/server/:serverId/share-stats" element={<AdminOnlyRoute><ShareStatsManagerPage /></AdminOnlyRoute>} />
+            <Route
+              path="/share-stats"
+              element={
+                <AdminOnlyRoute>
+                  <ShareStatsManagerPage />
+                </AdminOnlyRoute>
+              }
+            />
+            <Route
+              path="/server/:serverId/share-stats"
+              element={
+                <AdminOnlyRoute>
+                  <ShareStatsManagerPage />
+                </AdminOnlyRoute>
+              }
+            />
             <Route path="/utm-builder" element={<UtmBuilderPage />} />
             <Route path="/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
-            <Route path="/utm-template-manager" element={<UtmTemplateManager />} />
+            <Route
+              path="/utm-template-manager"
+              element={<UtmTemplateManager />}
+            />
             <Route path="/utm-tag-manager" element={<UtmTagManager />} />
-            <Route path="/server/create" element={<AdminOnlyRoute><CreateServer /></AdminOnlyRoute>} />
-            <Route path="/server/:serverId/edit" element={<AdminOnlyRoute><EditServer /></AdminOnlyRoute>} />
-            <Route path="/server/:serverId/utm-builder" element={<UtmBuilderPage />} />
-            <Route path="/server/:serverId/utm-bulk-builder" element={<UtmBulkBuilderPage />} />
-            <Route path="/server/:serverId/utm-template-manager" element={<UtmTemplateManager />} />
-            <Route path="/server/:serverId/utm-tag-manager" element={<UtmTagManager />} />
-            <Route path="/server/:serverId/*" element={<ShlinkWebComponentContainer />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route
+              path="/server/create"
+              element={
+                <AdminOnlyRoute>
+                  <CreateServer />
+                </AdminOnlyRoute>
+              }
+            />
+            <Route
+              path="/server/:serverId/edit"
+              element={
+                <AdminOnlyRoute>
+                  <EditServer />
+                </AdminOnlyRoute>
+              }
+            />
+            <Route
+              path="/server/:serverId/utm-builder"
+              element={<UtmBuilderPage />}
+            />
+            <Route
+              path="/server/:serverId/utm-bulk-builder"
+              element={<UtmBulkBuilderPage />}
+            />
+            <Route
+              path="/server/:serverId/utm-template-manager"
+              element={<UtmTemplateManager />}
+            />
+            <Route
+              path="/server/:serverId/utm-tag-manager"
+              element={<UtmTagManager />}
+            />
+            <Route
+              path="/server/:serverId/*"
+              element={<ShlinkWebComponentContainer />}
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
 
-        <div className={clsx(
-          'h-(--footer-height) mt-(--footer-margin) md:px-4',
-          { 'md:pl-(--aside-menu-width)': !isHome },
-        )}>
+        <div
+          className={clsx('h-(--footer-height) mt-(--footer-margin) md:px-4', {
+            'md:pl-(--aside-menu-width)': !isHome,
+          })}
+        >
           <ShlinkVersionsContainer />
         </div>
       </div>
 
-      <AppUpdateBanner isOpen={appUpdated} onClose={resetAppUpdate} forceUpdate={forceUpdate} />
+      <AppUpdateBanner
+        isOpen={appUpdated}
+        onClose={resetAppUpdate}
+        forceUpdate={forceUpdate}
+      />
     </div>
   );
 };

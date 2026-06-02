@@ -1,14 +1,14 @@
 import { faCopy, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
-import { useServers } from '../servers/reducers/servers';
 import { useT } from '../i18n';
-import { useUtmTemplates, useUtmTags } from './useUtmData';
+import { useServers } from '../servers/reducers/servers';
+import { useUtmTags, useUtmTemplates } from './useUtmData';
 
 type GeneratedRow = {
   id: string;
@@ -44,7 +44,10 @@ type OverrideFields = {
   content: string;
 };
 
-const pickOverride = (overrideValue: string | undefined, templateValue: string | undefined) => {
+const pickOverride = (
+  overrideValue: string | undefined,
+  templateValue: string | undefined,
+) => {
   const trimmed = overrideValue?.trim();
   return trimmed ? trimmed : templateValue;
 };
@@ -90,32 +93,54 @@ const normalizeBaseUrl = (rawBaseUrl: string): string => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
-const parseTags = (rawTags: string): string[] => rawTags
-  .split(',')
-  .map((tag) => tag.trim())
-  .filter(Boolean);
+const parseTags = (rawTags: string): string[] =>
+  rawTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
-const sanitizeSlugPart = (rawValue: string): string => rawValue
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9-]+/g, '-')
-  .replace(/-+/g, '-')
-  .replace(/^-|-$/g, '');
+const sanitizeSlugPart = (rawValue: string): string =>
+  rawValue
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 
-const pickFallbackServerId = (servers: Record<string, { id: string; autoConnect?: boolean }>): string | null => {
+const pickFallbackServerId = (
+  servers: Record<string, { id: string; autoConnect?: boolean }>,
+): string | null => {
   const list = Object.values(servers);
   return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
 };
 
-const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiClient }) => {
+// Read the active serverId from the URL so bulk creation targets the server the
+// user is viewing, not the autoConnect/first server (which silently created
+// short URLs on the wrong Shlink server).
+const serverIdFromPathname = (pathname: string): string | undefined => {
+  const matched = pathname.match(/^\/server\/([^/]+)/)?.[1];
+  return matched && matched !== 'create' ? matched : undefined;
+};
+
+const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
+  buildShlinkApiClient,
+}) => {
   const { serverId: paramServerId } = useParams<{ serverId: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const t = useT();
   const { templates } = useUtmTemplates();
   const { tags } = useUtmTags();
   const { servers } = useServers();
-  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
-  const serverId = paramServerId ?? fallbackServerId ?? undefined;
+  const fallbackServerId = useMemo(
+    () => pickFallbackServerId(servers),
+    [servers],
+  );
+  const serverId =
+    paramServerId ??
+    serverIdFromPathname(pathname) ??
+    fallbackServerId ??
+    undefined;
 
   const [baseUrl, setBaseUrl] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -147,22 +172,35 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     return templates.filter((template) => selectedIdSet.has(template.id));
   }, [selectedIds, templates]);
 
-  const previewRows = useMemo<GeneratedRow[]>(() => selectedTemplates
-    .map((template) => ({
-      id: template.id,
-      name: template.name,
-      description: template.description,
-      utmUrl: buildUtmUrlFromTemplate(normalizeBaseUrl(baseUrl), template, overrideFields),
-    }))
-    .filter((row) => row.utmUrl), [baseUrl, overrideFields, selectedTemplates]);
+  const previewRows = useMemo<GeneratedRow[]>(
+    () =>
+      selectedTemplates
+        .map((template) => ({
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          utmUrl: buildUtmUrlFromTemplate(
+            normalizeBaseUrl(baseUrl),
+            template,
+            overrideFields,
+          ),
+        }))
+        .filter((row) => row.utmUrl),
+    [baseUrl, overrideFields, selectedTemplates],
+  );
 
+  // Bootstrap selection only once: select every template the first time they
+  // load (0 -> N). After that the user is in control — clearing the selection
+  // via "전체 해제" must stay cleared and not re-trigger this effect.
+  const didBootstrapSelection = useRef(false);
   useEffect(() => {
-    if (templates.length === 0 || selectedIds.length > 0) {
+    if (didBootstrapSelection.current || templates.length === 0) {
       return;
     }
 
+    didBootstrapSelection.current = true;
     setSelectedIds(templates.map((template) => template.id));
-  }, [templates, selectedIds.length]);
+  }, [templates]);
 
   useEffect(() => {
     setHasGenerated(false);
@@ -172,20 +210,28 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     setShowShortOptions(false);
   }, [baseUrl, selectedIds, overrideFields]);
 
-  const allSelected = templates.length > 0 && selectedIds.length === templates.length;
+  const allSelected =
+    templates.length > 0 && selectedIds.length === templates.length;
   const hasShortUrls = generatedRows.some((row) => !!row.shortUrl);
-  const isBulkCreateDisabled = creatingShortUrls
-    || !shortOptions.titlePrefix.trim()
-    || parseTags(shortOptions.additionalTags).length === 0;
+  const isBulkCreateDisabled =
+    creatingShortUrls ||
+    !shortOptions.titlePrefix.trim() ||
+    parseTags(shortOptions.additionalTags).length === 0;
 
   const toggleSelected = (templateId: string) => {
-    setSelectedIds((prev) => (prev.includes(templateId)
-      ? prev.filter((id) => id !== templateId)
-      : [...prev, templateId]));
+    setSelectedIds((prev) =>
+      prev.includes(templateId)
+        ? prev.filter((id) => id !== templateId)
+        : [...prev, templateId],
+    );
   };
 
   const toggleAll = () => {
-    setSelectedIds((prev) => (prev.length === templates.length ? [] : templates.map((template) => template.id)));
+    setSelectedIds((prev) =>
+      prev.length === templates.length
+        ? []
+        : templates.map((template) => template.id),
+    );
   };
 
   const copyText = async (text: string) => {
@@ -227,7 +273,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
 
     setGeneratedRows(previewRows);
     setHasGenerated(true);
-    setActionMessage(t('utm.bulk.message.generated', { count: previewRows.length }));
+    setActionMessage(
+      t('utm.bulk.message.generated', { count: previewRows.length }),
+    );
   };
 
   const handleCreateShortUrlsInBulk = async () => {
@@ -261,17 +309,24 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
     const PER_REQUEST_TIMEOUT_MS = 8_000;
     const INTER_REQUEST_DELAY_MS = 750;
 
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
-    const withTimeout = <Result,>(promise: Promise<Result>): Promise<Result> => Promise.race<Result>([
-      promise,
-      new Promise<Result>((_, reject) => {
-        setTimeout(
-          () => reject(new Error(`Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`)),
-          PER_REQUEST_TIMEOUT_MS,
-        );
-      }),
-    ]);
+    const withTimeout = <Result,>(promise: Promise<Result>): Promise<Result> =>
+      Promise.race<Result>([
+        promise,
+        new Promise<Result>((_, reject) => {
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`,
+                ),
+              ),
+            PER_REQUEST_TIMEOUT_MS,
+          );
+        }),
+      ]);
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
       if (!raw) return '';
@@ -287,8 +342,12 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
         const parts: string[] = [];
         if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
         if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
-        if (typeof obj.detail === 'string' && obj.detail) parts.push(obj.detail);
-        if (Array.isArray(obj.invalidElements) && obj.invalidElements.length > 0) {
+        if (typeof obj.detail === 'string' && obj.detail)
+          parts.push(obj.detail);
+        if (
+          Array.isArray(obj.invalidElements) &&
+          obj.invalidElements.length > 0
+        ) {
           parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
         }
         if (parts.length === 0) return JSON.stringify(raw);
@@ -301,14 +360,33 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       if (!raw) return false;
       if (raw instanceof Error) {
         const m = raw.message;
-        return m.includes('slug') || m.includes('conflict') || m.includes('409');
+        return (
+          m.includes('slug') || m.includes('conflict') || m.includes('409')
+        );
       }
       if (typeof raw === 'object') {
-        const obj = raw as { status?: number; type?: string; detail?: string; invalidElements?: string[] };
+        const obj = raw as {
+          status?: number;
+          type?: string;
+          detail?: string;
+          invalidElements?: string[];
+        };
         if (obj.status === 409) return true;
-        if (typeof obj.type === 'string' && obj.type.toLowerCase().includes('slug')) return true;
-        if (typeof obj.detail === 'string' && obj.detail.toLowerCase().includes('slug')) return true;
-        if (Array.isArray(obj.invalidElements) && obj.invalidElements.includes('customSlug')) return true;
+        if (
+          typeof obj.type === 'string' &&
+          obj.type.toLowerCase().includes('slug')
+        )
+          return true;
+        if (
+          typeof obj.detail === 'string' &&
+          obj.detail.toLowerCase().includes('slug')
+        )
+          return true;
+        if (
+          Array.isArray(obj.invalidElements) &&
+          obj.invalidElements.includes('customSlug')
+        )
+          return true;
       }
       return false;
     };
@@ -323,7 +401,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       const rowsWithShortUrl: GeneratedRow[] = [];
       for (let index = 0; index < generatedRows.length; index += 1) {
         const row = generatedRows[index];
-        setActionMessage(`${t('utm.bulk.message.creating')} (${index + 1}/${generatedRows.length})`);
+        setActionMessage(
+          `${t('utm.bulk.message.creating')} (${index + 1}/${generatedRows.length})`,
+        );
 
         // Throttle between requests so Shlink does not rate-limit us.
         if (index > 0) {
@@ -348,13 +428,17 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
           let shortUrl;
 
           try {
-            shortUrl = await withTimeout(apiClient.createShortUrl({
-              ...createPayload,
-              customSlug,
-            }));
+            shortUrl = await withTimeout(
+              apiClient.createShortUrl({
+                ...createPayload,
+                customSlug,
+              }),
+            );
           } catch (slugError) {
             if (customSlug && isSlugConflictError(slugError)) {
-              shortUrl = await withTimeout(apiClient.createShortUrl(createPayload));
+              shortUrl = await withTimeout(
+                apiClient.createShortUrl(createPayload),
+              );
             } else {
               throw slugError;
             }
@@ -366,8 +450,11 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
             shortCode: shortUrl.shortCode,
             createError: undefined,
           });
+          // History logging now happens centrally in the API client wrapper
+          // (buildShlinkApiClient), so no explicit logging call is needed here.
         } catch (error) {
-          const message = extractShlinkErrorMessage(error) || t('utm.bulk.row.errorPrefix');
+          const message =
+            extractShlinkErrorMessage(error) || t('utm.bulk.row.errorPrefix');
           rowsWithShortUrl.push({
             ...row,
             createError: `${t('utm.bulk.row.errorPrefix')}: ${message}`,
@@ -376,11 +463,19 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       }
 
       setGeneratedRows(rowsWithShortUrl);
-      const successCount = rowsWithShortUrl.filter((row) => !!row.shortUrl).length;
+      const successCount = rowsWithShortUrl.filter(
+        (row) => !!row.shortUrl,
+      ).length;
       const failCount = rowsWithShortUrl.length - successCount;
-      setActionMessage(t('utm.bulk.message.bulkResult', { success: successCount, fail: failCount }));
+      setActionMessage(
+        t('utm.bulk.message.bulkResult', {
+          success: successCount,
+          fail: failCount,
+        }),
+      );
     } catch (error) {
-      const detail = error instanceof Error && error.message ? ` (${error.message})` : '';
+      const detail =
+        error instanceof Error && error.message ? ` (${error.message})` : '';
       setActionMessage(`${t('utm.bulk.message.bulkError')}${detail}`);
     } finally {
       setCreatingShortUrls(false);
@@ -392,7 +487,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
       return;
     }
 
-    navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
+    navigate(
+      `/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`,
+    );
   };
 
   const tagDescriptionMap = useMemo(() => {
@@ -411,7 +508,11 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
   }, [tags]);
 
   const getTemplateTagsInfo = (template: any) => {
-    const result: Array<{ category: string; value: string; description?: string }> = [];
+    const result: Array<{
+      category: string;
+      value: string;
+      description?: string;
+    }> = [];
 
     ['source', 'medium', 'campaign', 'term', 'content'].forEach((category) => {
       const value = template[category]?.trim();
@@ -433,10 +534,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
   return (
     <NoMenuLayout>
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-            {t('utm.bulk.title')}
-          </h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
+              {t('utm.bulk.title')}
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {t('utm.bulk.subtitle')}
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -463,40 +569,64 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
             </h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
-                <label htmlFor="bulk-override-campaign" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="bulk-override-campaign"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('utm.bulk.override.campaign.label')}
                 </label>
                 <input
                   id="bulk-override-campaign"
                   type="text"
                   value={overrideFields.campaign}
-                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, campaign: e.target.value }))}
+                  onChange={(e) =>
+                    setOverrideFields((prev) => ({
+                      ...prev,
+                      campaign: e.target.value,
+                    }))
+                  }
                   placeholder={t('utm.bulk.override.campaign.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
               <div>
-                <label htmlFor="bulk-override-term" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="bulk-override-term"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('utm.bulk.override.term.label')}
                 </label>
                 <input
                   id="bulk-override-term"
                   type="text"
                   value={overrideFields.term}
-                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, term: e.target.value }))}
+                  onChange={(e) =>
+                    setOverrideFields((prev) => ({
+                      ...prev,
+                      term: e.target.value,
+                    }))
+                  }
                   placeholder={t('utm.bulk.override.term.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
               <div>
-                <label htmlFor="bulk-override-content" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="bulk-override-content"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('utm.bulk.override.content.label')}
                 </label>
                 <input
                   id="bulk-override-content"
                   type="text"
                   value={overrideFields.content}
-                  onChange={(e) => setOverrideFields((prev) => ({ ...prev, content: e.target.value }))}
+                  onChange={(e) =>
+                    setOverrideFields((prev) => ({
+                      ...prev,
+                      content: e.target.value,
+                    }))
+                  }
                   placeholder={t('utm.bulk.override.content.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
@@ -518,7 +648,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                   onClick={toggleAll}
                   className="rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                 >
-                  {allSelected ? t('utm.bulk.step2.deselectAll') : t('utm.bulk.step2.selectAll')}
+                  {allSelected
+                    ? t('utm.bulk.step2.deselectAll')
+                    : t('utm.bulk.step2.selectAll')}
                 </button>
               )}
             </div>
@@ -527,7 +659,11 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
               <div className="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span>{t('utm.bulk.step2.empty')}</span>
                 <Link
-                  to={serverId ? `/server/${serverId}/utm-template-manager` : '/utm-template-manager'}
+                  to={
+                    serverId
+                      ? `/server/${serverId}/utm-template-manager`
+                      : '/utm-template-manager'
+                  }
                   className="w-fit rounded bg-blue-700 px-3 py-1.5 text-white no-underline hover:bg-blue-800"
                 >
                   {t('utm.bulk.step2.gotoTemplates')}
@@ -538,7 +674,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                 {templates.map((template) => {
                   const checked = selectedIds.includes(template.id);
                   const tagInfo = getTemplateTagsInfo(template);
-                  const hasCampaign = tagInfo.some((t) => t.category === 'campaign');
+                  const hasCampaign = tagInfo.some(
+                    (t) => t.category === 'campaign',
+                  );
 
                   return (
                     <label
@@ -563,21 +701,24 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                           </span>
                         )}
                         <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
-                          source={template.source || '-'} · medium={template.medium || '-'}
+                          source={template.source || '-'} · medium=
+                          {template.medium || '-'}
                           {hasCampaign && ` · campaign=${template.campaign}`}
                         </span>
                         {tagInfo.some((t) => t.description) && (
                           <div className="mt-1 space-y-0.5">
-                            {tagInfo.map((tag) => (
-                              tag.description && (
-                                <span
-                                  key={`${template.id}-${tag.category}`}
-                                  className="block text-[10px] text-blue-600 dark:text-blue-400"
-                                >
-                                  <strong>{tag.category}:</strong> {tag.description}
-                                </span>
-                              )
-                            ))}
+                            {tagInfo.map(
+                              (tag) =>
+                                tag.description && (
+                                  <span
+                                    key={`${template.id}-${tag.category}`}
+                                    className="block text-[10px] text-blue-600 dark:text-blue-400"
+                                  >
+                                    <strong>{tag.category}:</strong>{' '}
+                                    {tag.description}
+                                  </span>
+                                ),
+                            )}
                           </div>
                         )}
                       </span>
@@ -604,11 +745,17 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                 {serverId && (
                   <button
                     type="button"
-                    disabled={creatingShortUrls || !hasGenerated || generatedRows.length === 0}
+                    disabled={
+                      creatingShortUrls ||
+                      !hasGenerated ||
+                      generatedRows.length === 0
+                    }
                     onClick={() => setShowShortOptions((prev) => !prev)}
                     className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                   >
-                    {creatingShortUrls ? t('utm.bulk.action.makingShortUrls') : t('utm.bulk.action.makeShortUrls')}
+                    {creatingShortUrls
+                      ? t('utm.bulk.action.makingShortUrls')
+                      : t('utm.bulk.action.makeShortUrls')}
                   </button>
                 )}
                 <button
@@ -618,49 +765,74 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                   className="flex items-center gap-2 rounded bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
                 >
                   <FontAwesomeIcon icon={faCopy} />
-                  {copiedAll ? t('utm.bulk.action.copiedAll') : t('utm.bulk.action.copyAll')}
+                  {copiedAll
+                    ? t('utm.bulk.action.copiedAll')
+                    : t('utm.bulk.action.copyAll')}
                 </button>
               </div>
             </div>
 
             {actionMessage && (
-              <p className="mb-2 text-xs text-blue-600 dark:text-blue-300">{actionMessage}</p>
+              <p className="mb-2 text-xs text-blue-600 dark:text-blue-300">
+                {actionMessage}
+              </p>
             )}
 
             {showShortOptions && (
               <div className="mb-2 space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
-                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.bulk.options.title')}</p>
+                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('utm.bulk.options.title')}
+                </p>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <input
                     type="text"
                     value={shortOptions.titlePrefix}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, titlePrefix: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        titlePrefix: e.target.value,
+                      }))
+                    }
                     placeholder={t('utm.bulk.options.titlePrefix.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.additionalTags}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, additionalTags: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        additionalTags: e.target.value,
+                      }))
+                    }
                     placeholder={t('utm.bulk.options.tags.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.slugPrefix}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, slugPrefix: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        slugPrefix: e.target.value,
+                      }))
+                    }
                     placeholder={t('utm.bulk.options.slugPrefix.placeholder')}
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('utm.bulk.options.tagsHelp')}</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {t('utm.bulk.options.tagsHelp')}
+                </p>
                 <button
                   type="button"
                   disabled={isBulkCreateDisabled}
                   onClick={() => void handleCreateShortUrlsInBulk()}
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
-                  {creatingShortUrls ? t('utm.bulk.action.makingShortUrls') : t('utm.bulk.options.runBulk')}
+                  {creatingShortUrls
+                    ? t('utm.bulk.action.makingShortUrls')
+                    : t('utm.bulk.options.runBulk')}
                 </button>
               </div>
             )}
@@ -674,7 +846,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                 {generatedRows.map((row) => {
                   const template = templates.find((t) => t.id === row.id);
                   const tagInfo = template ? getTemplateTagsInfo(template) : [];
-                  const hasCampaign = tagInfo.some((t) => t.category === 'campaign');
+                  const hasCampaign = tagInfo.some(
+                    (t) => t.category === 'campaign',
+                  );
 
                   return (
                     <div
@@ -712,13 +886,18 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                       {/* Tag Descriptions */}
                       {tagInfo.some((t) => t.description) && (
                         <div className="mb-2 space-y-0.5 rounded bg-amber-50 p-2 dark:bg-amber-900/20">
-                          {tagInfo.map((tag) => (
-                            tag.description && (
-                              <div key={`${row.id}-${tag.category}`} className="text-[10px] text-amber-900 dark:text-amber-200">
-                                <strong>{tag.category}:</strong> {tag.description}
-                              </div>
-                            )
-                          ))}
+                          {tagInfo.map(
+                            (tag) =>
+                              tag.description && (
+                                <div
+                                  key={`${row.id}-${tag.category}`}
+                                  className="text-[10px] text-amber-900 dark:text-amber-200"
+                                >
+                                  <strong>{tag.category}:</strong>{' '}
+                                  {tag.description}
+                                </div>
+                              ),
+                          )}
                         </div>
                       )}
 
@@ -740,11 +919,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => void copyText(row.shortUrl ?? row.utmUrl)}
+                          onClick={() =>
+                            void copyText(row.shortUrl ?? row.utmUrl)
+                          }
                           className="flex items-center gap-2 rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                         >
                           <FontAwesomeIcon icon={faCopy} />
-                          {row.shortUrl ? t('utm.bulk.row.copyShort') : t('utm.bulk.row.copyUtm')}
+                          {row.shortUrl
+                            ? t('utm.bulk.row.copyShort')
+                            : t('utm.bulk.row.copyUtm')}
                         </button>
                         {serverId && (
                           <button
@@ -769,4 +952,6 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({ buildShlinkApiCli
   );
 };
 
-export const UtmBulkBuilderPage = withDependencies(UtmBulkBuilderPageBase, ['buildShlinkApiClient']);
+export const UtmBulkBuilderPage = withDependencies(UtmBulkBuilderPageBase, [
+  'buildShlinkApiClient',
+]);

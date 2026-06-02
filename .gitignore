@@ -15,3 +15,5 @@ public/servers.json*
 .env.local
 .remember
 .history
+
+.playwright-mcp

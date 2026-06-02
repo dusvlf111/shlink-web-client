@@ -4,10 +4,13 @@ export const enMessages: Messages = {
   'header.settings': 'Settings',
   'header.userManagement': 'User management',
   'header.userManagement.pendingBadge': '{count} pending',
+  'header.pocketbaseAdmin': 'PocketBase admin',
   'header.logout': 'Log out',
   'header.languageToggle': 'Language',
   'header.openSidebar': 'Open menu',
   'header.closeSidebar': 'Close menu',
+  'header.currentServer': 'Server:',
+  'header.noServer': 'No server',
 
   'sidebar.section.shortUrls': 'Short URLs',
   'sidebar.shortUrls.overview': 'Overview',
@@ -24,13 +27,36 @@ export const enMessages: Messages = {
 
   'sidebar.section.share': 'Share',
   'sidebar.share.stats': 'Share stats',
+  'sidebar.history': 'History',
+
+  // History page
+  'history.title': 'Short URL history',
+  'history.subtitle': 'Review every recorded short URL creation.',
+  'history.loading': 'Loading...',
+  'history.empty': 'No short URLs have been recorded yet.',
+  'history.filter.label': 'Server filter',
+  'history.filter.allServers': 'All servers',
+  'history.col.server': 'Server',
+  'history.col.shortUrl': 'Short URL',
+  'history.col.longUrl': 'Original URL',
+  'history.col.title': 'Title',
+  'history.col.tags': 'Tags',
+  'history.col.utm': 'UTM',
+  'history.col.createdBy': 'Created by',
+  'history.col.createdAt': 'Created at',
+  'history.col.action': 'Action',
+  'history.action.created': 'Created',
+  'history.action.deleted': 'Deleted',
 
   'share.manager.title': 'Stats share links',
-  'share.manager.subtitle': 'Securely share short URL stats with external collaborators. Share links only expose the stats view and stop working once they expire.',
+  'share.manager.subtitle':
+    'Securely share short URL stats with external collaborators. Share links only expose the stats view and stop working once they expire.',
   'share.manager.create.title': 'Create a new share link',
   'share.manager.create.shortCode.label': 'Short URL',
-  'share.manager.create.shortCode.placeholder': 'Search short URLs (title, code, URL)',
-  'share.manager.create.shortCode.help': 'Search the short URLs registered on this server and pick one.',
+  'share.manager.create.shortCode.placeholder':
+    'Search short URLs (title, code, URL)',
+  'share.manager.create.shortCode.help':
+    'Search the short URLs registered on this server and pick one.',
   'share.manager.create.shortCode.searching': 'Searching...',
   'share.manager.create.shortCode.empty': 'No short URLs match your search.',
   'share.manager.create.shortCode.selected': 'Selected',
@@ -44,7 +70,8 @@ export const enMessages: Messages = {
   'share.manager.create.expiry.day30': '30 days',
   'share.manager.create.expiry.day90': '90 days',
   'share.manager.create.expiry.never': 'Never expires',
-  'share.manager.create.serverMissing': 'Pick a server first by visiting a server route that contains the target short URL.',
+  'share.manager.create.serverMissing':
+    'Pick a server first by visiting a server route that contains the target short URL.',
   'share.manager.create.adminOnly': 'Only admins can create share links.',
   'share.manager.create.submit': 'Create share link',
   'share.manager.create.submitting': 'Creating...',
@@ -62,7 +89,8 @@ export const enMessages: Messages = {
   'share.manager.row.refresh': 'Refresh data',
   'share.manager.row.refreshing': 'Refreshing...',
   'share.manager.row.delete': 'Stop sharing',
-  'share.manager.row.deleteConfirm': 'Stop sharing this link? External viewers will lose access.',
+  'share.manager.row.deleteConfirm':
+    'Stop sharing this link? External viewers will lose access.',
   'share.manager.row.statusActive': 'Active',
   'share.manager.row.visitCount': '{count} visits',
   'share.manager.summary.active': '{count} active shares',
@@ -80,7 +108,8 @@ export const enMessages: Messages = {
   'share.public.expiresAt': 'Share expires at',
   'share.public.invalidLink': 'This share link format is invalid.',
   'share.public.expired': 'This share link has expired.',
-  'share.public.notFound': 'Share link could not be loaded — token might be invalid.',
+  'share.public.notFound':
+    'Share link could not be loaded — token might be invalid.',
   'share.public.metric.total': 'Total visits',
   'share.public.metric.nonBots': 'Non-bot visits',
   'share.public.metric.uniqueDays': 'Active days',
@@ -108,6 +137,30 @@ export const enMessages: Messages = {
   'share.public.share.bots': 'Including bots',
 
   'utm.builder.title': 'UTM builder',
+  'utm.builder.subtitle':
+    'Attach the same set of UTM parameters to several links at once',
+  'utm.builder.mode.single': 'Single link',
+  'utm.builder.mode.multi': 'Multiple links',
+  'utm.builder.multi.label': 'Link list',
+  'utm.builder.multi.placeholder':
+    'https://example.com/page1\nhttps://example.com/page2',
+  'utm.builder.multi.row.urlPlaceholder': 'https://example.com/page',
+  'utm.builder.multi.row.titlePlaceholder': 'Title (optional)',
+  'utm.builder.multi.row.tagsPlaceholder': 'Tags (optional, comma separated)',
+  'utm.builder.multi.row.addLink': '+ Add link',
+  'utm.builder.multi.row.removeLink': 'Remove row',
+  'utm.builder.multi.result.title': 'Generated URL list',
+  'utm.builder.multi.result.empty': 'Enter a base URL',
+  'utm.builder.multi.skipped': 'Skipped (invalid URL format)',
+  'utm.builder.multi.summary': '{valid} valid · {skipped} skipped',
+  'utm.builder.multi.copyAll': 'Copy all',
+  'utm.builder.multi.copiedAll': 'All copied',
+  'utm.builder.multi.copyAllNeeded': 'There are no valid URLs to copy.',
+  'utm.builder.multi.copyAllDone': 'All URLs copied.',
+  'utm.builder.multi.createAll': 'Create short URLs at once',
+  'utm.builder.multi.creating': 'Creating short URLs...',
+  'utm.builder.multi.bulkResult':
+    'Short URLs created: {success} succeeded, {fail} failed',
   'utm.builder.baseUrl.label': 'Base URL',
   'utm.builder.baseUrl.placeholder': 'e.g. https://example.com/path',
   'utm.builder.fields.source': 'Campaign source (utm_source)',
@@ -122,11 +175,15 @@ export const enMessages: Messages = {
   'utm.builder.openCreate': 'Create short URL',
 
   'utm.bulk.title': 'UTM bulk builder',
+  'utm.bulk.subtitle':
+    'Apply several templates saved for a single link all at once',
   'utm.bulk.step1.title': '1. Enter base URL',
   'utm.bulk.step1.placeholder': 'e.g. https://example.com/path',
-  'utm.bulk.step1.help': 'Selected templates\' utm_* values are automatically appended to build many URLs at once.',
+  'utm.bulk.step1.help':
+    'Selected templates\' utm_* values are automatically appended to build many URLs at once.',
   'utm.bulk.overrideSection.title': '1.5 Campaign info for this run (optional)',
-  'utm.bulk.overrideSection.help': 'Leave empty to use the values stored in each template. Filling these overrides them across every selected template.',
+  'utm.bulk.overrideSection.help':
+    'Leave empty to use the values stored in each template. Filling these overrides them across every selected template.',
   'utm.bulk.override.campaign.label': 'Campaign (utm_campaign)',
   'utm.bulk.override.campaign.placeholder': 'e.g. mktchl3_dday',
   'utm.bulk.override.term.label': 'Term (utm_term)',
@@ -139,7 +196,8 @@ export const enMessages: Messages = {
   'utm.bulk.step2.empty': 'No templates saved yet.',
   'utm.bulk.step2.gotoTemplates': 'Go to template manager',
   'utm.bulk.step3.title': '3. Result',
-  'utm.bulk.step3.empty': 'Enter a base URL, pick templates, and press the build button.',
+  'utm.bulk.step3.empty':
+    'Enter a base URL, pick templates, and press the build button.',
   'utm.bulk.action.generate': 'Build',
   'utm.bulk.action.makeShortUrls': 'Make short URLs at once',
   'utm.bulk.action.makingShortUrls': 'Making short URLs...',
@@ -153,16 +211,22 @@ export const enMessages: Messages = {
   'utm.bulk.options.runBulk': 'Run bulk short URL creation',
   'utm.bulk.message.needBaseUrl': 'Please enter a base URL first.',
   'utm.bulk.message.needTemplate': 'Please select at least one template.',
-  'utm.bulk.message.invalidUrl': 'Please check the URL format, e.g. https://example.com/path',
+  'utm.bulk.message.invalidUrl':
+    'Please check the URL format, e.g. https://example.com/path',
   'utm.bulk.message.generated': '{count} URLs were generated.',
-  'utm.bulk.message.needGenerate': 'Press the build button to generate URLs first.',
+  'utm.bulk.message.needGenerate':
+    'Press the build button to generate URLs first.',
   'utm.bulk.message.needTitle': 'Title is required.',
   'utm.bulk.message.needTags': 'At least one tag is required.',
   'utm.bulk.message.creating': 'Creating short URLs...',
-  'utm.bulk.message.serverMissing': 'Selected server is missing. Please retry from the server route.',
-  'utm.bulk.message.bulkResult': 'Bulk creation done: {success} succeeded, {fail} failed.',
-  'utm.bulk.message.bulkError': 'An error occurred while creating short URLs. Please check the server connection.',
-  'utm.bulk.message.copyAllNeeded': 'You can copy all after the short URLs are created.',
+  'utm.bulk.message.serverMissing':
+    'Selected server is missing. Please retry from the server route.',
+  'utm.bulk.message.bulkResult':
+    'Bulk creation done: {success} succeeded, {fail} failed.',
+  'utm.bulk.message.bulkError':
+    'An error occurred while creating short URLs. Please check the server connection.',
+  'utm.bulk.message.copyAllNeeded':
+    'You can copy all after the short URLs are created.',
   'utm.bulk.message.copyAllDone': 'All entries copied.',
   'utm.bulk.row.copyShort': 'Copy short URL',
   'utm.bulk.row.copyUtm': 'Copy UTM URL',
@@ -171,7 +235,15 @@ export const enMessages: Messages = {
   'utm.bulk.row.errorPrefix': 'Short URL creation failed',
 
   'utm.template.title': 'UTM template manager',
+  'utm.template.message.saved': 'Template saved.',
+  'utm.template.message.updated': 'Template updated.',
+  'utm.template.error.saveFailed': 'Failed to save the template',
+  'utm.template.error.deleteFailed': 'Failed to delete the template',
   'utm.tag.title': 'UTM tag manager',
+  'utm.tag.message.saved': 'Tag saved.',
+  'utm.tag.message.updated': 'Tag updated.',
+  'utm.tag.error.saveFailed': 'Failed to save the tag',
+  'utm.tag.error.deleteFailed': 'Failed to delete the tag',
 
   'home.title': 'Server list',
   'home.subtitle': 'Click a server to start managing your short links.',
@@ -191,8 +263,10 @@ export const enMessages: Messages = {
   'servers.manage.col.options': 'Options',
   'servers.manage.col.autoConnect': 'Auto-connect',
   'servers.manage.empty': 'No servers found.',
-  'servers.manage.import.success': 'Servers properly imported. You can now select one from the list :)',
-  'servers.manage.import.error': 'The servers could not be imported. Make sure the format is correct.',
+  'servers.manage.import.success':
+    'Servers properly imported. You can now select one from the list :)',
+  'servers.manage.import.error':
+    'The servers could not be imported. Make sure the format is correct.',
   'servers.row.connect': 'Connect',
   'servers.row.edit': 'Edit server',
   'servers.row.autoConnect.on': 'Auto-connect',
@@ -201,20 +275,28 @@ export const enMessages: Messages = {
   'servers.create.title': 'Add new server',
   'servers.create.cancel': 'Cancel',
   'servers.create.submit': 'Create server',
+  'servers.create.error.notLoggedIn':
+    'You must be logged in to add a server. Please log in and try again.',
+  'servers.create.error.saveFailed':
+    'Could not save the server. Check your connection and try again. No temporary server was created.',
   'servers.edit.title': 'Edit "{name}"',
   'servers.edit.cancel': 'Cancel',
   'servers.edit.save': 'Save',
   'servers.delete.title': 'Remove server',
   'servers.delete.confirm': 'Delete',
   'servers.delete.question': 'Are you sure you want to remove {name}?',
-  'servers.delete.note': 'No data will be deleted, only the access to this server will be removed from this device. You can create it again at any moment.',
+  'servers.delete.note':
+    'No data will be deleted, only the access to this server will be removed from this device. You can create it again at any moment.',
   'servers.form.name': 'Name',
   'servers.form.url': 'URL',
   'servers.form.apiKey': 'API key',
   'servers.form.advanced': 'Advanced options',
-  'servers.form.forwardCredentials': 'Forward credentials to this server on every request.',
-  'servers.form.forwardCredentials.help': '"Credentials" here means cookies, TLS client certificates, or authentication headers containing a username and password.',
-  'servers.form.forwardCredentials.warning': 'If you are not sure what this means, leave it unchecked. Enabling this option will make all requests fail for Shlink older than v4.5.0.',
+  'servers.form.forwardCredentials':
+    'Forward credentials to this server on every request.',
+  'servers.form.forwardCredentials.help':
+    '"Credentials" here means cookies, TLS client certificates, or authentication headers containing a username and password.',
+  'servers.form.forwardCredentials.warning':
+    'If you are not sure what this means, leave it unchecked. Enabling this option will make all requests fail for Shlink older than v4.5.0.',
   'servers.import.button': 'Import servers',
   'servers.import.tooltip': 'Import server list from a JSON or CSV file.',
   'home.learnMore': 'Learn more about Shlink',

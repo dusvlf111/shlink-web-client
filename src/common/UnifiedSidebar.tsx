@@ -1,6 +1,8 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faChartLine,
   faClipboardList,
+  faClockRotateLeft,
   faGlobe,
   faHouse,
   faLayerGroup,
@@ -11,16 +13,14 @@ import {
   faTags,
   faWandMagicSparkles,
 } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
-import { Link, useLocation, useParams } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
-import type { ServersMap } from '../servers/data';
-import { useServers } from '../servers/reducers/servers';
+import { useActiveServer } from '../servers/useActiveServer';
 
 type SidebarItem = {
   /** Path appended to the optional server prefix. */
@@ -42,32 +42,84 @@ type SidebarItem = {
 // (node_modules/@shlinkio/shlink-web-component/dist/index.js:291-329) — keep paths and
 // icons in sync with future package upgrades.
 const SHORT_URL_ITEMS: readonly SidebarItem[] = [
-  { to: '/overview', labelKey: 'sidebar.shortUrls.overview', icon: faHouse, scoped: true, requiresServer: true },
-  { to: '/list-short-urls/1', labelKey: 'sidebar.shortUrls.list', icon: faList, matchPrefix: '/list-short-urls', scoped: true, requiresServer: true },
-  { to: '/create-short-url', labelKey: 'sidebar.shortUrls.create', icon: faLink, iconFlip: 'horizontal', scoped: true, requiresServer: true },
-  { to: '/manage-tags', labelKey: 'sidebar.shortUrls.tags', icon: faTags, scoped: true, requiresServer: true },
-  { to: '/manage-domains', labelKey: 'sidebar.shortUrls.domains', icon: faGlobe, scoped: true, requiresServer: true },
+  {
+    to: '/overview',
+    labelKey: 'sidebar.shortUrls.overview',
+    icon: faHouse,
+    scoped: true,
+    requiresServer: true,
+  },
+  {
+    to: '/list-short-urls/1',
+    labelKey: 'sidebar.shortUrls.list',
+    icon: faList,
+    matchPrefix: '/list-short-urls',
+    scoped: true,
+    requiresServer: true,
+  },
+  {
+    to: '/create-short-url',
+    labelKey: 'sidebar.shortUrls.create',
+    icon: faLink,
+    iconFlip: 'horizontal',
+    scoped: true,
+    requiresServer: true,
+  },
+  {
+    to: '/manage-tags',
+    labelKey: 'sidebar.shortUrls.tags',
+    icon: faTags,
+    scoped: true,
+    requiresServer: true,
+  },
+  {
+    to: '/manage-domains',
+    labelKey: 'sidebar.shortUrls.domains',
+    icon: faGlobe,
+    scoped: true,
+    requiresServer: true,
+  },
 ];
 
 const UTM_ITEMS: readonly SidebarItem[] = [
-  { to: '/utm-builder', labelKey: 'sidebar.utm.builder', icon: faWandMagicSparkles, scoped: true },
-  { to: '/utm-bulk-builder', labelKey: 'sidebar.utm.bulk', icon: faLayerGroup, scoped: true },
-  { to: '/utm-template-manager', labelKey: 'sidebar.utm.templates', icon: faClipboardList, scoped: true },
-  { to: '/utm-tag-manager', labelKey: 'sidebar.utm.tags', icon: faTag, scoped: true },
+  {
+    to: '/utm-builder',
+    labelKey: 'sidebar.utm.builder',
+    icon: faWandMagicSparkles,
+    scoped: true,
+  },
+  {
+    to: '/utm-bulk-builder',
+    labelKey: 'sidebar.utm.bulk',
+    icon: faLayerGroup,
+    scoped: true,
+  },
+  {
+    to: '/utm-template-manager',
+    labelKey: 'sidebar.utm.templates',
+    icon: faClipboardList,
+    scoped: true,
+  },
+  {
+    to: '/utm-tag-manager',
+    labelKey: 'sidebar.utm.tags',
+    icon: faTag,
+    scoped: true,
+  },
 ];
 
 const SHARE_ITEMS: readonly SidebarItem[] = [
   { to: '/share-stats', labelKey: 'sidebar.share.stats', icon: faShareNodes },
+  {
+    to: '/history',
+    labelKey: 'sidebar.history',
+    icon: faClockRotateLeft,
+    scoped: false,
+  },
 ];
 
 const buildHref = (item: SidebarItem, prefix: string) =>
   item.scoped ? `${prefix}${item.to}` : item.to;
-
-const pickFallbackServerId = (servers: ServersMap): string | null => {
-  const serverList = Object.values(servers);
-  const autoConnect = serverList.find((server) => server.autoConnect);
-  return autoConnect?.id ?? serverList[0]?.id ?? null;
-};
 
 const isActive = (pathname: string, href: string, matchPrefix?: string) => {
   if (matchPrefix && pathname.includes(matchPrefix)) {
@@ -90,7 +142,8 @@ const NavRow: FC<{
     'no-underline rounded-none px-5 py-2.5',
     {
       'text-white bg-lm-main dark:bg-dm-main': active,
-      'highlight:bg-lm-secondary highlight:dark:bg-dm-secondary': !active && !disabled,
+      'highlight:bg-lm-secondary highlight:dark:bg-dm-secondary':
+        !active && !disabled,
       'opacity-40 pointer-events-none': disabled,
     },
   );
@@ -105,7 +158,11 @@ const NavRow: FC<{
   }
 
   return (
-    <Link to={href} className={className} aria-current={active ? 'page' : undefined}>
+    <Link
+      to={href}
+      className={className}
+      aria-current={active ? 'page' : undefined}
+    >
       <FontAwesomeIcon icon={item.icon} flip={item.iconFlip} />
       {label}
     </Link>
@@ -119,7 +176,10 @@ const SectionLabel: FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const SidebarDivider: FC = () => (
-  <div className="my-2 border-t border-lm-border dark:border-dm-border" aria-hidden="true" />
+  <div
+    className="my-2 border-t border-lm-border dark:border-dm-border"
+    aria-hidden="true"
+  />
 );
 
 export type UnifiedSidebarProps = {
@@ -129,15 +189,18 @@ export type UnifiedSidebarProps = {
   onClose?: () => void;
 };
 
-export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({ isOpen = false, onClose }) => {
+export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
+  isOpen = false,
+  onClose,
+}) => {
   const t = useT();
   const { pathname } = useLocation();
-  const { serverId } = useParams<{ serverId: string }>();
-  const { servers } = useServers();
-  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
-  const effectiveServerId = serverId ?? fallbackServerId;
-  const serverPrefix = effectiveServerId ? `/server/${effectiveServerId}` : '';
-  const hasServer = !!effectiveServerId;
+  // Shared active-server resolution (URL -> selectedServer -> fallback) keeps the
+  // sidebar aligned with the header and preserves the server context on
+  // non-scoped pages like /history and /share-stats.
+  const { activeServerId } = useActiveServer();
+  const serverPrefix = activeServerId ? `/server/${activeServerId}` : '';
+  const hasServer = !!activeServerId;
 
   // Auto-close the mobile sidebar whenever the route changes.
   const lastPathnameRef = useRef(pathname);
@@ -197,7 +260,10 @@ export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({ isOpen = false, onClos
           <SidebarDivider />
 
           <SectionLabel>
-            <FontAwesomeIcon icon={faChartLine} className="mr-1.5 text-[10px]" />
+            <FontAwesomeIcon
+              icon={faChartLine}
+              className="mr-1.5 text-[10px]"
+            />
             {t('sidebar.section.utm')}
           </SectionLabel>
           {UTM_ITEMS.map((item) => {

@@ -1,4 +1,12 @@
-import { faBars, faCogs as cogsIcon, faLanguage, faSignOutAlt as logoutIcon, faUsers as usersIcon } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBars,
+  faCogs as cogsIcon,
+  faDatabase as databaseIcon,
+  faLanguage,
+  faServer as serverIcon,
+  faSignOutAlt as logoutIcon,
+  faUsers as usersIcon,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
@@ -8,9 +16,14 @@ import { useAuth } from '../auth/AuthContext';
 import type { Locale } from '../i18n';
 import { useLocale, useT } from '../i18n';
 import { ServersDropdown } from '../servers/ServersDropdown';
-import { ShlinkLogo } from './img/ShlinkLogo';
+import { useActiveServer } from '../servers/useActiveServer';
+import { LetsCareerLogo } from './img/LetsCareerLogo';
 
 const NEXT_LOCALE: Record<Locale, Locale> = { ko: 'en', en: 'ko' };
+
+// PocketBase admin console URL, derived once from the same env var the
+// PocketBase client uses (see src/lib/pocketbase.ts).
+const POCKETBASE_ADMIN_URL = `${import.meta.env.VITE_POCKETBASE_URL ?? 'http://127.0.0.1:8090'}/_/`;
 
 export type MainHeaderProps = {
   onMenuClick?: () => void;
@@ -22,6 +35,7 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const { count: pendingUsersCount } = usePendingUsersCount();
+  const { activeServer } = useActiveServer();
 
   const settingsPath = '/settings';
   const localeLabelKey = locale === 'ko' ? 'language.en' : 'language.ko';
@@ -29,8 +43,8 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
   return (
     <NavBar
       className="[&]:fixed top-0 z-900"
-      brand={(
-        <div className="flex items-center gap-2">
+      brand={
+        <div className="flex items-center gap-3">
           {onMenuClick && (
             <button
               type="button"
@@ -42,11 +56,34 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
               <FontAwesomeIcon icon={faBars} />
             </button>
           )}
-          <Link to="/" className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap">
-            <ShlinkLogo className="w-7" color="white" /> <small className="font-normal">Shlink</small>
+          <Link
+            to="/"
+            className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap"
+          >
+            <span className="flex items-center justify-center rounded bg-white p-1">
+              <LetsCareerLogo className="w-5 h-5" />
+            </span>{' '}
+            <small className="font-normal">렛츠커리어</small>
           </Link>
+          <span
+            data-testid="active-server-indicator"
+            className="hidden md:flex items-center gap-1.5 text-sm whitespace-nowrap text-white/80"
+            title={
+              activeServer
+                ? `${t('header.currentServer')} ${activeServer.name}`
+                : t('header.noServer')
+            }
+          >
+            <FontAwesomeIcon icon={serverIcon} />
+            <span className="text-white/60">
+              {t('header.currentServer')}
+            </span>{' '}
+            <span className="font-medium text-white">
+              {activeServer ? activeServer.name : t('header.noServer')}
+            </span>
+          </span>
         </div>
-      )}
+      }
     >
       <NavBar.MenuItem
         to={settingsPath}
@@ -66,13 +103,31 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
           {pendingUsersCount > 0 && (
             <span
               data-testid="pending-users-badge"
-              aria-label={t('header.userManagement.pendingBadge', { count: pendingUsersCount })}
+              aria-label={t('header.userManagement.pendingBadge', {
+                count: pendingUsersCount,
+              })}
               className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white"
             >
               {pendingUsersCount}
             </span>
           )}
         </NavBar.MenuItem>
+      )}
+      {user?.role === 'admin' && (
+        <li role="none" className="flex">
+          <a
+            href={POCKETBASE_ADMIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            role="menuitem"
+            data-testid="pocketbase-admin-link"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap text-white/80 hover:text-white"
+            title={t('header.pocketbaseAdmin')}
+          >
+            <FontAwesomeIcon icon={databaseIcon} />{' '}
+            {t('header.pocketbaseAdmin')}
+          </a>
+        </li>
       )}
       <li role="none" className="flex">
         <button
