@@ -1,57 +1,57 @@
-import { screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
-import { UtmBulkBuilderPage } from "../../src/utm/UtmBulkBuilderPage";
-import { renderWithStore } from "../__helpers__/setUpTest";
+import { screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { UtmBulkBuilderPage } from '../../src/utm/UtmBulkBuilderPage';
+import { renderWithStore } from '../__helpers__/setUpTest';
 
 const mockTemplates = [
   {
-    id: "tpl-1",
-    name: "구글 광고",
-    description: "광고 캠페인",
-    source: "google",
-    medium: "cpc",
-    campaign: "spring",
-    term: "keyword",
-    content: "banner",
+    id: 'tpl-1',
+    name: '구글 광고',
+    description: '광고 캠페인',
+    source: 'google',
+    medium: 'cpc',
+    campaign: 'spring',
+    term: 'keyword',
+    content: 'banner',
   },
   {
-    id: "tpl-2",
-    name: "네이버 광고",
-    description: "",
-    source: "naver",
-    medium: "cpc",
-    campaign: "spring",
-    term: "",
-    content: "",
+    id: 'tpl-2',
+    name: '네이버 광고',
+    description: '',
+    source: 'naver',
+    medium: 'cpc',
+    campaign: 'spring',
+    term: '',
+    content: '',
   },
 ];
 
-vi.mock("../../src/utm/useUtmData", () => ({
+vi.mock('../../src/utm/useUtmData', () => ({
   useUtmTemplates: () => ({
     templates: mockTemplates,
   }),
   useUtmTags: () => ({
     tags: [
       {
-        id: "tag-1",
-        category: "source",
-        value: "google",
-        description: "구글 검색",
+        id: 'tag-1',
+        category: 'source',
+        value: 'google',
+        description: '구글 검색',
       },
       {
-        id: "tag-2",
-        category: "medium",
-        value: "cpc",
-        description: "CPC 광고",
+        id: 'tag-2',
+        category: 'medium',
+        value: 'cpc',
+        description: 'CPC 광고',
       },
     ],
   }),
 }));
 
-describe("<UtmBulkBuilderPage />", () => {
+describe('<UtmBulkBuilderPage />', () => {
   const setUp = () =>
     renderWithStore(
-      <MemoryRouter initialEntries={["/server/server-1/utm-bulk-builder"]}>
+      <MemoryRouter initialEntries={['/server/server-1/utm-bulk-builder']}>
         <Routes>
           <Route
             path="/server/:serverId/utm-bulk-builder"
@@ -61,27 +61,27 @@ describe("<UtmBulkBuilderPage />", () => {
       </MemoryRouter>,
     );
 
-  it("renders heading using the i18n key", () => {
+  it('renders heading using the i18n key', () => {
     setUp();
     expect(
-      screen.getByRole("heading", { name: "UTM 벌크 생성" }),
+      screen.getByRole('heading', { name: 'UTM 벌크 생성' }),
     ).toBeInTheDocument();
   });
 
-  it("renders template checkboxes for each template", () => {
+  it('renders template checkboxes for each template', () => {
     setUp();
     expect(screen.getByLabelText(/구글 광고/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/네이버 광고/i)).toBeInTheDocument();
   });
 
-  it("shows template description if present", () => {
+  it('shows template description if present', () => {
     setUp();
-    expect(screen.getByText("광고 캠페인")).toBeInTheDocument();
+    expect(screen.getByText('광고 캠페인')).toBeInTheDocument();
   });
 
-  it("all templates are selected by default", () => {
+  it('all templates are selected by default', () => {
     setUp();
-    const checkboxes = screen.getAllByRole("checkbox");
+    const checkboxes = screen.getAllByRole('checkbox');
     checkboxes.forEach((checkbox) => {
       expect(checkbox).toBeChecked();
     });
@@ -90,9 +90,9 @@ describe("<UtmBulkBuilderPage />", () => {
   it('keeps the selection empty after "전체 해제" is clicked', async () => {
     const { user } = setUp();
 
-    await user.click(screen.getByRole("button", { name: "전체 해제" }));
+    await user.click(screen.getByRole('button', { name: '전체 해제' }));
 
-    const checkboxes = screen.getAllByRole("checkbox");
+    const checkboxes = screen.getAllByRole('checkbox');
     checkboxes.forEach((checkbox) => {
       expect(checkbox).not.toBeChecked();
     });
@@ -100,10 +100,10 @@ describe("<UtmBulkBuilderPage />", () => {
     // The bootstrap effect must not re-select everything once cleared.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "전체 선택" }),
+        screen.getByRole('button', { name: '전체 선택' }),
       ).toBeInTheDocument();
     });
-    screen.getAllByRole("checkbox").forEach((checkbox) => {
+    screen.getAllByRole('checkbox').forEach((checkbox) => {
       expect(checkbox).not.toBeChecked();
     });
   });
@@ -111,15 +111,15 @@ describe("<UtmBulkBuilderPage />", () => {
   it('selects all templates again when "전체 선택" is clicked after clearing', async () => {
     const { user } = setUp();
 
-    await user.click(screen.getByRole("button", { name: "전체 해제" }));
-    await user.click(screen.getByRole("button", { name: "전체 선택" }));
+    await user.click(screen.getByRole('button', { name: '전체 해제' }));
+    await user.click(screen.getByRole('button', { name: '전체 선택' }));
 
-    screen.getAllByRole("checkbox").forEach((checkbox) => {
+    screen.getAllByRole('checkbox').forEach((checkbox) => {
       expect(checkbox).toBeChecked();
     });
   });
 
-  it("toggles individual template selection", async () => {
+  it('toggles individual template selection', async () => {
     const { user } = setUp();
     const checkbox = screen.getByLabelText(/구글 광고/i);
 
@@ -130,35 +130,35 @@ describe("<UtmBulkBuilderPage />", () => {
     expect(checkbox).toBeChecked();
   });
 
-  it("shows toggle all button label", () => {
+  it('shows toggle all button label', () => {
     setUp();
     expect(
-      screen.getByRole("button", { name: "전체 해제" }),
+      screen.getByRole('button', { name: '전체 해제' }),
     ).toBeInTheDocument();
   });
 
-  it("shows error message when generate is clicked without base URL", async () => {
+  it('shows error message when generate is clicked without base URL', async () => {
     const { user } = setUp();
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
     expect(
-      screen.getByText("기본 URL을 먼저 입력해 주세요."),
+      screen.getByText('기본 URL을 먼저 입력해 주세요.'),
     ).toBeInTheDocument();
   });
 
-  it("generates UTM URLs from templates when base URL is valid", async () => {
+  it('generates UTM URLs from templates when base URL is valid', async () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
 
     await waitFor(() => {
       expect(screen.getByText(/2개 URL이 생성되었습니다/)).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText("구글 광고").length).toBeGreaterThan(0);
+    expect(screen.getAllByText('구글 광고').length).toBeGreaterThan(0);
     expect(screen.getByText(/utm_source=google/)).toBeInTheDocument();
   });
 
@@ -166,51 +166,51 @@ describe("<UtmBulkBuilderPage />", () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
 
     await waitFor(() => {
-      const createButtons = screen.getAllByRole("button", {
+      const createButtons = screen.getAllByRole('button', {
         name: /단축링크 만들기/,
       });
       expect(createButtons.length).toBeGreaterThan(0);
     });
   });
 
-  it("shows copy all disabled before short URLs are created", async () => {
+  it('shows copy all disabled before short URLs are created', async () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
 
     await waitFor(() => {
       expect(screen.getByText(/URL이 생성되었습니다/)).toBeInTheDocument();
     });
 
-    const copyAllButton = screen.getByRole("button", { name: /전체 복사/ });
+    const copyAllButton = screen.getByRole('button', { name: /전체 복사/ });
     expect(copyAllButton).toBeDisabled();
   });
 
-  it("renders the initial guide text before generation", () => {
+  it('renders the initial guide text before generation', () => {
     setUp();
     expect(
       screen.getByText(/기본 URL을 입력하고 템플릿을 선택한 뒤/),
     ).toBeInTheDocument();
   });
 
-  it("keeps the template campaign value when the override is left empty", async () => {
+  it('keeps the template campaign value when the override is left empty', async () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
 
     await waitFor(() => {
       expect(screen.getByText(/utm_source=google/)).toBeInTheDocument();
@@ -219,23 +219,23 @@ describe("<UtmBulkBuilderPage />", () => {
     expect(allUtmText.length).toBeGreaterThan(0);
   });
 
-  it("overrides every selected template with the campaign/term/content fields", async () => {
+  it('overrides every selected template with the campaign/term/content fields', async () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
     await user.type(
       screen.getByLabelText(/캠페인 \(utm_campaign\)/),
-      "mktchl3_dday",
+      'mktchl3_dday',
     );
-    await user.type(screen.getByLabelText(/키워드 \(utm_term\)/), "brand");
+    await user.type(screen.getByLabelText(/키워드 \(utm_term\)/), 'brand');
     await user.type(
       screen.getByLabelText(/콘텐츠 \(utm_content\)/),
-      "banner-top",
+      'banner-top',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
 
     await waitFor(() => {
       expect(screen.getByText(/2개 URL이 생성되었습니다/)).toBeInTheDocument();
@@ -243,9 +243,9 @@ describe("<UtmBulkBuilderPage />", () => {
 
     const overrideHits = screen.getAllByText(
       (content) =>
-        content.includes("utm_campaign=mktchl3_dday") &&
-        content.includes("utm_term=brand") &&
-        content.includes("utm_content=banner-top"),
+        content.includes('utm_campaign=mktchl3_dday') &&
+        content.includes('utm_term=brand') &&
+        content.includes('utm_content=banner-top'),
     );
     expect(overrideHits.length).toBe(2);
 
@@ -253,21 +253,21 @@ describe("<UtmBulkBuilderPage />", () => {
     expect(screen.queryByText(/utm_campaign=spring/)).toBeNull();
   });
 
-  it("clears generated rows when the override fields change", async () => {
+  it('clears generated rows when the override fields change', async () => {
     const { user } = setUp();
 
     await user.type(
-      screen.getByPlaceholderText("예) https://example.com/path"),
-      "https://example.com/page",
+      screen.getByPlaceholderText('예) https://example.com/path'),
+      'https://example.com/page',
     );
-    await user.click(screen.getByRole("button", { name: "만들기" }));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
     await waitFor(() =>
       expect(screen.getByText(/utm_source=google/)).toBeInTheDocument(),
     );
 
     await user.type(
       screen.getByLabelText(/캠페인 \(utm_campaign\)/),
-      "mktchl3_d1",
+      'mktchl3_d1',
     );
 
     expect(screen.queryByText(/utm_source=google/)).toBeNull();
@@ -276,9 +276,9 @@ describe("<UtmBulkBuilderPage />", () => {
     ).toBeInTheDocument();
   });
 
-  it("falls back to English labels under the en locale", () => {
+  it('falls back to English labels under the en locale', () => {
     renderWithStore(
-      <MemoryRouter initialEntries={["/server/server-1/utm-bulk-builder"]}>
+      <MemoryRouter initialEntries={['/server/server-1/utm-bulk-builder']}>
         <Routes>
           <Route
             path="/server/:serverId/utm-bulk-builder"
@@ -286,15 +286,15 @@ describe("<UtmBulkBuilderPage />", () => {
           />
         </Routes>
       </MemoryRouter>,
-      { initialLocale: "en" },
+      { initialLocale: 'en' },
     );
 
     expect(
-      screen.getByRole("heading", { name: "UTM bulk builder" }),
+      screen.getByRole('heading', { name: 'UTM bulk builder' }),
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText(/Campaign \(utm_campaign\)/),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Build" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Build' })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,9 @@
-import { faCopy, faRotateRight, faShareNodes, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCopy,
+  faRotateRight,
+  faShareNodes,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -49,7 +54,9 @@ type Notice = {
   message: string;
 };
 
-const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlinkApiClient }) => {
+const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({
+  buildShlinkApiClient,
+}) => {
   const t = useT();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -66,12 +73,20 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   // Defensive newest-first sort: PocketBase already returns rows sorted by -id,
   // but explicit createdAt-desc here protects the UI from any future schema or
   // cursor changes, and keeps optimistic prepends ordered when timestamps drift.
-  const setTokens = useCallback((updater: ShareToken[] | ((prev: ShareToken[]) => ShareToken[])) => {
-    setTokensRaw((prev) => {
-      const next = typeof updater === 'function' ? (updater as (p: ShareToken[]) => ShareToken[])(prev) : updater;
-      return [...next].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
-    });
-  }, []);
+  const setTokens = useCallback(
+    (updater: ShareToken[] | ((prev: ShareToken[]) => ShareToken[])) => {
+      setTokensRaw((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? (updater as (p: ShareToken[]) => ShareToken[])(prev)
+            : updater;
+        return [...next].sort((a, b) =>
+          (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
+        );
+      });
+    },
+    [],
+  );
   const [shortCode, setShortCode] = useState('');
   const [label, setLabel] = useState('');
   const [expiryDays, setExpiryDays] = useState(7);
@@ -96,10 +111,12 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
       return list;
     } catch (error) {
       const detail = describePocketBaseError(error);
-      setLoadError(`발급된 공유 링크를 불러오지 못했습니다. PocketBase schema/권한 확인이 필요합니다.${detail}`);
+      setLoadError(
+        `발급된 공유 링크를 불러오지 못했습니다. PocketBase schema/권한 확인이 필요합니다.${detail}`,
+      );
       return null;
     }
-  }, []);
+  }, [setTokens, setLoadError]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -110,11 +127,17 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   const handleCreate = async () => {
     setNotice(null);
     if (!isAdmin) {
-      setNotice({ kind: 'error', message: t('share.manager.create.adminOnly') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.create.adminOnly'),
+      });
       return;
     }
     if (!activeServer) {
-      setNotice({ kind: 'error', message: t('share.manager.create.serverMissing') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.create.serverMissing'),
+      });
       return;
     }
     if (!shortCode.trim()) {
@@ -131,15 +154,28 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
         expiresInDays: expiryDays > 0 ? expiryDays : undefined,
         apiClient,
       });
-      const createdShareUrl = buildShareUrl(window.location.origin, createdToken.id, createdToken.token);
+      const createdShareUrl = buildShareUrl(
+        window.location.origin,
+        createdToken.id,
+        createdToken.token,
+      );
       setLastIssuedUrl(createdShareUrl);
-      setTokens((prev) => [createdToken, ...prev.filter((token) => token.id !== createdToken.id)]);
+      setTokens((prev) => [
+        createdToken,
+        ...prev.filter((token) => token.id !== createdToken.id),
+      ]);
       setShortCode('');
       setLabel('');
-      setNotice({ kind: 'success', message: t('share.manager.notice.createSuccess') });
+      setNotice({
+        kind: 'success',
+        message: t('share.manager.notice.createSuccess'),
+      });
       void reload();
     } catch {
-      setNotice({ kind: 'error', message: t('share.manager.notice.createError') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.notice.createError'),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -149,12 +185,18 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
     const url = buildShareUrl(window.location.origin, token.id, token.token);
     await navigator.clipboard.writeText(url);
     setCopiedId(token.id);
-    setTimeout(() => setCopiedId((current) => (current === token.id ? null : current)), 2000);
+    setTimeout(
+      () => setCopiedId((current) => (current === token.id ? null : current)),
+      2000,
+    );
   };
 
   const handleRefresh = async (token: ShareToken) => {
     if (!activeServer) {
-      setNotice({ kind: 'error', message: t('share.manager.create.serverMissing') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.create.serverMissing'),
+      });
       return;
     }
     setRefreshingId(token.id);
@@ -164,7 +206,10 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
       await refreshShareToken(token.id, token.shortCode, apiClient);
       await reload();
     } catch {
-      setNotice({ kind: 'error', message: t('share.manager.notice.refreshError') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.notice.refreshError'),
+      });
     } finally {
       setRefreshingId(null);
     }
@@ -179,7 +224,10 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
       await deleteShareToken(token.id);
       await reload();
     } catch {
-      setNotice({ kind: 'error', message: t('share.manager.notice.deleteError') });
+      setNotice({
+        kind: 'error',
+        message: t('share.manager.notice.deleteError'),
+      });
     }
   };
 
@@ -190,7 +238,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
           <h1 className="flex items-center gap-2 text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
             <FontAwesomeIcon icon={faShareNodes} /> {t('share.manager.title')}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('share.manager.subtitle')}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t('share.manager.subtitle')}
+          </p>
         </header>
 
         {!isAdmin && (
@@ -206,7 +256,10 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
             </h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label htmlFor="share-short-code" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="share-short-code"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('share.manager.create.shortCode.label')}
                 </label>
                 <ShortUrlPicker
@@ -221,10 +274,15 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                   }}
                   onClear={() => setShortCode('')}
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('share.manager.create.shortCode.help')}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {t('share.manager.create.shortCode.help')}
+                </p>
               </div>
               <div>
-                <label htmlFor="share-label" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="share-label"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('share.manager.create.label.label')}
                 </label>
                 <input
@@ -237,7 +295,10 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                 />
               </div>
               <div className="md:col-span-2">
-                <label htmlFor="share-expiry" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="share-expiry"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   {t('share.manager.create.expiry.label')}
                 </label>
                 <select
@@ -256,7 +317,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
             </div>
 
             {notice ? (
-              <p className={`mt-3 text-xs ${notice.kind === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}>
+              <p
+                className={`mt-3 text-xs ${notice.kind === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}
+              >
                 {notice.message}
               </p>
             ) : null}
@@ -274,7 +337,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                 onClick={() => void handleCreate()}
                 className="rounded bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-40"
               >
-                {submitting ? t('share.manager.create.submitting') : t('share.manager.create.submit')}
+                {submitting
+                  ? t('share.manager.create.submitting')
+                  : t('share.manager.create.submit')}
               </button>
             </div>
           </section>
@@ -296,10 +361,18 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
               {tokens.length > 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
-                    {t('share.manager.summary.active', { count: tokens.filter((token) => !isShareTokenExpired(token)).length })}
+                    {t('share.manager.summary.active', {
+                      count: tokens.filter(
+                        (token) => !isShareTokenExpired(token),
+                      ).length,
+                    })}
                   </span>
                   <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                    {t('share.manager.summary.expired', { count: tokens.filter((token) => isShareTokenExpired(token)).length })}
+                    {t('share.manager.summary.expired', {
+                      count: tokens.filter((token) =>
+                        isShareTokenExpired(token),
+                      ).length,
+                    })}
                   </span>
                 </p>
               )}
@@ -308,17 +381,33 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
               <div className="mb-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
                 <p>{loadError}</p>
                 <p className="mt-1 text-[11px] text-red-600 dark:text-red-300">
-                  점검 항목: ① <code>public_tokens</code> 콜렉션이 존재하는지 ② <code>created_by</code>, <code>token</code>, <code>label</code>, <code>server_id</code>, <code>snapshot</code>, <code>snapshot_at</code> 필드가 모두 있는지 ③ listRule 이 <code>@request.auth.id != '' && created_by = @request.auth.id</code> 인지 ④ 본인이 admin 으로 로그인했는지. 정확한 원인은 PocketBase Admin → Logs 탭에서 확인.
+                  점검 항목: ① <code>public_tokens</code> 콜렉션이 존재하는지 ②{' '}
+                  <code>created_by</code>, <code>token</code>,{' '}
+                  <code>label</code>, <code>server_id</code>,{' '}
+                  <code>snapshot</code>, <code>snapshot_at</code> 필드가 모두
+                  있는지 ③ listRule 이{' '}
+                  <code>
+                    @request.auth.id != &apos;&apos; && created_by =
+                    @request.auth.id
+                  </code>{' '}
+                  인지 ④ 본인이 admin 으로 로그인했는지. 정확한 원인은
+                  PocketBase Admin → Logs 탭에서 확인.
                 </p>
               </div>
             )}
             {tokens.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('share.manager.list.empty')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('share.manager.list.empty')}
+              </p>
             ) : (
               <ul className="space-y-3">
                 {tokens.map((token) => {
                   const expired = isShareTokenExpired(token);
-                  const shareUrl = buildShareUrl(window.location.origin, token.id, token.token);
+                  const shareUrl = buildShareUrl(
+                    window.location.origin,
+                    token.id,
+                    token.token,
+                  );
                   const visitCount = token.snapshot?.data?.data?.length ?? 0;
                   return (
                     <li
@@ -332,15 +421,21 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="mb-1 flex items-center gap-2">
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              expired
-                                ? 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
-                            }`}>
-                              {expired ? t('share.manager.row.expired') : t('share.manager.row.statusActive')}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                expired
+                                  ? 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+                              }`}
+                            >
+                              {expired
+                                ? t('share.manager.row.expired')
+                                : t('share.manager.row.statusActive')}
                             </span>
                             <span className="rounded bg-lm-primary/40 px-2 py-0.5 text-[11px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)">
-                              {t('share.manager.row.visitCount', { count: visitCount })}
+                              {t('share.manager.row.visitCount', {
+                                count: visitCount,
+                              })}
                             </span>
                           </div>
                           <p className="truncate text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
@@ -353,13 +448,18 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                             {shareUrl}
                           </p>
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            {t('share.manager.row.createdAt')}: {formatDateTime(token.createdAt)}
+                            {t('share.manager.row.createdAt')}:{' '}
+                            {formatDateTime(token.createdAt)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {t('share.manager.row.expires')}: {token.expiresAt ? formatDateTime(token.expiresAt) : t('share.manager.row.never')}
+                            {t('share.manager.row.expires')}:{' '}
+                            {token.expiresAt
+                              ? formatDateTime(token.expiresAt)
+                              : t('share.manager.row.never')}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {t('share.manager.row.snapshotAt')}: {formatDateTime(token.snapshotAt)}
+                            {t('share.manager.row.snapshotAt')}:{' '}
+                            {formatDateTime(token.snapshotAt)}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -369,7 +469,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                             className="flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                           >
                             <FontAwesomeIcon icon={faCopy} />
-                            {copiedId === token.id ? t('share.manager.row.copied') : t('share.manager.row.copy')}
+                            {copiedId === token.id
+                              ? t('share.manager.row.copied')
+                              : t('share.manager.row.copy')}
                           </button>
                           <button
                             type="button"
@@ -378,7 +480,9 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
                             className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                           >
                             <FontAwesomeIcon icon={faRotateRight} />
-                            {refreshingId === token.id ? t('share.manager.row.refreshing') : t('share.manager.row.refresh')}
+                            {refreshingId === token.id
+                              ? t('share.manager.row.refreshing')
+                              : t('share.manager.row.refresh')}
                           </button>
                           <button
                             type="button"
@@ -402,4 +506,7 @@ const ShareStatsManagerPageBase: FC<ShareStatsManagerPageProps> = ({ buildShlink
   );
 };
 
-export const ShareStatsManagerPage = withDependencies(ShareStatsManagerPageBase, ['buildShlinkApiClient']);
+export const ShareStatsManagerPage = withDependencies(
+  ShareStatsManagerPageBase,
+  ['buildShlinkApiClient'],
+);

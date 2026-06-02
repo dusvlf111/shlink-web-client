@@ -1,6 +1,6 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { faChartLine, faChartPie, faEye, faGlobe, faList, faMapMarkedAlt, faRobot } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -8,6 +8,7 @@ import { useParams, useSearchParams } from 'react-router';
 import {
   Area,
   AreaChart,
+  CartesianGrid,
   Cell,
   Pie,
   PieChart,
@@ -15,7 +16,6 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from 'recharts';
 import { useT } from '../i18n';
 import {
@@ -25,13 +25,13 @@ import {
   type ShareToken,
 } from './services/shareTokenService';
 import {
+  type Bucket,
   buildVisitsTimeline,
   visitsByBrowser,
   visitsByCity,
   visitsByCountry,
   visitsByOs,
   visitsByReferer,
-  type Bucket,
 } from './visitsAnalytics';
 
 const formatDateTime = (iso?: string) => {
