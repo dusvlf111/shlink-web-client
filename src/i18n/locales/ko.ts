@@ -8,6 +8,8 @@ export const koMessages = {
   'header.languageToggle': '언어',
   'header.openSidebar': '메뉴 열기',
   'header.closeSidebar': '메뉴 닫기',
+  'header.currentServer': '서버:',
+  'header.noServer': '서버 미선택',
 
   // 좌측 사이드바 — 단축링크 영역
   'sidebar.section.shortUrls': '단축 링크',

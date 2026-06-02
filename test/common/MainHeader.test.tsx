@@ -1,8 +1,11 @@
 import { screen } from '@testing-library/react';
+import { fromPartial } from '@total-typescript/shoehorn';
 import { createMemoryHistory } from 'history';
 import { Router } from 'react-router';
 import { MainHeader } from '../../src/common/MainHeader';
 import type { UserRecord } from '../../src/lib/pocketbase';
+import type { SelectedServer, ServerWithId } from '../../src/servers/data';
+import type { RootState } from '../../src/store';
 import { checkAccessibility } from '../__helpers__/accessibility';
 import {
   ADMIN_USER,
@@ -11,7 +14,11 @@ import {
 } from '../__helpers__/setUpTest';
 
 describe('<MainHeader />', () => {
-  const setUp = (pathname = '', asUser?: UserRecord) => {
+  const setUp = (
+    pathname = '',
+    asUser?: UserRecord,
+    initialState?: Partial<RootState>,
+  ) => {
     const history = createMemoryHistory();
     history.push(pathname);
 
@@ -23,9 +30,13 @@ describe('<MainHeader />', () => {
       >
         <MainHeader />
       </Router>,
-      { asUser },
+      { asUser, initialState },
     );
   };
+
+  const serversState = (servers: ServerWithId[]): Partial<RootState> => ({
+    servers: Object.fromEntries(servers.map((s) => [s.id, s])),
+  });
 
   it('passes a11y checks', () => checkAccessibility(setUp()));
 
@@ -68,5 +79,42 @@ describe('<MainHeader />', () => {
     expect(
       screen.queryByTestId('pocketbase-admin-link'),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the active server name from the URL', () => {
+    setUp(
+      '/server/srv-a/overview',
+      undefined,
+      serversState([
+        fromPartial<ServerWithId>({ id: 'srv-a', name: 'Alpha bin' }),
+        fromPartial<ServerWithId>({ id: 'srv-b', name: 'Beta bin' }),
+      ]),
+    );
+
+    const indicator = screen.getByTestId('active-server-indicator');
+    expect(indicator).toHaveTextContent('Alpha bin');
+  });
+
+  it('keeps the selected server name on a non-scoped page', () => {
+    setUp('/history', undefined, {
+      ...serversState([
+        fromPartial<ServerWithId>({ id: 'first', name: 'First bin' }),
+        fromPartial<ServerWithId>({ id: 'current', name: 'Current bin' }),
+      ]),
+      selectedServer: fromPartial<SelectedServer>({
+        id: 'current',
+        name: 'Current bin',
+      }),
+    });
+
+    const indicator = screen.getByTestId('active-server-indicator');
+    expect(indicator).toHaveTextContent('Current bin');
+  });
+
+  it('shows the no-server label when no server can be resolved', () => {
+    setUp('/history');
+
+    const indicator = screen.getByTestId('active-server-indicator');
+    expect(indicator).toHaveTextContent('서버 미선택');
   });
 });

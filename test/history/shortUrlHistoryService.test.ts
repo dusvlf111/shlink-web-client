@@ -44,9 +44,22 @@ describe('shortUrlHistoryService', () => {
     it('passes a server filter when serverId is provided', async () => {
       getFullListMock.mockResolvedValueOnce([]);
       await fetchShortUrlHistory({ serverId: 'srv-1' });
-      expect(getFullListMock).toHaveBeenCalledWith(
-        expect.objectContaining({ filter: 'server_id="srv-1"' }),
-      );
+      // pb.filter binds the value as a quoted literal on server_id.
+      const { filter } = getFullListMock.mock.calls[0][0];
+      expect(filter).toContain('server_id=');
+      expect(filter).toContain('srv-1');
+    });
+
+    it('binds the serverId via the parameterized filter helper, neutralizing injection', async () => {
+      getFullListMock.mockResolvedValueOnce([]);
+      // A value crafted to break out of a naive string-concatenated filter. The
+      // pb.filter helper must escape/bind it so the injected operator never
+      // becomes part of the filter expression structure.
+      await fetchShortUrlHistory({ serverId: 'x\' || created_by != \'' });
+      const { filter } = getFullListMock.mock.calls[0][0];
+      // The dangerous payload must not appear as a raw boolean expression: the
+      // quote that would close the bound literal is escaped by pb.filter.
+      expect(filter).not.toContain('\' || created_by != \'');
     });
   });
 

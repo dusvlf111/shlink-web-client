@@ -9,6 +9,8 @@ export const enMessages: Messages = {
   'header.languageToggle': 'Language',
   'header.openSidebar': 'Open menu',
   'header.closeSidebar': 'Close menu',
+  'header.currentServer': 'Server:',
+  'header.noServer': 'No server',
 
   'sidebar.section.shortUrls': 'Short URLs',
   'sidebar.shortUrls.overview': 'Overview',

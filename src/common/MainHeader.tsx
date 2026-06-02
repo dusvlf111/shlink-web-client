@@ -3,6 +3,7 @@ import {
   faCogs as cogsIcon,
   faDatabase as databaseIcon,
   faLanguage,
+  faServer as serverIcon,
   faSignOutAlt as logoutIcon,
   faUsers as usersIcon,
 } from '@fortawesome/free-solid-svg-icons';
@@ -15,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 import type { Locale } from '../i18n';
 import { useLocale, useT } from '../i18n';
 import { ServersDropdown } from '../servers/ServersDropdown';
+import { useActiveServer } from '../servers/useActiveServer';
 import { ShlinkLogo } from './img/ShlinkLogo';
 
 const NEXT_LOCALE: Record<Locale, Locale> = { ko: 'en', en: 'ko' };
@@ -33,6 +35,7 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const { count: pendingUsersCount } = usePendingUsersCount();
+  const { activeServer } = useActiveServer();
 
   const settingsPath = '/settings';
   const localeLabelKey = locale === 'ko' ? 'language.en' : 'language.ko';
@@ -63,6 +66,22 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
         </div>
       }
     >
+      <li
+        role="none"
+        data-testid="active-server-indicator"
+        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap text-white/80"
+        title={
+          activeServer
+            ? `${t('header.currentServer')} ${activeServer.name}`
+            : t('header.noServer')
+        }
+      >
+        <FontAwesomeIcon icon={serverIcon} />
+        <span className="text-white/60">{t('header.currentServer')}</span>{' '}
+        <span className="font-medium text-white">
+          {activeServer ? activeServer.name : t('header.noServer')}
+        </span>
+      </li>
       <NavBar.MenuItem
         to={settingsPath}
         active={pathname.startsWith(settingsPath)}

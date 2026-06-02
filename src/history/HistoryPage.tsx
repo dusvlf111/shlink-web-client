@@ -27,6 +27,34 @@ const creatorLabel = (record: ShortUrlHistoryRecord): string => {
   return user?.name?.trim() || user?.email?.trim() || record.created_by || '-';
 };
 
+// Only http(s) URLs may be rendered as clickable links. Anything else
+// (e.g. a `javascript:` URL injected into a stored record) is shown as plain
+// text to prevent XSS via the href.
+const HTTP_URL_PATTERN = /^https?:\/\//i;
+
+const safeLinkHref = (url: string): string | undefined =>
+  HTTP_URL_PATTERN.test(url) ? url : undefined;
+
+const UrlCell: FC<{ url: string; className: string }> = ({
+  url,
+  className,
+}) => {
+  const href = safeLinkHref(url);
+  if (!href) {
+    return <span className={`block ${className}`}>{url}</span>;
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={`${className} hover:underline`}
+    >
+      {url}
+    </a>
+  );
+};
+
 const UtmCell: FC<{ record: ShortUrlHistoryRecord }> = ({ record }) => {
   const parts = [
     record.utm_source && `source=${record.utm_source}`,
@@ -166,19 +194,16 @@ export const HistoryPage: FC = () => {
                       {record.server_name?.trim() || record.server_id}
                     </td>
                     <td className="px-3 py-2">
-                      <a
-                        href={record.short_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="break-all text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        {record.short_url}
-                      </a>
+                      <UrlCell
+                        url={record.short_url}
+                        className="break-all text-blue-600 dark:text-blue-400"
+                      />
                     </td>
                     <td className="max-w-xs px-3 py-2">
-                      <span className="block break-all text-gray-600 dark:text-gray-300">
-                        {record.long_url}
-                      </span>
+                      <UrlCell
+                        url={record.long_url}
+                        className="break-all text-gray-600 dark:text-gray-300"
+                      />
                     </td>
                     <td className="px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)">
                       {record.title?.trim() || '-'}

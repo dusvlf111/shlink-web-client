@@ -107,6 +107,46 @@ describe('<HistoryPage />', () => {
     });
   });
 
+  it('does not render a non-http(s) short_url as a clickable link (XSS guard)', async () => {
+    mockFetch.mockResolvedValue([
+      fromPartial<ShortUrlHistoryRecord>({
+        id: 'evil',
+        created_by: 'user-1',
+        server_id: 'srv-1',
+        server_name: 'Bin01',
+
+        short_url: 'javascript:alert(1)',
+        long_url: 'javascript:alert(2)',
+        created: '2026-05-03T10:00:00Z',
+        updated: '2026-05-03T10:00:00Z',
+      }),
+    ]);
+    setUp();
+
+    await waitFor(() => {
+      expect(screen.getByText('javascript:alert(1)')).toBeInTheDocument();
+    });
+
+    // The dangerous URL is shown as plain text, never as an <a href>.
+    expect(
+      screen.queryByRole('link', { name: 'javascript:alert(1)' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('link', { name: 'javascript:alert(2)' }),
+    ).toBeNull();
+  });
+
+  it('renders an http(s) short_url as a clickable link', async () => {
+    mockFetch.mockResolvedValue(RECORDS);
+    setUp();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: 'https://s.test/aaa' }),
+      ).toHaveAttribute('href', 'https://s.test/aaa');
+    });
+  });
+
   it('re-fetches with a server filter when a server is selected', async () => {
     mockFetch.mockResolvedValue(RECORDS);
     const { user } = setUp();

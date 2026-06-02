@@ -118,7 +118,12 @@ export const fetchShortUrlHistory = async (
       .getFullList<ShortUrlHistoryRecord>({
         sort: '-created',
         expand: 'created_by',
-        filter: opts.serverId ? `server_id="${opts.serverId}"` : undefined,
+        // Use PocketBase's parameterized filter helper so the serverId is bound
+        // as a value, never concatenated into the filter string (prevents
+        // filter injection).
+        filter: opts.serverId
+          ? pb.filter('server_id={:sid}', { sid: opts.serverId })
+          : undefined,
       });
   } catch {
     return [];

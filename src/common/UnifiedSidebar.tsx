@@ -16,12 +16,11 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { clsx } from 'clsx';
 import type { FC } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
-import type { ServersMap } from '../servers/data';
-import { useServers } from '../servers/reducers/servers';
+import { useActiveServer } from '../servers/useActiveServer';
 
 type SidebarItem = {
   /** Path appended to the optional server prefix. */
@@ -122,25 +121,6 @@ const SHARE_ITEMS: readonly SidebarItem[] = [
 const buildHref = (item: SidebarItem, prefix: string) =>
   item.scoped ? `${prefix}${item.to}` : item.to;
 
-const pickFallbackServerId = (servers: ServersMap): string | null => {
-  const serverList = Object.values(servers);
-  const autoConnect = serverList.find((server) => server.autoConnect);
-  return autoConnect?.id ?? serverList[0]?.id ?? null;
-};
-
-// The sidebar renders OUTSIDE <Routes> (it is a sibling of the route switch in
-// App.tsx), so useParams() never sees :serverId — it would always be undefined
-// and every link would fall back to the first/autoConnect server, making the
-// menu jump to a different server than the one being viewed. We must read the
-// active serverId straight from the URL instead. `/server/create` is the only
-// reserved non-id segment, so it is excluded.
-const SERVER_PATH_PATTERN = /^\/server\/([^/]+)/;
-
-const serverIdFromPathname = (pathname: string): string | undefined => {
-  const matched = pathname.match(SERVER_PATH_PATTERN)?.[1];
-  return matched && matched !== 'create' ? matched : undefined;
-};
-
 const isActive = (pathname: string, href: string, matchPrefix?: string) => {
   if (matchPrefix && pathname.includes(matchPrefix)) {
     return true;
@@ -215,15 +195,12 @@ export const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
 }) => {
   const t = useT();
   const { pathname } = useLocation();
-  const { servers } = useServers();
-  const fallbackServerId = useMemo(
-    () => pickFallbackServerId(servers),
-    [servers],
-  );
-  const routeServerId = serverIdFromPathname(pathname);
-  const effectiveServerId = routeServerId ?? fallbackServerId;
-  const serverPrefix = effectiveServerId ? `/server/${effectiveServerId}` : '';
-  const hasServer = !!effectiveServerId;
+  // Shared active-server resolution (URL -> selectedServer -> fallback) keeps the
+  // sidebar aligned with the header and preserves the server context on
+  // non-scoped pages like /history and /share-stats.
+  const { activeServerId } = useActiveServer();
+  const serverPrefix = activeServerId ? `/server/${activeServerId}` : '';
+  const hasServer = !!activeServerId;
 
   // Auto-close the mobile sidebar whenever the route changes.
   const lastPathnameRef = useRef(pathname);
