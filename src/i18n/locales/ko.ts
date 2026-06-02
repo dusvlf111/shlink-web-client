@@ -3,6 +3,7 @@ export const koMessages = {
   'header.settings': '설정',
   'header.userManagement': '사용자 관리',
   'header.userManagement.pendingBadge': '승인 대기 {count}명',
+  'header.pocketbaseAdmin': 'PocketBase 관리',
   'header.logout': '로그아웃',
   'header.languageToggle': '언어',
   'header.openSidebar': '메뉴 열기',

@@ -4,6 +4,7 @@ export const enMessages: Messages = {
   'header.settings': 'Settings',
   'header.userManagement': 'User management',
   'header.userManagement.pendingBadge': '{count} pending',
+  'header.pocketbaseAdmin': 'PocketBase admin',
   'header.logout': 'Log out',
   'header.languageToggle': 'Language',
   'header.openSidebar': 'Open menu',
