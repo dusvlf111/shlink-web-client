@@ -2,8 +2,8 @@ import { BRAND_COLOR_LM } from '@shlinkio/shlink-frontend-kit';
 import type { ManifestOptions } from 'vite-plugin-pwa';
 
 export const manifest: Partial<ManifestOptions> = {
-  short_name: 'Shlink',
-  name: 'Shlink Web Client',
+  short_name: '렛츠커리어',
+  name: '렛츠커리어 단축 URL',
   start_url: '/',
   display: 'standalone',
   theme_color: BRAND_COLOR_LM, // Toolbar color

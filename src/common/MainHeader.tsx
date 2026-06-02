@@ -17,7 +17,7 @@ import type { Locale } from '../i18n';
 import { useLocale, useT } from '../i18n';
 import { ServersDropdown } from '../servers/ServersDropdown';
 import { useActiveServer } from '../servers/useActiveServer';
-import { ShlinkLogo } from './img/ShlinkLogo';
+import { LetsCareerLogo } from './img/LetsCareerLogo';
 
 const NEXT_LOCALE: Record<Locale, Locale> = { ko: 'en', en: 'ko' };
 
@@ -44,7 +44,7 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
     <NavBar
       className="[&]:fixed top-0 z-900"
       brand={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {onMenuClick && (
             <button
               type="button"
@@ -60,28 +60,31 @@ export const MainHeader: FC<MainHeaderProps> = ({ onMenuClick }) => {
             to="/"
             className="[&]:text-white no-underline flex items-center gap-2 whitespace-nowrap"
           >
-            <ShlinkLogo className="w-7" color="white" />{' '}
-            <small className="font-normal">Shlink</small>
+            <span className="flex items-center justify-center rounded bg-white p-1">
+              <LetsCareerLogo className="w-5 h-5" />
+            </span>{' '}
+            <small className="font-normal">렛츠커리어</small>
           </Link>
+          <span
+            data-testid="active-server-indicator"
+            className="hidden md:flex items-center gap-1.5 text-sm whitespace-nowrap text-white/80"
+            title={
+              activeServer
+                ? `${t('header.currentServer')} ${activeServer.name}`
+                : t('header.noServer')
+            }
+          >
+            <FontAwesomeIcon icon={serverIcon} />
+            <span className="text-white/60">
+              {t('header.currentServer')}
+            </span>{' '}
+            <span className="font-medium text-white">
+              {activeServer ? activeServer.name : t('header.noServer')}
+            </span>
+          </span>
         </div>
       }
     >
-      <li
-        role="none"
-        data-testid="active-server-indicator"
-        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap text-white/80"
-        title={
-          activeServer
-            ? `${t('header.currentServer')} ${activeServer.name}`
-            : t('header.noServer')
-        }
-      >
-        <FontAwesomeIcon icon={serverIcon} />
-        <span className="text-white/60">{t('header.currentServer')}</span>{' '}
-        <span className="font-medium text-white">
-          {activeServer ? activeServer.name : t('header.noServer')}
-        </span>
-      </li>
       <NavBar.MenuItem
         to={settingsPath}
         active={pathname.startsWith(settingsPath)}

@@ -11,7 +11,7 @@ import { useT } from '../i18n';
 import { withoutSelectedServer } from '../servers/helpers/withoutSelectedServer';
 import { useServers } from '../servers/reducers/servers';
 import { ServersListGroup } from '../servers/ServersListGroup';
-import { ShlinkLogo } from './img/ShlinkLogo';
+import { LetsCareerLogo } from './img/LetsCareerLogo';
 
 export const Home: FC = withoutSelectedServer(() => {
   const navigate = useNavigate();
@@ -24,7 +24,9 @@ export const Home: FC = withoutSelectedServer(() => {
 
   useEffect(() => {
     // Try to redirect to the first server marked as auto-connect
-    const autoConnectServer = serversList.find(({ autoConnect }) => autoConnect);
+    const autoConnectServer = serversList.find(
+      ({ autoConnect }) => autoConnect,
+    );
     if (autoConnectServer) {
       navigate(`/server/${autoConnectServer.id}`);
     }
@@ -36,7 +38,7 @@ export const Home: FC = withoutSelectedServer(() => {
         <div className="flex flex-col md:flex-row">
           <div className="p-6 hidden md:flex items-center w-[40%]">
             <div className="w-full">
-              <ShlinkLogo />
+              <LetsCareerLogo className="w-full" />
             </div>
           </div>
 
@@ -59,11 +61,16 @@ export const Home: FC = withoutSelectedServer(() => {
             ) : (
               <div className="p-6 text-center flex flex-col gap-12 text-xl">
                 <p>{t('home.empty.title')}</p>
-                <p>{canManageServers ? t('home.subtitle') : t('home.empty.contactAdmin')}</p>
+                <p>
+                  {canManageServers
+                    ? t('home.subtitle')
+                    : t('home.empty.contactAdmin')}
+                </p>
                 {canManageServers && (
                   <p>
                     <Button to="/server/create" size="lg" inline>
-                      <FontAwesomeIcon icon={faPlus} widthAuto /> {t('home.empty.action')}
+                      <FontAwesomeIcon icon={faPlus} widthAuto />{' '}
+                      {t('home.empty.action')}
                     </Button>
                   </p>
                 )}
