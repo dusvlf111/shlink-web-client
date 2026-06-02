@@ -10,7 +10,7 @@
  * next dev server / build picks up the fresh source instead of serving
  * the previously pre-bundled English copy out of node_modules/.vite/.
  */
-import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync,writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PKG_DIR = 'node_modules/@shlinkio/shlink-web-component/dist';
@@ -348,6 +348,29 @@ const REPLACEMENTS = [
   ['"Last 365 days"', '"최근 365일"'],
   ['"Potential bot"', '"봇 가능성"'],
   ['"User Agent"', '"User Agent"'],
+
+  // ===== Settings > Visits section (chunk file: dist/index-*.js) =====
+  // The bots-exclusion toggle label. The bundle uses unicode left single
+  // quotes (U+2018 '‘') around "option's"/"server's", not ASCII apostrophes,
+  // so match the exact literal as it appears in the minified bundle.
+  [
+    'children: "Exclude bots wherever possible (this option‘s effect might depend on Shlink server‘s version)."',
+    'children: "가능한 한 봇 제외 (이 옵션의 효과는 Shlink 서버 버전에 따라 다를 수 있습니다)."',
+  ],
+  // Some installs may ship the ASCII-apostrophe variant; cover it too.
+  [
+    'children: "Exclude bots wherever possible (this option\'s effect might depend on Shlink server\'s version)."',
+    'children: "가능한 한 봇 제외 (이 옵션의 효과는 Shlink 서버 버전에 따라 다를 수 있습니다)."',
+  ],
+  // Bots toggle helpText bold word: "봇으로 추정되는 방문은 <b>excluded/included</b>."
+  // Match the full ternary so we don't touch unrelated "excluded"/"included".
+  ['s?.excludeBots ? "excluded" : "included"', 's?.excludeBots ? "제외됩니다" : "포함됩니다"'],
+  // Compare-visits helpText: "방문 데이터 로드 시 이전 기간 <b>will/won't</b> be loaded by default."
+  // "will"/"won't" are too generic to replace globally, so match the full
+  // loadPrevInterval ternary (distinct from the confirmDeletions one).
+  ['s?.loadPrevInterval ? "will" : "won\'t"', 's?.loadPrevInterval ? "로드됩니다" : "로드되지 않습니다"'],
+  // Trailing JSX fragment for the compare-visits helpText (leading space).
+  ['" be loaded by default."', '" (기본값)."'],
 ];
 
 const isJsBundle = (file) => /\.(?:js|mjs)$/.test(file) && !file.endsWith('.map');
