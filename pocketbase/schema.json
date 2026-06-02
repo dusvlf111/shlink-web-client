@@ -509,6 +509,18 @@
         "pattern": ""
       },
       {
+        "id": "select_suh_action",
+        "name": "action",
+        "type": "select",
+        "required": false,
+        "presentable": false,
+        "maxSelect": 1,
+        "values": [
+          "created",
+          "deleted"
+        ]
+      },
+      {
         "id": "autodate_suh_created",
         "name": "created",
         "type": "autodate",

@@ -1,5 +1,10 @@
 import { pb, type UserRecord } from '../lib/pocketbase';
 
+// Whether a history record represents a short-url creation or deletion. Older
+// records predate this field, so it is optional everywhere and treated as
+// 'created' when absent.
+export type ShortUrlHistoryAction = 'created' | 'deleted';
+
 // One stored record in the `short_url_history` collection. Mirrors the
 // PocketBase schema (pocketbase/schema.json -> short_url_history). `expand`
 // carries the resolved `created_by` relation when fetched with expand.
@@ -18,6 +23,7 @@ export type ShortUrlHistoryRecord = {
   utm_campaign?: string;
   utm_term?: string;
   utm_content?: string;
+  action?: ShortUrlHistoryAction;
   created: string;
   updated: string;
   expand?: {
@@ -25,8 +31,8 @@ export type ShortUrlHistoryRecord = {
   };
 };
 
-// Shape callers pass in when logging a creation. `created_by` is filled in by
-// the service from the auth store, so callers never provide it.
+// Shape callers pass in when logging a creation or deletion. `created_by` is
+// filled in by the service from the auth store, so callers never provide it.
 export type ShortUrlHistoryInput = {
   server_id: string;
   server_name?: string;
@@ -40,7 +46,14 @@ export type ShortUrlHistoryInput = {
   utm_campaign?: string;
   utm_term?: string;
   utm_content?: string;
+  action?: ShortUrlHistoryAction;
 };
+
+// Read an action from a stored record, defaulting to 'created' for records
+// written before the `action` field existed.
+export const resolveHistoryAction = (
+  record: Pick<ShortUrlHistoryRecord, 'action'>,
+): ShortUrlHistoryAction => record.action ?? 'created';
 
 type ExtractedUtm = {
   utm_source?: string;
@@ -94,6 +107,7 @@ export const recordShortUrlHistory = async (
   try {
     await pb.collection('short_url_history').create({
       ...input,
+      action: input.action ?? 'created',
       created_by: userId,
     });
   } catch {

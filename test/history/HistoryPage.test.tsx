@@ -1,3 +1,4 @@
+import type { ShlinkApiClient } from '@shlinkio/shlink-js-sdk';
 import { screen, waitFor } from '@testing-library/react';
 import { fromPartial } from '@total-typescript/shoehorn';
 import { MemoryRouter } from 'react-router';
@@ -11,12 +12,14 @@ vi.mock('../../src/history/shortUrlHistoryService', async (importOriginal) => {
   return {
     ...actual,
     fetchShortUrlHistory: vi.fn(),
+    recordShortUrlHistory: vi.fn(),
   };
 });
 
-const { fetchShortUrlHistory } = ShortUrlHistoryService;
+const { fetchShortUrlHistory, recordShortUrlHistory } = ShortUrlHistoryService;
 
 const mockFetch = vi.mocked(fetchShortUrlHistory);
+const mockRecord = vi.mocked(recordShortUrlHistory);
 
 const RECORDS: ShortUrlHistoryRecord[] = [
   fromPartial<ShortUrlHistoryRecord>({
@@ -54,7 +57,7 @@ const RECORDS: ShortUrlHistoryRecord[] = [
 ];
 
 describe('<HistoryPage />', () => {
-  const setUp = () =>
+  const setUp = (buildShlinkApiClient?: () => ShlinkApiClient) =>
     renderWithStore(
       <MemoryRouter>
         <HistoryPage />
@@ -62,10 +65,16 @@ describe('<HistoryPage />', () => {
       {
         initialState: {
           servers: {
-            'srv-1': fromPartial({ id: 'srv-1', name: 'Bin01' }),
+            'srv-1': fromPartial({
+              id: 'srv-1',
+              name: 'Bin01',
+              url: 'https://s.test',
+              apiKey: 'key',
+            }),
             'srv-2': fromPartial({ id: 'srv-2', name: 'Bin02' }),
           },
         },
+        ...(buildShlinkApiClient ? { buildShlinkApiClient } : {}),
       },
     );
 
@@ -160,5 +169,111 @@ describe('<HistoryPage />', () => {
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith({ serverId: 'srv-1' });
     });
+  });
+
+  it('renders created/deleted action badges', async () => {
+    mockFetch.mockResolvedValue([
+      ...RECORDS,
+      fromPartial<ShortUrlHistoryRecord>({
+        id: 'rec-del',
+        created_by: 'user-1',
+        server_id: 'srv-1',
+        server_name: 'Bin01',
+        short_url: 'https://s.test/ddd',
+        short_code: 'ddd',
+        long_url: 'https://example.com/gone',
+        action: 'deleted',
+        created: '2026-05-04T10:00:00Z',
+        updated: '2026-05-04T10:00:00Z',
+      }),
+    ]);
+    setUp();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('history-action-created').length).toBe(2);
+    });
+    expect(screen.getByTestId('history-action-deleted')).toBeInTheDocument();
+    expect(screen.getAllByText('생성').length).toBe(2);
+  });
+
+  it('deletes a short URL, logs a \'deleted\' record and refetches', async () => {
+    const deleteShortUrl = vi.fn().mockResolvedValue(undefined);
+    const apiClient = fromPartial<ShlinkApiClient>({ deleteShortUrl });
+    const buildShlinkApiClient = vi.fn().mockReturnValue(apiClient);
+    mockFetch.mockResolvedValue([RECORDS[0]]);
+    mockRecord.mockResolvedValue();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const { user } = setUp(buildShlinkApiClient);
+
+    await waitFor(() => {
+      expect(screen.getByText('봄 캠페인')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: '삭제' }));
+
+    await waitFor(() => {
+      expect(deleteShortUrl).toHaveBeenCalledWith({ shortCode: 'aaa' });
+    });
+    expect(buildShlinkApiClient).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'srv-1' }),
+    );
+    expect(mockRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        server_id: 'srv-1',
+        short_code: 'aaa',
+        action: 'deleted',
+      }),
+    );
+    // Initial load + reload after delete.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an error message when the delete API call fails', async () => {
+    const deleteShortUrl = vi.fn().mockRejectedValue(new Error('boom'));
+    const apiClient = fromPartial<ShlinkApiClient>({ deleteShortUrl });
+    const buildShlinkApiClient = vi.fn().mockReturnValue(apiClient);
+    mockFetch.mockResolvedValue([RECORDS[0]]);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const { user } = setUp(buildShlinkApiClient);
+
+    await waitFor(() => {
+      expect(screen.getByText('봄 캠페인')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: '삭제' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('단축 URL 삭제에 실패했습니다.'),
+      ).toBeInTheDocument();
+    });
+    expect(mockRecord).not.toHaveBeenCalled();
+  });
+
+  it('does not show a delete button for already-deleted rows', async () => {
+    mockFetch.mockResolvedValue([
+      fromPartial<ShortUrlHistoryRecord>({
+        id: 'rec-del',
+        created_by: 'user-1',
+        server_id: 'srv-1',
+        server_name: 'Bin01',
+        short_url: 'https://s.test/ddd',
+        short_code: 'ddd',
+        long_url: 'https://example.com/gone',
+        action: 'deleted',
+        created: '2026-05-04T10:00:00Z',
+        updated: '2026-05-04T10:00:00Z',
+      }),
+    ]);
+    setUp();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('history-action-deleted')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole('button', { name: '삭제' }),
+    ).not.toBeInTheDocument();
   });
 });

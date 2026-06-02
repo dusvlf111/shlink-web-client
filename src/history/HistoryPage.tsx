@@ -1,10 +1,17 @@
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
+import { withDependencies } from '../container/context';
 import { useT } from '../i18n';
+import type { ServersMap } from '../servers/data';
 import { useServers } from '../servers/reducers/servers';
 import {
   fetchShortUrlHistory,
+  recordShortUrlHistory,
+  resolveHistoryAction,
   type ShortUrlHistoryRecord,
 } from './shortUrlHistoryService';
 
@@ -82,12 +89,18 @@ const UtmCell: FC<{ record: ShortUrlHistoryRecord }> = ({ record }) => {
   );
 };
 
-export const HistoryPage: FC = () => {
+type HistoryPageProps = {
+  buildShlinkApiClient: ShlinkApiClientBuilder;
+};
+
+const HistoryPageComp: FC<HistoryPageProps> = ({ buildShlinkApiClient }) => {
   const t = useT();
   const { servers } = useServers();
   const [records, setRecords] = useState<ShortUrlHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverFilter, setServerFilter] = useState<string>(ALL_SERVERS);
+  const [deletingId, setDeletingId] = useState<string | undefined>();
+  const [error, setError] = useState<string | undefined>();
 
   const serverList = useMemo(() => Object.values(servers), [servers]);
 
@@ -106,6 +119,53 @@ export const HistoryPage: FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Delete a short URL we recorded creating, via the same server's Shlink API,
+  // then log a 'deleted' history record and refresh the list. Only available
+  // for 'created' rows whose server is still registered (so we have credentials
+  // to call the API). Short URLs deleted directly inside the embedded
+  // web-component are NOT captured here — see the History page notes.
+  const handleDelete = useCallback(
+    async (record: ShortUrlHistoryRecord) => {
+      const server = (servers as ServersMap)[record.server_id];
+      if (!server || !record.short_code) {
+        return;
+      }
+
+      if (!window.confirm(t('history.deleteConfirm'))) {
+        return;
+      }
+
+      setError(undefined);
+      setDeletingId(record.id);
+      try {
+        await buildShlinkApiClient(server).deleteShortUrl({
+          shortCode: record.short_code,
+        });
+        await recordShortUrlHistory({
+          server_id: record.server_id,
+          server_name: record.server_name,
+          short_url: record.short_url,
+          short_code: record.short_code,
+          long_url: record.long_url,
+          title: record.title,
+          tags: record.tags,
+          utm_source: record.utm_source,
+          utm_medium: record.utm_medium,
+          utm_campaign: record.utm_campaign,
+          utm_term: record.utm_term,
+          utm_content: record.utm_content,
+          action: 'deleted',
+        });
+        await load();
+      } catch {
+        setError(t('history.deleteFailed'));
+      } finally {
+        setDeletingId(undefined);
+      }
+    },
+    [buildShlinkApiClient, load, servers, t],
+  );
 
   return (
     <NoMenuLayout>
@@ -145,6 +205,15 @@ export const HistoryPage: FC = () => {
           </div>
         </div>
 
+        {error && (
+          <div
+            role="alert"
+            className="mb-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
+          >
+            {error}
+          </div>
+        )}
+
         {loading ? (
           <div className="py-12 text-center text-gray-400">
             {t('history.loading')}
@@ -158,6 +227,9 @@ export const HistoryPage: FC = () => {
             <table className="w-full text-sm">
               <thead className="bg-lm-primary/40 dark:bg-dm-main">
                 <tr>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
+                    {t('history.col.action')}
+                  </th>
                   <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
                     {t('history.col.server')}
                   </th>
@@ -182,59 +254,95 @@ export const HistoryPage: FC = () => {
                   <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">
                     {t('history.col.createdAt')}
                   </th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-lm-border dark:divide-dm-border">
-                {records.map((record) => (
-                  <tr
-                    key={record.id}
-                    className="bg-white align-top dark:bg-dm-primary"
-                  >
-                    <td className="px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)">
-                      {record.server_name?.trim() || record.server_id}
-                    </td>
-                    <td className="px-3 py-2">
-                      <UrlCell
-                        url={record.short_url}
-                        className="break-all text-blue-600 dark:text-blue-400"
-                      />
-                    </td>
-                    <td className="max-w-xs px-3 py-2">
-                      <UrlCell
-                        url={record.long_url}
-                        className="break-all text-gray-600 dark:text-gray-300"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)">
-                      {record.title?.trim() || '-'}
-                    </td>
-                    <td className="px-3 py-2">
-                      {record.tags && record.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {record.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <UtmCell record={record} />
-                    </td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                      {creatorLabel(record)}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-gray-600 dark:text-gray-300">
-                      {formatCreatedAt(record.created)}
-                    </td>
-                  </tr>
-                ))}
+                {records.map((record) => {
+                  const action = resolveHistoryAction(record);
+                  const canDelete =
+                    action === 'created' &&
+                    !!record.short_code &&
+                    !!(servers as ServersMap)[record.server_id];
+
+                  return (
+                    <tr
+                      key={record.id}
+                      className="bg-white align-top dark:bg-dm-primary"
+                    >
+                      <td className="px-3 py-2">
+                        <span
+                          data-testid={`history-action-${action}`}
+                          className={
+                            action === 'deleted'
+                              ? 'rounded bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                              : 'rounded bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                          }
+                        >
+                          {t(`history.action.${action}`)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)">
+                        {record.server_name?.trim() || record.server_id}
+                      </td>
+                      <td className="px-3 py-2">
+                        <UrlCell
+                          url={record.short_url}
+                          className="break-all text-blue-600 dark:text-blue-400"
+                        />
+                      </td>
+                      <td className="max-w-xs px-3 py-2">
+                        <UrlCell
+                          url={record.long_url}
+                          className="break-all text-gray-600 dark:text-gray-300"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-(--light-text-color) dark:text-(--dark-text-color)">
+                        {record.title?.trim() || '-'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {record.tags && record.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {record.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <UtmCell record={record} />
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {creatorLabel(record)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {formatCreatedAt(record.created)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right">
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(record)}
+                            disabled={deletingId === record.id}
+                            aria-label={t('history.delete')}
+                            title={t('history.delete')}
+                            className="inline-flex items-center gap-1.5 rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                            {t('history.delete')}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -243,3 +351,7 @@ export const HistoryPage: FC = () => {
     </NoMenuLayout>
   );
 };
+
+export const HistoryPage = withDependencies(HistoryPageComp, [
+  'buildShlinkApiClient',
+]);

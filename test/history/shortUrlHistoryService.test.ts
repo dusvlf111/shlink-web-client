@@ -86,5 +86,34 @@ describe('shortUrlHistoryService', () => {
       });
       expect(createMock).not.toHaveBeenCalled();
     });
+
+    it('defaults action to "created" when not provided', async () => {
+      pb.authStore.save('token', { id: 'user-1' } as never);
+      createMock.mockResolvedValueOnce({});
+      await recordShortUrlHistory({
+        server_id: 'srv-1',
+        short_url: 'https://s.test/abc',
+        long_url: 'https://example.com',
+      });
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'created', created_by: 'user-1' }),
+      );
+      pb.authStore.clear();
+    });
+
+    it('persists action "deleted" when provided', async () => {
+      pb.authStore.save('token', { id: 'user-1' } as never);
+      createMock.mockResolvedValueOnce({});
+      await recordShortUrlHistory({
+        server_id: 'srv-1',
+        short_url: 'https://s.test/abc',
+        long_url: 'https://example.com',
+        action: 'deleted',
+      });
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'deleted' }),
+      );
+      pb.authStore.clear();
+    });
   });
 });
