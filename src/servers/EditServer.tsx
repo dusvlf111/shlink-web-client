@@ -9,10 +9,6 @@ import { ServerForm } from './helpers/ServerForm';
 import { withSelectedServer } from './helpers/withSelectedServer';
 import { useSelectedServer } from './reducers/selectedServer';
 import { useServers } from './reducers/servers';
-import {
-  isPocketBaseLoggedIn,
-  updateServerConfig,
-} from './services/serverConfigsService';
 
 export const EditServer: FC = withSelectedServer(() => {
   const t = useT();
@@ -27,11 +23,6 @@ export const EditServer: FC = withSelectedServer(() => {
 
   const handleSubmit = (serverData: ServerData) => {
     editServer(selectedServer.id, serverData);
-    // PocketBase is the source of truth for server configs, so persist the
-    // edit there too. Best-effort: a failure still keeps the local edit.
-    if (isPocketBaseLoggedIn()) {
-      void updateServerConfig(selectedServer.id, serverData).catch(() => {});
-    }
     if (reconnect === 'true') {
       selectServer(selectedServer.id);
     }
@@ -45,9 +36,7 @@ export const EditServer: FC = withSelectedServer(() => {
         initialValues={selectedServer}
         onSubmit={handleSubmit}
       >
-        <Button variant="secondary" onClick={goBack}>
-          {t('servers.edit.cancel')}
-        </Button>
+        <Button variant="secondary" onClick={goBack}>{t('servers.edit.cancel')}</Button>
         <Button type="submit">{t('servers.edit.save')}</Button>
       </ServerForm>
     </NoMenuLayout>

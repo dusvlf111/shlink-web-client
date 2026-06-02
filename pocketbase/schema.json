@@ -258,53 +258,9 @@
         "min": 0,
         "max": 500,
         "pattern": ""
-      },
-      {
-        "id": "bool_sc_minimal_slug",
-        "name": "minimal_slug",
-        "type": "bool",
-        "required": false,
-        "presentable": false
       }
     ],
     "indexes": []
-  },
-  {
-    "id": "pbc_slug_counters",
-    "name": "slug_counters",
-    "type": "base",
-    "system": false,
-    "listRule": "@request.auth.id != ''",
-    "viewRule": "@request.auth.id != ''",
-    "createRule": "@request.auth.id != ''",
-    "updateRule": "@request.auth.id != ''",
-    "deleteRule": "@request.auth.id != ''",
-    "fields": [
-      {
-        "id": "text_slc_server_id",
-        "name": "server_id",
-        "type": "text",
-        "required": true,
-        "presentable": false,
-        "autogeneratePattern": "",
-        "min": 1,
-        "max": 255,
-        "pattern": ""
-      },
-      {
-        "id": "number_slc_next_index",
-        "name": "next_index",
-        "type": "number",
-        "required": true,
-        "presentable": false,
-        "min": 0,
-        "max": null,
-        "onlyInt": true
-      }
-    ],
-    "indexes": [
-      "CREATE UNIQUE INDEX `idx_slug_counters_server_id` ON `slug_counters` (`server_id`)"
-    ]
   },
   {
     "id": "pbc_public_token",

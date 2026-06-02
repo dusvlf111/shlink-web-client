@@ -305,9 +305,6 @@ export const koMessages = {
     '여기서 "자격 증명"은 쿠키, TLS 클라이언트 인증서, 사용자 이름과 비밀번호가 포함된 인증 헤더를 의미합니다.',
   'servers.form.forwardCredentials.warning':
     '잘 모르겠다면 체크하지 마세요. 이 옵션을 켜면 Shlink v4.5.0 이전 버전에서는 모든 요청이 실패합니다.',
-  'servers.form.minimalSlug': '최소 길이 순차 슬러그 (1글자→2글자…)',
-  'servers.form.minimalSlug.help':
-    '이 서버에서 만드는 모든 단축 URL에 순차적인 최소 길이 슬러그를 자동으로 부여합니다. 1글자(62개)를 모두 사용하면 2글자로 늘어납니다. 직접 커스텀 슬러그를 지정하면 그대로 사용됩니다.',
   'servers.import.button': '서버 불러오기',
   'servers.import.tooltip': 'JSON 또는 CSV 파일에서 서버 목록을 불러옵니다.',
   'home.learnMore': 'Shlink에 대해 더 알아보기',

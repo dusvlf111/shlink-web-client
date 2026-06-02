@@ -5,12 +5,6 @@ export interface ServerData {
   url: string;
   apiKey: string;
   forwardCredentials?: boolean;
-  /**
-   * When enabled, every short URL created on this server that does not specify
-   * an explicit custom slug receives a sequential minimal-length base-62 slug
-   * (1 char until the 62 single-char slugs are exhausted, then 2 chars, ...).
-   */
-  minimalSlug?: boolean;
 }
 
 export interface ServerWithId extends ServerData {
@@ -37,35 +31,24 @@ export type SelectedServer = RegularServer | NotFoundServer | null;
 
 export type ServersMap = Record<string, ServerWithId>;
 
-export const hasServerData = (
-  server: SelectedServer | ServerData,
-): server is ServerData =>
+export const hasServerData = (server: SelectedServer | ServerData): server is ServerData =>
   !!(server as ServerData)?.url && !!(server as ServerData)?.apiKey;
 
-export const isServerWithId = (
-  server: SelectedServer | ServerWithId,
-): server is ServerWithId => !!(server as ServerWithId)?.id;
+export const isServerWithId = (server: SelectedServer | ServerWithId): server is ServerWithId =>
+  !!(server as ServerWithId)?.id;
 
-export const isReachableServer = (
-  server: SelectedServer,
-): server is ReachableServer => !!(server as ReachableServer)?.version;
+export const isReachableServer = (server: SelectedServer): server is ReachableServer =>
+  !!(server as ReachableServer)?.version;
 
-export const isNotFoundServer = (
-  server: SelectedServer,
-): server is NotFoundServer => !!(server as NotFoundServer)?.serverNotFound;
+export const isNotFoundServer = (server: SelectedServer): server is NotFoundServer =>
+  !!(server as NotFoundServer)?.serverNotFound;
 
-export const getServerId = (server: SelectedServer) =>
-  isServerWithId(server) ? server.id : '';
+export const getServerId = (server: SelectedServer) => (isServerWithId(server) ? server.id : '');
 
 /**
  * Expose values that represent provided server, in a way that can be serialized in JSON or CSV strings.
  */
-export const serializeServer = ({
-  name,
-  url,
-  apiKey,
-  forwardCredentials,
-}: ServerData): Record<string, string> => ({
+export const serializeServer = ({ name, url, apiKey, forwardCredentials }: ServerData): Record<string, string> => ({
   name,
   url,
   apiKey,
@@ -73,22 +56,16 @@ export const serializeServer = ({
 });
 
 const validateServerData = (server: any): server is ServerData =>
-  typeof server.url === 'string' &&
-  typeof server.apiKey === 'string' &&
-  typeof server.name === 'string';
+  typeof server.url === 'string' && typeof server.apiKey === 'string' && typeof server.name === 'string';
 
 /**
  * Provided a record, it picks the right properties to build a ServerData object.
  * @throws Error If any of the required ServerData properties is missing.
  */
-export const deserializeServer = (
-  potentialServer: Record<string, unknown>,
-): ServerData => {
+export const deserializeServer = (potentialServer: Record<string, unknown>): ServerData => {
   const { forwardCredentials, ...serverData } = potentialServer;
   if (!validateServerData(serverData)) {
-    throw new Error(
-      'Server is missing required "url", "apiKey" and/or "name" properties',
-    );
+    throw new Error('Server is missing required "url", "apiKey" and/or "name" properties');
   }
 
   return {
