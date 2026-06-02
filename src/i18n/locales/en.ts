@@ -226,6 +226,10 @@ export const enMessages: Messages = {
   "servers.create.title": "Add new server",
   "servers.create.cancel": "Cancel",
   "servers.create.submit": "Create server",
+  "servers.create.error.notLoggedIn":
+    "You must be logged in to add a server. Please log in and try again.",
+  "servers.create.error.saveFailed":
+    "Could not save the server. Check your connection and try again. No temporary server was created.",
   "servers.edit.title": 'Edit "{name}"',
   "servers.edit.cancel": "Cancel",
   "servers.edit.save": "Save",

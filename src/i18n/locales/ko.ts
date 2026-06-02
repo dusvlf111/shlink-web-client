@@ -236,6 +236,10 @@ export const koMessages = {
   "servers.create.title": "새 서버 추가",
   "servers.create.cancel": "취소",
   "servers.create.submit": "서버 만들기",
+  "servers.create.error.notLoggedIn":
+    "서버를 추가하려면 먼저 로그인해야 합니다. 로그인 후 다시 시도해 주세요.",
+  "servers.create.error.saveFailed":
+    "서버를 저장하지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요. 임시 서버는 생성되지 않았습니다.",
   "servers.edit.title": '"{name}" 편집',
   "servers.edit.cancel": "취소",
   "servers.edit.save": "저장",
