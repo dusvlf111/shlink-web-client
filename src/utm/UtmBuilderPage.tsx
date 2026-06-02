@@ -2,23 +2,23 @@ import {
   faCopy,
   faExternalLinkAlt,
   faSave,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { FC } from "react";
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import type { ShlinkApiClientBuilder } from "../api/services/ShlinkApiClientBuilder";
-import { NoMenuLayout } from "../common/NoMenuLayout";
-import { withDependencies } from "../container/context";
-import { useT } from "../i18n";
-import { useServers } from "../servers/reducers/servers";
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { FC } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
+import { NoMenuLayout } from '../common/NoMenuLayout';
+import { withDependencies } from '../container/context';
+import { useT } from '../i18n';
+import { useServers } from '../servers/reducers/servers';
 import {
   useUtmTags,
   useUtmTemplates,
   UTM_CATEGORIES,
   type UtmCategory,
-} from "./useUtmData";
-import { UtmFieldInput } from "./UtmFieldInput";
+} from './useUtmData';
+import { UtmFieldInput } from './UtmFieldInput';
 
 type UtmFields = {
   baseUrl: string;
@@ -36,45 +36,71 @@ type ShortCreateOptions = {
 };
 
 const EMPTY: UtmFields = {
-  baseUrl: "",
-  source: "",
-  medium: "",
-  campaign: "",
-  term: "",
-  content: "",
+  baseUrl: '',
+  source: '',
+  medium: '',
+  campaign: '',
+  term: '',
+  content: '',
 };
 const EMPTY_SHORT_OPTIONS: ShortCreateOptions = {
-  customSlug: "",
-  title: "",
-  tags: "",
+  customSlug: '',
+  title: '',
+  tags: '',
 };
 
 const parseTags = (rawTags: string): string[] =>
   rawTags
-    .split(",")
+    .split(',')
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+type BuilderMode = 'single' | 'multi';
+
+type MultiUrlResult = {
+  url: string;
+  builtUrl: string;
+  ok: boolean;
+};
+
 const buildUtmUrl = (fields: UtmFields): string => {
-  if (!fields.baseUrl) return "";
+  if (!fields.baseUrl) return '';
 
   try {
     const url = new URL(fields.baseUrl);
-    if (fields.source) url.searchParams.set("utm_source", fields.source);
-    if (fields.medium) url.searchParams.set("utm_medium", fields.medium);
-    if (fields.campaign) url.searchParams.set("utm_campaign", fields.campaign);
-    if (fields.term) url.searchParams.set("utm_term", fields.term);
-    if (fields.content) url.searchParams.set("utm_content", fields.content);
+    if (fields.source) url.searchParams.set('utm_source', fields.source);
+    if (fields.medium) url.searchParams.set('utm_medium', fields.medium);
+    if (fields.campaign) url.searchParams.set('utm_campaign', fields.campaign);
+    if (fields.term) url.searchParams.set('utm_term', fields.term);
+    if (fields.content) url.searchParams.set('utm_content', fields.content);
 
     return url.toString();
   } catch {
-    return "";
+    return '';
   }
 };
 
+const parseMultiUrls = (raw: string): string[] =>
+  raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+// Apply a single set of UTM fields to each URL. The result is generalized so
+// callers (output / copy / short-url creation) only ever consume an array
+// (single mode == array of length 1).
+const buildUtmUrls = (
+  urls: string[],
+  fields: Omit<UtmFields, 'baseUrl'>,
+): MultiUrlResult[] =>
+  urls.map((url) => {
+    const builtUrl = buildUtmUrl({ ...fields, baseUrl: url });
+    return { url, builtUrl, ok: !!builtUrl };
+  });
+
 const extractUtmFieldsFromUrl = (
   baseUrl: string,
-): Partial<Omit<UtmFields, "baseUrl">> | null => {
+): Partial<Omit<UtmFields, 'baseUrl'>> | null => {
   if (!baseUrl.trim()) {
     return null;
   }
@@ -82,11 +108,11 @@ const extractUtmFieldsFromUrl = (
   try {
     const url = new URL(baseUrl);
     const extracted = {
-      source: url.searchParams.get("utm_source") ?? "",
-      medium: url.searchParams.get("utm_medium") ?? "",
-      campaign: url.searchParams.get("utm_campaign") ?? "",
-      term: url.searchParams.get("utm_term") ?? "",
-      content: url.searchParams.get("utm_content") ?? "",
+      source: url.searchParams.get('utm_source') ?? '',
+      medium: url.searchParams.get('utm_medium') ?? '',
+      campaign: url.searchParams.get('utm_campaign') ?? '',
+      term: url.searchParams.get('utm_term') ?? '',
+      content: url.searchParams.get('utm_content') ?? '',
     };
 
     return Object.values(extracted).some((value) => value.trim())
@@ -125,16 +151,20 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   const serverId = paramServerId ?? fallbackServerId ?? undefined;
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
-  const [templateName, setTemplateName] = useState("");
-  const [templateDescription, setTemplateDescription] = useState("");
-  const [saveMsg, setSaveMsg] = useState("");
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [saveMsg, setSaveMsg] = useState('');
   const [creatingShortUrl, setCreatingShortUrl] = useState(false);
-  const [quickShortUrl, setQuickShortUrl] = useState("");
-  const [shortCreateMsg, setShortCreateMsg] = useState("");
+  const [quickShortUrl, setQuickShortUrl] = useState('');
+  const [shortCreateMsg, setShortCreateMsg] = useState('');
   const [showShortOptions, setShowShortOptions] = useState(false);
   const [shortOptions, setShortOptions] =
     useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
-  const [appliedTemplateName, setAppliedTemplateName] = useState("");
+  const [appliedTemplateName, setAppliedTemplateName] = useState('');
+  const [mode, setMode] = useState<BuilderMode>('single');
+  const [multiBaseUrls, setMultiBaseUrls] = useState('');
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [multiRows, setMultiRows] = useState<MultiUrlResult[]>([]);
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
@@ -142,6 +172,23 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   const utmUrl = useMemo(() => buildUtmUrl(fields), [fields]);
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
   const selectedServer = serverId ? servers[serverId] : null;
+
+  // Derived (not stored) list: each base URL gets the current single UTM set.
+  // Single mode never touches this so its behavior is untouched.
+  const multiResults = useMemo<MultiUrlResult[]>(() => {
+    const utmOnly: Omit<UtmFields, 'baseUrl'> = {
+      source: fields.source,
+      medium: fields.medium,
+      campaign: fields.campaign,
+      term: fields.term,
+      content: fields.content,
+    };
+    return buildUtmUrls(parseMultiUrls(multiBaseUrls), utmOnly);
+  }, [multiBaseUrls, fields]);
+  const multiValidCount = multiResults.filter((row) => row.ok).length;
+  const multiSkippedCount = multiResults.length - multiValidCount;
+  const canBuildMulti =
+    multiValidCount > 0 && !!fields.source.trim() && !!fields.medium.trim();
 
   const set = (key: keyof UtmFields) => (val: string) =>
     setFields((prev) => ({ ...prev, [key]: val }));
@@ -176,19 +223,19 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   const handleGoToShorten = () => {
     if (!canGenerate) {
       setShortCreateMsg(
-        "URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.",
+        'URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.',
       );
       return;
     }
     if (!serverId) {
       setShortCreateMsg(
-        "연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.",
+        '연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.',
       );
       return;
     }
     if (!servers[serverId]) {
       setShortCreateMsg(
-        "선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.",
+        '선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.',
       );
       return;
     }
@@ -205,7 +252,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 
     if (!canGenerate) {
       setShortCreateMsg(
-        "URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.",
+        'URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.',
       );
       return;
     }
@@ -213,31 +260,31 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
     if (!selectedServer) {
       setShortCreateMsg(
         serverId
-          ? "서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요."
-          : "연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.",
+          ? '서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요.'
+          : '연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.',
       );
       return;
     }
 
     if (!shortOptions.title.trim()) {
-      setShortCreateMsg("제목은 필수입니다.");
+      setShortCreateMsg('제목은 필수입니다.');
       return;
     }
 
     if (parseTags(shortOptions.tags).length === 0) {
-      setShortCreateMsg("태그는 1개 이상 필수입니다.");
+      setShortCreateMsg('태그는 1개 이상 필수입니다.');
       return;
     }
 
     setCreatingShortUrl(true);
-    setShortCreateMsg("단축링크 생성 중...");
+    setShortCreateMsg('단축링크 생성 중...');
 
     const TIMEOUT_MS = 8_000;
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
-      if (!raw) return "";
+      if (!raw) return '';
       if (raw instanceof Error) return raw.message;
-      if (typeof raw === "object") {
+      if (typeof raw === 'object') {
         const obj = raw as {
           status?: number;
           title?: string;
@@ -245,17 +292,17 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
           invalidElements?: string[];
         };
         const parts: string[] = [];
-        if (typeof obj.status === "number") parts.push(`HTTP ${obj.status}`);
-        if (typeof obj.title === "string" && obj.title) parts.push(obj.title);
-        if (typeof obj.detail === "string" && obj.detail)
+        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === 'string' && obj.detail)
           parts.push(obj.detail);
         if (
           Array.isArray(obj.invalidElements) &&
           obj.invalidElements.length > 0
         ) {
-          parts.push(`invalid: ${obj.invalidElements.join(", ")}`);
+          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
         }
-        return parts.length > 0 ? parts.join(" · ") : JSON.stringify(raw);
+        return parts.length > 0 ? parts.join(' · ') : JSON.stringify(raw);
       }
       return String(raw);
     };
@@ -269,7 +316,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         appliedTemplateName.trim(),
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .trim();
       const created = await Promise.race([
         apiClient.createShortUrl({
@@ -292,11 +339,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         ),
       ]);
       setQuickShortUrl(created.shortUrl);
-      setShortCreateMsg("단축링크 생성 완료");
+      setShortCreateMsg('단축링크 생성 완료');
     } catch (error) {
       const detail = extractShlinkErrorMessage(error);
       setShortCreateMsg(
-        `단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ""}`,
+        `단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ''}`,
       );
     } finally {
       setCreatingShortUrl(false);
@@ -305,14 +352,137 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 
   const applyTemplate = (tpl: any) => {
     const templateFields = {
-      source: tpl.source || "",
-      medium: tpl.medium || "",
-      campaign: tpl.campaign || "",
-      term: tpl.term || "",
-      content: tpl.content || "",
+      source: tpl.source || '',
+      medium: tpl.medium || '',
+      campaign: tpl.campaign || '',
+      term: tpl.term || '',
+      content: tpl.content || '',
     };
     setFields((prev) => ({ ...prev, ...templateFields }));
-    setAppliedTemplateName(typeof tpl?.name === "string" ? tpl.name : "");
+    setAppliedTemplateName(typeof tpl?.name === 'string' ? tpl.name : '');
+  };
+
+  // Switching modes preserves the UTM fields (source/medium/...) and only
+  // resets the per-mode short-url results so stale output is not shown.
+  const switchMode = (next: BuilderMode) => {
+    setMode(next);
+    setMultiRows([]);
+    setCopiedAll(false);
+    setShortCreateMsg('');
+  };
+
+  const handleCopyAll = async () => {
+    const validUrls = multiResults
+      .filter((row) => row.ok)
+      .map((row) => row.builtUrl);
+
+    if (validUrls.length === 0) {
+      setShortCreateMsg(t('utm.builder.multi.copyAllNeeded'));
+      return;
+    }
+
+    await navigator.clipboard.writeText(validUrls.join('\n'));
+    setCopiedAll(true);
+    setShortCreateMsg(t('utm.builder.multi.copyAllDone'));
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  // Bulk short-url creation: loop over the derived result array (single mode
+  // would be a length-1 array, but multi mode drives this). Reuses the same
+  // create options form as single mode.
+  const handleCreateShortInBulk = async () => {
+    if (creatingShortUrl) {
+      return;
+    }
+
+    if (!canBuildMulti) {
+      setShortCreateMsg(
+        '유효한 URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.',
+      );
+      return;
+    }
+
+    if (!selectedServer) {
+      setShortCreateMsg(
+        serverId
+          ? '서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요.'
+          : '연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.',
+      );
+      return;
+    }
+
+    if (!shortOptions.title.trim()) {
+      setShortCreateMsg('제목은 필수입니다.');
+      return;
+    }
+
+    if (parseTags(shortOptions.tags).length === 0) {
+      setShortCreateMsg('태그는 1개 이상 필수입니다.');
+      return;
+    }
+
+    setCreatingShortUrl(true);
+
+    const TIMEOUT_MS = 8_000;
+    const INTER_REQUEST_DELAY_MS = 750;
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    const apiClient = buildShlinkApiClient(selectedServer);
+    const composedTitle = [
+      shortOptions.title.trim(),
+      appliedTemplateName.trim(),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const validRows = multiResults.filter((row) => row.ok);
+    const resultRows: MultiUrlResult[] = [];
+    let success = 0;
+    let fail = 0;
+
+    for (let index = 0; index < validRows.length; index += 1) {
+      const row = validRows[index];
+      setShortCreateMsg(
+        `${t('utm.builder.multi.creating')} (${index + 1}/${validRows.length})`,
+      );
+
+      if (index > 0) {
+        await sleep(INTER_REQUEST_DELAY_MS);
+      }
+
+      try {
+        const created = await Promise.race([
+          apiClient.createShortUrl({
+            longUrl: row.builtUrl,
+            customSlug: undefined,
+            title: composedTitle || undefined,
+            tags: parseTags(shortOptions.tags),
+            findIfExists: true,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(
+                  new Error(
+                    `Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`,
+                  ),
+                ),
+              TIMEOUT_MS,
+            ),
+          ),
+        ]);
+        success += 1;
+        resultRows.push({ ...row, builtUrl: created.shortUrl, ok: true });
+      } catch {
+        fail += 1;
+        resultRows.push({ ...row, ok: false });
+      }
+    }
+
+    setMultiRows(resultRows);
+    setShortCreateMsg(t('utm.builder.multi.bulkResult', { success, fail }));
+    setCreatingShortUrl(false);
   };
 
   const handleSaveAsTemplate = async () => {
@@ -324,10 +494,10 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       ...fields,
     });
 
-    setTemplateName("");
-    setTemplateDescription("");
-    setSaveMsg("템플릿이 저장되었습니다.");
-    setTimeout(() => setSaveMsg(""), 2000);
+    setTemplateName('');
+    setTemplateDescription('');
+    setSaveMsg('템플릿이 저장되었습니다.');
+    setTimeout(() => setSaveMsg(''), 2000);
   };
 
   return (
@@ -336,37 +506,91 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         <div className="mb-4">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t("utm.builder.title")}
+              {t('utm.builder.title')}
             </h1>
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t("utm.builder.subtitle")}
+            {t('utm.builder.subtitle')}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* 왼쪽: 빌더 */}
           <div className="lg:col-span-2 space-y-4 rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
-            <div>
-              <label
-                htmlFor="utm-base-url"
-                className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+            {/* 단일/다중 링크 토글 */}
+            <div className="inline-flex rounded border border-lm-border p-0.5 dark:border-dm-border">
+              <button
+                type="button"
+                onClick={() => switchMode('single')}
+                className={`rounded px-3 py-1.5 text-xs font-semibold ${
+                  mode === 'single'
+                    ? 'bg-lm-main text-white dark:bg-dm-main'
+                    : 'text-(--light-text-color) dark:text-(--dark-text-color)'
+                }`}
               >
-                기본 URL <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="utm-base-url"
-                type="url"
-                value={fields.baseUrl}
-                onChange={(e) => handleBaseUrlChange(e.target.value)}
-                placeholder="https://example.com/page"
-                className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                URL에 포함된 utm_source, utm_medium, utm_campaign, utm_term,
-                utm_content 값은 아래 입력칸에 자동 반영됩니다.
-              </p>
+                {t('utm.builder.mode.single')}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('multi')}
+                className={`rounded px-3 py-1.5 text-xs font-semibold ${
+                  mode === 'multi'
+                    ? 'bg-lm-main text-white dark:bg-dm-main'
+                    : 'text-(--light-text-color) dark:text-(--dark-text-color)'
+                }`}
+              >
+                {t('utm.builder.mode.multi')}
+              </button>
             </div>
+
+            {mode === 'single' ? (
+              <div>
+                <label
+                  htmlFor="utm-base-url"
+                  className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
+                  기본 URL <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="utm-base-url"
+                  type="url"
+                  value={fields.baseUrl}
+                  onChange={(e) => handleBaseUrlChange(e.target.value)}
+                  placeholder="https://example.com/page"
+                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  URL에 포함된 utm_source, utm_medium, utm_campaign, utm_term,
+                  utm_content 값은 아래 입력칸에 자동 반영됩니다.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label
+                  htmlFor="utm-multi-base-url"
+                  className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
+                  {t('utm.builder.multi.label')}{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="utm-multi-base-url"
+                  rows={5}
+                  value={multiBaseUrls}
+                  onChange={(e) => setMultiBaseUrls(e.target.value)}
+                  placeholder={t('utm.builder.multi.placeholder')}
+                  className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                {multiResults.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {t('utm.builder.multi.summary', {
+                      valid: multiValidCount,
+                      skipped: multiSkippedCount,
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
 
             {UTM_CATEGORIES.map((cat) => (
               <UtmFieldInput
@@ -376,41 +600,90 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                 onChange={set(cat)}
                 tags={tagsFor(cat)}
                 required={
-                  cat === "source" || cat === "medium" || cat === "campaign"
+                  cat === 'source' || cat === 'medium' || cat === 'campaign'
                 }
               />
             ))}
 
-            {/* 결과 URL */}
-            <div className="mt-2">
-              <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
-                생성된 URL
-              </p>
-              <div className="min-h-12 break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-(--light-text-color) dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)">
-                {utmUrl || (
-                  <span className="text-gray-500 dark:text-gray-400">
-                    기본 URL을 입력하세요
-                  </span>
+            {mode === 'single' ? (
+              <>
+                {/* 결과 URL */}
+                <div className="mt-2">
+                  <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                    생성된 URL
+                  </p>
+                  <div className="min-h-12 break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-(--light-text-color) dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)">
+                    {utmUrl || (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        기본 URL을 입력하세요
+                      </span>
+                    )}
+                  </div>
+                  {!canGenerate && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      단축링크 생성/복사를 위해 utm_source, utm_medium,
+                      utm_campaign은 필수입니다.
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="mt-2">
+                <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {t('utm.builder.multi.result.title')}
+                </p>
+                {multiResults.length === 0 ? (
+                  <div className="min-h-12 break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-gray-500 dark:border-dm-border dark:bg-dm-main dark:text-gray-400">
+                    {t('utm.builder.multi.result.empty')}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {(multiRows.length > 0 ? multiRows : multiResults).map(
+                      (row, index) => (
+                        <div
+                          key={`${row.url}-${index}`}
+                          className="break-all rounded border border-lm-border px-3 py-1.5 text-xs dark:border-dm-border"
+                        >
+                          {row.ok ? (
+                            <span className="text-(--light-text-color) dark:text-(--dark-text-color)">
+                              {row.builtUrl}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              {row.url} — {t('utm.builder.multi.skipped')}
+                            </span>
+                          )}
+                        </div>
+                      ),
+                    )}
+                  </div>
                 )}
               </div>
-              {!canGenerate && (
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  단축링크 생성/복사를 위해 utm_source, utm_medium,
-                  utm_campaign은 필수입니다.
-                </p>
-              )}
-            </div>
+            )}
 
             {/* 액션 버튼 */}
             <div className="flex gap-3">
-              <button
-                onClick={handleCopy}
-                disabled={!canGenerate}
-                className="flex items-center gap-2 rounded bg-lm-main px-4 py-2 text-sm text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
-              >
-                <FontAwesomeIcon icon={faCopy} />
-                {copied ? "복사됨!" : "복사"}
-              </button>
+              {mode === 'single' ? (
+                <button
+                  onClick={handleCopy}
+                  disabled={!canGenerate}
+                  className="flex items-center gap-2 rounded bg-lm-main px-4 py-2 text-sm text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
+                >
+                  <FontAwesomeIcon icon={faCopy} />
+                  {copied ? '복사됨!' : '복사'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => void handleCopyAll()}
+                  disabled={multiValidCount === 0}
+                  className="flex items-center gap-2 rounded bg-lm-main px-4 py-2 text-sm text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
+                >
+                  <FontAwesomeIcon icon={faCopy} />
+                  {copiedAll
+                    ? t('utm.builder.multi.copiedAll')
+                    : t('utm.builder.multi.copyAll')}
+                </button>
+              )}
               <button
                 onClick={() => setShowShortOptions((prev) => !prev)}
                 className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
@@ -418,13 +691,15 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                 <FontAwesomeIcon icon={faExternalLinkAlt} />
                 한번에 링크 만들기
               </button>
-              <button
-                onClick={handleGoToShorten}
-                className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
-              >
-                <FontAwesomeIcon icon={faExternalLinkAlt} />
-                단축링크 만들기
-              </button>
+              {mode === 'single' && (
+                <button
+                  onClick={handleGoToShorten}
+                  className="flex items-center gap-2 rounded bg-lm-primary px-4 py-2 text-sm text-(--light-text-color) hover:bg-lm-secondary dark:bg-dm-primary dark:text-(--dark-text-color) dark:hover:bg-dm-secondary"
+                >
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                  단축링크 만들기
+                </button>
+              )}
             </div>
 
             {shortCreateMsg && (
@@ -462,27 +737,33 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                     placeholder="태그 (필수, 쉼표 구분)"
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
-                  <input
-                    type="text"
-                    value={shortOptions.customSlug}
-                    onChange={(e) =>
-                      setShortOptions((prev) => ({
-                        ...prev,
-                        customSlug: e.target.value,
-                      }))
-                    }
-                    placeholder="슬러그 직접 입력 (선택)"
-                    className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
-                  />
+                  {mode === 'single' && (
+                    <input
+                      type="text"
+                      value={shortOptions.customSlug}
+                      onChange={(e) =>
+                        setShortOptions((prev) => ({
+                          ...prev,
+                          customSlug: e.target.value,
+                        }))
+                      }
+                      placeholder="슬러그 직접 입력 (선택)"
+                      className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                    />
+                  )}
                 </div>
                 {appliedTemplateName && (
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    저장 시 제목 뒤에 적용된 템플릿 이름{" "}
+                    저장 시 제목 뒤에 적용된 템플릿 이름{' '}
                     <strong>{appliedTemplateName}</strong> 이 자동으로 붙습니다.
                   </p>
                 )}
                 <button
-                  onClick={() => void handleCreateShortInOneClick()}
+                  onClick={() =>
+                    void (mode === 'single'
+                      ? handleCreateShortInOneClick()
+                      : handleCreateShortInBulk())
+                  }
                   disabled={
                     !shortOptions.title.trim() ||
                     parseTags(shortOptions.tags).length === 0 ||
@@ -490,7 +771,9 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
                   }
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
-                  단축링크 생성 실행
+                  {mode === 'single'
+                    ? '단축링크 생성 실행'
+                    : t('utm.builder.multi.createAll')}
                 </button>
               </div>
             )}
@@ -591,5 +874,5 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 };
 
 export const UtmBuilderPage = withDependencies(UtmBuilderPageBase, [
-  "buildShlinkApiClient",
+  'buildShlinkApiClient',
 ]);
