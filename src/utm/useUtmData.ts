@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { pb } from "../lib/pocketbase";
+import { useCallback, useEffect, useState } from 'react';
+import { pb } from '../lib/pocketbase';
 
 export const UTM_CATEGORIES = [
-  "source",
-  "medium",
-  "campaign",
-  "term",
-  "content",
+  'source',
+  'medium',
+  'campaign',
+  'term',
+  'content',
 ] as const;
-export const UTM_REQUIRED_FIELDS = ["source", "medium"] as const;
-export const UTM_OPTIONAL_FIELDS = ["campaign", "term", "content"] as const;
+export const UTM_REQUIRED_FIELDS = ['source', 'medium'] as const;
+export const UTM_OPTIONAL_FIELDS = ['campaign', 'term', 'content'] as const;
 
 export type UtmCategory = (typeof UTM_CATEGORIES)[number];
 export type UtmRequiredField = (typeof UTM_REQUIRED_FIELDS)[number];
@@ -63,12 +63,12 @@ export const normalizeTemplateForUpdate = (
   data: Record<string, string>,
 ): Partial<UtmTemplate> => ({
   name: data.name,
-  description: data.description?.trim() ?? "",
+  description: data.description?.trim() ?? '',
   source: data.source,
   medium: data.medium,
-  campaign: data.campaign?.trim() ?? "",
-  term: data.term?.trim() ?? "",
-  content: data.content?.trim() ?? "",
+  campaign: data.campaign?.trim() ?? '',
+  term: data.term?.trim() ?? '',
+  content: data.content?.trim() ?? '',
 });
 
 // Surface a readable message from whatever PocketBase / network threw so the
@@ -78,7 +78,7 @@ const toUtmError = (error: unknown): Error => {
     return error;
   }
 
-  if (error && typeof error === "object") {
+  if (error && typeof error === 'object') {
     const obj = error as { message?: string; data?: { message?: string } };
     const message = obj.data?.message || obj.message;
     if (message) {
@@ -102,8 +102,8 @@ export const useUtmTags = () => {
     }
 
     try {
-      const records = await pb.collection("utm_tags").getFullList<UtmTag>({
-        sort: "category,value",
+      const records = await pb.collection('utm_tags').getFullList<UtmTag>({
+        sort: 'category,value',
       });
       setTags(records);
     } catch {
@@ -118,14 +118,14 @@ export const useUtmTags = () => {
   const addTag = async (
     category: UtmCategory,
     value: string,
-    description = "",
+    description = '',
   ) => {
     const userId = currentUserId();
     if (!userId || !value.trim()) {
       return;
     }
 
-    await pb.collection("utm_tags").create({
+    await pb.collection('utm_tags').create({
       category,
       value: value.trim(),
       description: description.trim(),
@@ -136,7 +136,7 @@ export const useUtmTags = () => {
 
   const deleteTag = async (id: string) => {
     try {
-      await pb.collection("utm_tags").delete(id);
+      await pb.collection('utm_tags').delete(id);
     } catch (error) {
       throw toUtmError(error);
     }
@@ -147,7 +147,7 @@ export const useUtmTags = () => {
     id: string,
     category: UtmCategory,
     value: string,
-    description = "",
+    description = '',
   ) => {
     const userId = currentUserId();
     if (!userId || !value.trim()) {
@@ -157,7 +157,7 @@ export const useUtmTags = () => {
     try {
       // Do NOT re-assign `user`: editing a shared tag must preserve the
       // original owner instead of stealing it for the editor.
-      await pb.collection("utm_tags").update(id, {
+      await pb.collection('utm_tags').update(id, {
         category,
         value: value.trim(),
         description: description.trim(),
@@ -183,9 +183,9 @@ export const useUtmTemplates = () => {
 
     try {
       const records = await pb
-        .collection("utm_templates")
+        .collection('utm_templates')
         .getFullList<UtmTemplate>({
-          sort: "name",
+          sort: 'name',
         });
       setTemplates(records);
     } catch {
@@ -197,7 +197,7 @@ export const useUtmTemplates = () => {
     void fetch();
   }, [fetch]);
 
-  const saveTemplate = async (data: Omit<UtmTemplate, "id">) => {
+  const saveTemplate = async (data: Omit<UtmTemplate, 'id'>) => {
     const userId = currentUserId();
     if (!userId) {
       return;
@@ -208,14 +208,14 @@ export const useUtmTemplates = () => {
       return;
     }
 
-    await pb.collection("utm_templates").create({
+    await pb.collection('utm_templates').create({
       ...normalized,
       user: userId,
     });
     await fetch();
   };
 
-  const updateTemplate = async (id: string, data: Omit<UtmTemplate, "id">) => {
+  const updateTemplate = async (id: string, data: Omit<UtmTemplate, 'id'>) => {
     const userId = currentUserId();
     if (!userId) {
       return;
@@ -233,7 +233,7 @@ export const useUtmTemplates = () => {
     try {
       // Do NOT re-assign `user`: editing a shared template must preserve the
       // original owner instead of stealing it for the editor.
-      await pb.collection("utm_templates").update(id, normalized);
+      await pb.collection('utm_templates').update(id, normalized);
     } catch (error) {
       throw toUtmError(error);
     }
@@ -242,7 +242,7 @@ export const useUtmTemplates = () => {
 
   const deleteTemplate = async (id: string) => {
     try {
-      await pb.collection("utm_templates").delete(id);
+      await pb.collection('utm_templates').delete(id);
     } catch (error) {
       throw toUtmError(error);
     }

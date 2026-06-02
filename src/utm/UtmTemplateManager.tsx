@@ -22,10 +22,14 @@ export const UtmTemplateManager: FC = () => {
   });
   const [saveMsg, setSaveMsg] = useState('');
   const [validationError, setValidationError] = useState('');
-  const [openSuggestionField, setOpenSuggestionField] = useState<UtmCategory | null>(null);
-  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [openSuggestionField, setOpenSuggestionField] =
+    useState<UtmCategory | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
+    null,
+  );
 
-  const { templates, saveTemplate, updateTemplate, deleteTemplate } = useUtmTemplates();
+  const { templates, saveTemplate, updateTemplate, deleteTemplate } =
+    useUtmTemplates();
   const { tags } = useUtmTags();
 
   const handleFieldChange = (key: UtmCategory, value: string) => {
@@ -59,12 +63,21 @@ export const UtmTemplateManager: FC = () => {
       content: fields.content.trim() || undefined,
     };
 
-    if (editingTemplateId) {
-      await updateTemplate(editingTemplateId, payload);
-      setSaveMsg('템플릿이 수정됐습니다.');
-    } else {
-      await saveTemplate(payload);
-      setSaveMsg('템플릿이 저장됐습니다.');
+    try {
+      if (editingTemplateId) {
+        await updateTemplate(editingTemplateId, payload);
+        setSaveMsg(t('utm.template.message.updated'));
+      } else {
+        await saveTemplate(payload);
+        setSaveMsg(t('utm.template.message.saved'));
+      }
+    } catch (error) {
+      // Only show success after the write actually resolved. On failure,
+      // surface the real cause and keep the form intact so the user can retry.
+      const reason =
+        error instanceof Error && error.message ? `: ${error.message}` : '';
+      setValidationError(`${t('utm.template.error.saveFailed')}${reason}`);
+      return;
     }
 
     setEditingTemplateId(null);
@@ -97,6 +110,24 @@ export const UtmTemplateManager: FC = () => {
     setValidationError('');
   };
 
+  const handleDelete = async (template: { id: string; name: string }) => {
+    if (!window.confirm(`'${template.name}' 템플릿을 삭제할까요?`)) {
+      return;
+    }
+
+    if (editingTemplateId === template.id) {
+      cancelEdit();
+    }
+
+    try {
+      await deleteTemplate(template.id);
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message ? `: ${error.message}` : '';
+      setValidationError(`${t('utm.template.error.deleteFailed')}${reason}`);
+    }
+  };
+
   const tagDescriptionMap = useMemo(() => {
     const map = new Map<string, string>();
 
@@ -113,22 +144,29 @@ export const UtmTemplateManager: FC = () => {
   }, [tags]);
 
   const templateTags = (template: Record<string, any>) => {
-    const allFields: UtmCategory[] = ['source', 'medium', 'campaign', 'term', 'content'];
-    return allFields
-      .flatMap((category) => {
-        const value = template[category]?.trim();
-        if (!value) {
-          return [];
-        }
+    const allFields: UtmCategory[] = [
+      'source',
+      'medium',
+      'campaign',
+      'term',
+      'content',
+    ];
+    return allFields.flatMap((category) => {
+      const value = template[category]?.trim();
+      if (!value) {
+        return [];
+      }
 
-        const key = `${category}|${value.toLowerCase()}`;
-        const description = tagDescriptionMap.get(key);
+      const key = `${category}|${value.toLowerCase()}`;
+      const description = tagDescriptionMap.get(key);
 
-        return [{
+      return [
+        {
           label: `utm_${category}: ${value}`,
           description,
-        }];
-      });
+        },
+      ];
+    });
   };
 
   const tagValuesByCategory = (category: UtmCategory) => {
@@ -156,7 +194,9 @@ export const UtmTemplateManager: FC = () => {
         }
       });
 
-    return [...valueMap.values()].sort((a, b) => a.value.localeCompare(b.value));
+    return [...valueMap.values()].sort((a, b) =>
+      a.value.localeCompare(b.value),
+    );
   };
 
   const filteredTagValuesByCategory = (category: UtmCategory) => {
@@ -169,7 +209,10 @@ export const UtmTemplateManager: FC = () => {
         }
 
         const normalizedOption = option.toLowerCase();
-        return normalizedOption.includes(currentValue) || normalizedOption.startsWith(currentValue);
+        return (
+          normalizedOption.includes(currentValue) ||
+          normalizedOption.startsWith(currentValue)
+        );
       })
       .slice(0, 8);
   };
@@ -177,10 +220,17 @@ export const UtmTemplateManager: FC = () => {
   const renderFieldInput = (category: UtmCategory, isRequired: boolean) => (
     <div key={category} className="relative">
       <div className="mb-1 flex items-center gap-1">
-        <label htmlFor={`template-${category}`} className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor={`template-${category}`}
+          className="block text-xs font-medium text-gray-700 dark:text-gray-300"
+        >
           utm_{category}
         </label>
-        {isRequired && <span className="text-red-500" aria-hidden="true">*</span>}
+        {isRequired && (
+          <span className="text-red-500" aria-hidden="true">
+            *
+          </span>
+        )}
       </div>
       <input
         id={`template-${category}`}
@@ -188,12 +238,21 @@ export const UtmTemplateManager: FC = () => {
         value={fields[category]}
         onChange={(e) => handleFieldChange(category, e.target.value)}
         onFocus={() => setOpenSuggestionField(category)}
-        onBlur={() => setTimeout(() => setOpenSuggestionField((prev) => (prev === category ? null : prev)), 120)}
+        onBlur={() =>
+          setTimeout(
+            () =>
+              setOpenSuggestionField((prev) =>
+                prev === category ? null : prev,
+              ),
+            120,
+          )
+        }
         autoComplete="off"
         placeholder={`utm_${category} 값`}
         className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
       />
-      {openSuggestionField === category && filteredTagValuesByCategory(category).length > 0 && (
+      {openSuggestionField === category &&
+        filteredTagValuesByCategory(category).length > 0 && (
         <div className="absolute z-10 mt-1 w-full rounded border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
           {filteredTagValuesByCategory(category).map((option) => (
             <button
@@ -204,7 +263,9 @@ export const UtmTemplateManager: FC = () => {
             >
               <span className="block">{option.value}</span>
               {option.description && (
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400">{option.description}</span>
+                <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+                  {option.description}
+                </span>
               )}
             </button>
           ))}
@@ -230,7 +291,10 @@ export const UtmTemplateManager: FC = () => {
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label htmlFor="template-name" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="template-name"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   템플릿 이름 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -244,7 +308,10 @@ export const UtmTemplateManager: FC = () => {
               </div>
 
               <div>
-                <label htmlFor="template-description" className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                <label
+                  htmlFor="template-description"
+                  className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+                >
                   설명 (선택)
                 </label>
                 <input
@@ -286,7 +353,8 @@ export const UtmTemplateManager: FC = () => {
                 disabled={!name.trim()}
                 className="flex items-center justify-center gap-2 rounded bg-lm-main px-3 py-1.5 text-xs text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
               >
-                <FontAwesomeIcon icon={faSave} /> {editingTemplateId ? '템플릿 수정 저장' : '템플릿 저장'}
+                <FontAwesomeIcon icon={faSave} />{' '}
+                {editingTemplateId ? '템플릿 수정 저장' : '템플릿 저장'}
               </button>
               {editingTemplateId && (
                 <button
@@ -296,7 +364,9 @@ export const UtmTemplateManager: FC = () => {
                   수정 취소
                 </button>
               )}
-              {validationError && <p className="text-xs text-red-600">{validationError}</p>}
+              {validationError && (
+                <p className="text-xs text-red-600">{validationError}</p>
+              )}
               {saveMsg && <p className="text-xs text-green-600">{saveMsg}</p>}
             </div>
           </div>
@@ -307,7 +377,9 @@ export const UtmTemplateManager: FC = () => {
               저장된 템플릿
             </h2>
             {templates.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">저장된 템플릿이 없습니다.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                저장된 템플릿이 없습니다.
+              </p>
             ) : (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {templates.map((tpl) => {
@@ -324,7 +396,9 @@ export const UtmTemplateManager: FC = () => {
                             {tpl.name}
                           </span>
                           {tpl.description && (
-                            <span className="block text-xs text-gray-500 dark:text-gray-400">{tpl.description}</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                              {tpl.description}
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
@@ -335,27 +409,22 @@ export const UtmTemplateManager: FC = () => {
                             수정
                           </button>
                           <button
-                            onClick={() => {
-                              if (!window.confirm(`'${tpl.name}' 템플릿을 삭제할까요?`)) {
-                                return;
-                              }
-
-                              if (editingTemplateId === tpl.id) {
-                                cancelEdit();
-                              }
-
-                              void deleteTemplate(tpl.id);
-                            }}
+                            onClick={() => void handleDelete(tpl)}
                             className="text-gray-400 hover:text-red-500"
                           >
-                            <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                            <FontAwesomeIcon
+                              icon={faTrash}
+                              className="text-xs"
+                            />
                           </button>
                         </div>
                       </div>
 
                       <div className="mt-2 space-y-1">
                         {tags.length === 0 ? (
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">UTM 값이 없습니다.</span>
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                            UTM 값이 없습니다.
+                          </span>
                         ) : (
                           tags.map((tag) => (
                             <span

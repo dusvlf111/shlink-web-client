@@ -6,8 +6,8 @@ import { useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
-import { useServers } from '../servers/reducers/servers';
 import { useT } from '../i18n';
+import { useServers } from '../servers/reducers/servers';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
 
@@ -223,7 +223,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
           findIfExists: true,
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`)), TIMEOUT_MS)
+          setTimeout(() => reject(new Error(`Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`)), TIMEOUT_MS),
         ),
       ]);
       setQuickShortUrl(created.shortUrl);

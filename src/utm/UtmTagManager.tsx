@@ -16,24 +16,62 @@ export const UtmTagManager: FC = () => {
 
   const { tags, addTag, updateTag, deleteTag } = useUtmTags();
 
+  const [validationError, setValidationError] = useState('');
+
   const handleSave = async () => {
     if (!value.trim()) return;
 
-    if (editingTagId) {
-      await updateTag(editingTagId, category, value.trim(), description.trim());
-      setSaveMsg('태그가 수정됐습니다.');
-    } else {
-      await addTag(category, value.trim(), description.trim());
-      setSaveMsg('태그가 저장됐습니다.');
+    try {
+      if (editingTagId) {
+        await updateTag(
+          editingTagId,
+          category,
+          value.trim(),
+          description.trim(),
+        );
+        setSaveMsg(t('utm.tag.message.updated'));
+      } else {
+        await addTag(category, value.trim(), description.trim());
+        setSaveMsg(t('utm.tag.message.saved'));
+      }
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message ? `: ${error.message}` : '';
+      setValidationError(`${t('utm.tag.error.saveFailed')}${reason}`);
+      return;
     }
 
     setEditingTagId(null);
     setValue('');
     setDescription('');
+    setValidationError('');
     setTimeout(() => setSaveMsg(''), 2000);
   };
 
-  const handleEdit = (tagId: string, tagCategory: UtmCategory, tagValue: string, tagDescription?: string) => {
+  const handleDelete = async (tagId: string, tagValue: string) => {
+    if (!window.confirm(`'${tagValue}' 태그를 삭제할까요?`)) {
+      return;
+    }
+
+    if (editingTagId === tagId) {
+      cancelEdit();
+    }
+
+    try {
+      await deleteTag(tagId);
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message ? `: ${error.message}` : '';
+      setValidationError(`${t('utm.tag.error.deleteFailed')}${reason}`);
+    }
+  };
+
+  const handleEdit = (
+    tagId: string,
+    tagCategory: UtmCategory,
+    tagValue: string,
+    tagDescription?: string,
+  ) => {
     setEditingTagId(tagId);
     setCategory(tagCategory);
     setValue(tagValue);
@@ -47,13 +85,16 @@ export const UtmTagManager: FC = () => {
     setDescription('');
   };
 
-  const tagsByCategory = (cat: UtmCategory) => tags.filter((tag) => tag.category === cat);
+  const tagsByCategory = (cat: UtmCategory) =>
+    tags.filter((tag) => tag.category === cat);
 
   return (
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.tag.title')}</h1>
+          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
+            {t('utm.tag.title')}
+          </h1>
         </div>
 
         <div className="space-y-4">
@@ -64,7 +105,10 @@ export const UtmTagManager: FC = () => {
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label htmlFor="tag-category" className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  htmlFor="tag-category"
+                  className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
                   카테고리 <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -82,7 +126,10 @@ export const UtmTagManager: FC = () => {
               </div>
 
               <div>
-                <label htmlFor="tag-value" className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  htmlFor="tag-value"
+                  className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
                   태그 값 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -96,7 +143,10 @@ export const UtmTagManager: FC = () => {
               </div>
 
               <div className="lg:col-span-2">
-                <label htmlFor="tag-description" className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  htmlFor="tag-description"
+                  className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
                   설명 (선택)
                 </label>
                 <input
@@ -117,7 +167,8 @@ export const UtmTagManager: FC = () => {
                 disabled={!value.trim()}
                 className="flex items-center justify-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-40"
               >
-                <FontAwesomeIcon icon={faPlus} /> {editingTagId ? '태그 수정 저장' : '태그 저장'}
+                <FontAwesomeIcon icon={faPlus} />{' '}
+                {editingTagId ? '태그 수정 저장' : '태그 저장'}
               </button>
               {editingTagId && (
                 <button
@@ -126,6 +177,9 @@ export const UtmTagManager: FC = () => {
                 >
                   수정 취소
                 </button>
+              )}
+              {validationError && (
+                <p className="text-xs text-red-600">{validationError}</p>
               )}
               {saveMsg && <p className="text-xs text-green-600">{saveMsg}</p>}
             </div>
@@ -139,10 +193,17 @@ export const UtmTagManager: FC = () => {
               {UTM_CATEGORIES.map((cat) => {
                 const categoryTags = tagsByCategory(cat);
                 return (
-                  <div key={cat} className="rounded border border-lm-border p-2 dark:border-dm-border">
-                    <h3 className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-400">utm_{cat}</h3>
+                  <div
+                    key={cat}
+                    className="rounded border border-lm-border p-2 dark:border-dm-border"
+                  >
+                    <h3 className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      utm_{cat}
+                    </h3>
                     {categoryTags.length === 0 ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">태그가 없습니다.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        태그가 없습니다.
+                      </p>
                     ) : (
                       <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
                         {categoryTags.map((tag) => (
@@ -155,28 +216,29 @@ export const UtmTagManager: FC = () => {
                                 {tag.value}
                               </span>
                               {tag.description && (
-                                <span className="block truncate text-gray-500 dark:text-gray-400">{tag.description}</span>
+                                <span className="block truncate text-gray-500 dark:text-gray-400">
+                                  {tag.description}
+                                </span>
                               )}
                             </div>
                             <div className="ml-2 flex items-center gap-2">
                               <button
-                                onClick={() => handleEdit(tag.id, tag.category, tag.value, tag.description)}
+                                onClick={() =>
+                                  handleEdit(
+                                    tag.id,
+                                    tag.category,
+                                    tag.value,
+                                    tag.description,
+                                  )
+                                }
                                 className="text-[11px] text-blue-600 hover:text-blue-700"
                               >
                                 수정
                               </button>
                               <button
-                                onClick={() => {
-                                  if (!window.confirm(`'${tag.value}' 태그를 삭제할까요?`)) {
-                                    return;
-                                  }
-
-                                  if (editingTagId === tag.id) {
-                                    cancelEdit();
-                                  }
-
-                                  void deleteTag(tag.id);
-                                }}
+                                onClick={() =>
+                                  void handleDelete(tag.id, tag.value)
+                                }
                                 className="text-gray-400 hover:text-red-500"
                               >
                                 <FontAwesomeIcon icon={faTrash} />
