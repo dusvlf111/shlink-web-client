@@ -1,8 +1,16 @@
 import { screen, waitFor } from '@testing-library/react';
+import { fromPartial } from '@total-typescript/shoehorn';
+import type * as ReactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import type { UtmTag } from '../../src/utm/useUtmData';
 import { UtmBuilderPage } from '../../src/utm/UtmBuilderPage';
 import { renderWithStore } from '../__helpers__/setUpTest';
+
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
+vi.mock('react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof ReactRouter>()),
+  useNavigate: () => navigateMock,
+}));
 
 const saveTemplateMock = vi.fn(async () => undefined);
 const deleteTemplateMock = vi.fn(async () => undefined);
@@ -76,6 +84,43 @@ describe('<UtmBuilderPage />', () => {
       </MemoryRouter>,
       options,
     );
+
+  // Regression (PRD-0602 follow-up): when the page renders without the :serverId
+  // route param (e.g. via the web-component's createNotFound) the server must be
+  // read from the URL pathname, NOT the autoConnect/first server — otherwise short
+  // URLs are created on the wrong Shlink server.
+  it('targets the URL server, not the autoConnect server, for short-url creation', async () => {
+    const { user } = renderWithStore(
+      <MemoryRouter initialEntries={['/server/bin01/utm-builder']}>
+        <Routes>
+          <Route path="*" element={<UtmBuilderPage />} />
+        </Routes>
+      </MemoryRouter>,
+      {
+        initialState: {
+          servers: {
+            bin01: fromPartial({ id: 'bin01', name: 'Bin01' }),
+            other: fromPartial({
+              id: 'other',
+              name: 'Other',
+              autoConnect: true,
+            }),
+          },
+        },
+      },
+    );
+
+    await user.type(screen.getByLabelText('기본 URL *'), 'https://example.com');
+    await user.type(screen.getByLabelText(/utm_source/i), 'google');
+    await user.type(screen.getByLabelText(/utm_medium/i), 'cpc');
+    await user.click(screen.getByRole('button', { name: /^단축링크 만들기$/ }));
+
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith(
+        expect.stringContaining('/server/bin01/create-short-url'),
+      ),
+    );
+  });
 
   it('fills utm fields when base URL already has utm params', async () => {
     const { user } = setUp();

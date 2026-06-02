@@ -1,14 +1,14 @@
-import { faCopy, faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { FC } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import type { ShlinkApiClientBuilder } from "../api/services/ShlinkApiClientBuilder";
-import { NoMenuLayout } from "../common/NoMenuLayout";
-import { withDependencies } from "../container/context";
-import { useT } from "../i18n";
-import { useServers } from "../servers/reducers/servers";
-import { useUtmTags, useUtmTemplates } from "./useUtmData";
+import { faCopy, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { FC } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
+import { NoMenuLayout } from '../common/NoMenuLayout';
+import { withDependencies } from '../container/context';
+import { useT } from '../i18n';
+import { useServers } from '../servers/reducers/servers';
+import { useUtmTags, useUtmTemplates } from './useUtmData';
 
 type GeneratedRow = {
   id: string;
@@ -58,7 +58,7 @@ const buildUtmUrlFromTemplate = (
   overrides?: Partial<OverrideFields>,
 ): string => {
   if (!baseUrl.trim()) {
-    return "";
+    return '';
   }
 
   try {
@@ -80,14 +80,14 @@ const buildUtmUrlFromTemplate = (
 
     return url.toString();
   } catch {
-    return "";
+    return '';
   }
 };
 
 const normalizeBaseUrl = (rawBaseUrl: string): string => {
   const trimmed = rawBaseUrl.trim();
   if (!trimmed) {
-    return "";
+    return '';
   }
 
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
@@ -95,7 +95,7 @@ const normalizeBaseUrl = (rawBaseUrl: string): string => {
 
 const parseTags = (rawTags: string): string[] =>
   rawTags
-    .split(",")
+    .split(',')
     .map((tag) => tag.trim())
     .filter(Boolean);
 
@@ -103,9 +103,9 @@ const sanitizeSlugPart = (rawValue: string): string =>
   rawValue
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 
 const pickFallbackServerId = (
   servers: Record<string, { id: string; autoConnect?: boolean }>,
@@ -114,10 +114,19 @@ const pickFallbackServerId = (
   return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
 };
 
+// Read the active serverId from the URL so bulk creation targets the server the
+// user is viewing, not the autoConnect/first server (which silently created
+// short URLs on the wrong Shlink server).
+const serverIdFromPathname = (pathname: string): string | undefined => {
+  const matched = pathname.match(/^\/server\/([^/]+)/)?.[1];
+  return matched && matched !== 'create' ? matched : undefined;
+};
+
 const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
   buildShlinkApiClient,
 }) => {
   const { serverId: paramServerId } = useParams<{ serverId: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const t = useT();
   const { templates } = useUtmTemplates();
@@ -127,25 +136,29 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     () => pickFallbackServerId(servers),
     [servers],
   );
-  const serverId = paramServerId ?? fallbackServerId ?? undefined;
+  const serverId =
+    paramServerId ??
+    serverIdFromPathname(pathname) ??
+    fallbackServerId ??
+    undefined;
 
-  const [baseUrl, setBaseUrl] = useState("");
+  const [baseUrl, setBaseUrl] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copiedAll, setCopiedAll] = useState(false);
   const [generatedRows, setGeneratedRows] = useState<GeneratedRow[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [creatingShortUrls, setCreatingShortUrls] = useState(false);
-  const [actionMessage, setActionMessage] = useState("");
+  const [actionMessage, setActionMessage] = useState('');
   const [showShortOptions, setShowShortOptions] = useState(false);
   const [shortOptions, setShortOptions] = useState<BulkShortCreateOptions>({
-    slugPrefix: "",
-    titlePrefix: "",
-    additionalTags: "",
+    slugPrefix: '',
+    titlePrefix: '',
+    additionalTags: '',
   });
   const [overrideFields, setOverrideFields] = useState<OverrideFields>({
-    campaign: "",
-    term: "",
-    content: "",
+    campaign: '',
+    term: '',
+    content: '',
   });
 
   const selectedServer = serverId ? servers[serverId] : null;
@@ -193,7 +206,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     setHasGenerated(false);
     setGeneratedRows([]);
     setCopiedAll(false);
-    setActionMessage("");
+    setActionMessage('');
     setShowShortOptions(false);
   }, [baseUrl, selectedIds, overrideFields]);
 
@@ -227,41 +240,41 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
 
   const handleCopyAll = async () => {
     if (!hasShortUrls) {
-      setActionMessage(t("utm.bulk.message.copyAllNeeded"));
+      setActionMessage(t('utm.bulk.message.copyAllNeeded'));
       return;
     }
 
     const shortUrls = generatedRows
       .map((row) => row.shortUrl)
       .filter((url): url is string => !!url);
-    const tsv = shortUrls.join("\n");
+    const tsv = shortUrls.join('\n');
 
     await copyText(tsv);
     setCopiedAll(true);
-    setActionMessage(t("utm.bulk.message.copyAllDone"));
+    setActionMessage(t('utm.bulk.message.copyAllDone'));
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
   const handleGenerate = () => {
     if (!baseUrl.trim()) {
-      setActionMessage(t("utm.bulk.message.needBaseUrl"));
+      setActionMessage(t('utm.bulk.message.needBaseUrl'));
       return;
     }
 
     if (selectedIds.length === 0) {
-      setActionMessage(t("utm.bulk.message.needTemplate"));
+      setActionMessage(t('utm.bulk.message.needTemplate'));
       return;
     }
 
     if (previewRows.length === 0) {
-      setActionMessage(t("utm.bulk.message.invalidUrl"));
+      setActionMessage(t('utm.bulk.message.invalidUrl'));
       return;
     }
 
     setGeneratedRows(previewRows);
     setHasGenerated(true);
     setActionMessage(
-      t("utm.bulk.message.generated", { count: previewRows.length }),
+      t('utm.bulk.message.generated', { count: previewRows.length }),
     );
   };
 
@@ -271,27 +284,27 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     }
 
     if (!selectedServer) {
-      setActionMessage(t("utm.bulk.message.serverMissing"));
+      setActionMessage(t('utm.bulk.message.serverMissing'));
       return;
     }
 
     if (generatedRows.length === 0) {
-      setActionMessage(t("utm.bulk.message.needGenerate"));
+      setActionMessage(t('utm.bulk.message.needGenerate'));
       return;
     }
 
     if (!shortOptions.titlePrefix.trim()) {
-      setActionMessage(t("utm.bulk.message.needTitle"));
+      setActionMessage(t('utm.bulk.message.needTitle'));
       return;
     }
 
     if (parseTags(shortOptions.additionalTags).length === 0) {
-      setActionMessage(t("utm.bulk.message.needTags"));
+      setActionMessage(t('utm.bulk.message.needTags'));
       return;
     }
 
     setCreatingShortUrls(true);
-    setActionMessage(t("utm.bulk.message.creating"));
+    setActionMessage(t('utm.bulk.message.creating'));
 
     const PER_REQUEST_TIMEOUT_MS = 8_000;
     const INTER_REQUEST_DELAY_MS = 750;
@@ -316,9 +329,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
       ]);
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
-      if (!raw) return "";
+      if (!raw) return '';
       if (raw instanceof Error) return raw.message;
-      if (typeof raw === "object") {
+      if (typeof raw === 'object') {
         const obj = raw as Record<string, unknown> & {
           detail?: string;
           title?: string;
@@ -327,18 +340,18 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
           invalidElements?: string[];
         };
         const parts: string[] = [];
-        if (typeof obj.status === "number") parts.push(`HTTP ${obj.status}`);
-        if (typeof obj.title === "string" && obj.title) parts.push(obj.title);
-        if (typeof obj.detail === "string" && obj.detail)
+        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === 'string' && obj.detail)
           parts.push(obj.detail);
         if (
           Array.isArray(obj.invalidElements) &&
           obj.invalidElements.length > 0
         ) {
-          parts.push(`invalid: ${obj.invalidElements.join(", ")}`);
+          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
         }
         if (parts.length === 0) return JSON.stringify(raw);
-        return parts.join(" · ");
+        return parts.join(' · ');
       }
       return String(raw);
     };
@@ -348,10 +361,10 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
       if (raw instanceof Error) {
         const m = raw.message;
         return (
-          m.includes("slug") || m.includes("conflict") || m.includes("409")
+          m.includes('slug') || m.includes('conflict') || m.includes('409')
         );
       }
-      if (typeof raw === "object") {
+      if (typeof raw === 'object') {
         const obj = raw as {
           status?: number;
           type?: string;
@@ -360,18 +373,18 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
         };
         if (obj.status === 409) return true;
         if (
-          typeof obj.type === "string" &&
-          obj.type.toLowerCase().includes("slug")
+          typeof obj.type === 'string' &&
+          obj.type.toLowerCase().includes('slug')
         )
           return true;
         if (
-          typeof obj.detail === "string" &&
-          obj.detail.toLowerCase().includes("slug")
+          typeof obj.detail === 'string' &&
+          obj.detail.toLowerCase().includes('slug')
         )
           return true;
         if (
           Array.isArray(obj.invalidElements) &&
-          obj.invalidElements.includes("customSlug")
+          obj.invalidElements.includes('customSlug')
         )
           return true;
       }
@@ -389,7 +402,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
       for (let index = 0; index < generatedRows.length; index += 1) {
         const row = generatedRows[index];
         setActionMessage(
-          `${t("utm.bulk.message.creating")} (${index + 1}/${generatedRows.length})`,
+          `${t('utm.bulk.message.creating')} (${index + 1}/${generatedRows.length})`,
         );
 
         // Throttle between requests so Shlink does not rate-limit us.
@@ -400,7 +413,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
         try {
           const normalizedName = sanitizeSlugPart(row.name);
           const customSlug = basePrefix
-            ? `${basePrefix}-${normalizedName || "item"}-${index + 1}`
+            ? `${basePrefix}-${normalizedName || 'item'}-${index + 1}`
             : undefined;
           const title = `${shortOptions.titlePrefix.trim()} ${row.name}`.trim();
           const tags = additionalTags;
@@ -439,10 +452,10 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
           });
         } catch (error) {
           const message =
-            extractShlinkErrorMessage(error) || t("utm.bulk.row.errorPrefix");
+            extractShlinkErrorMessage(error) || t('utm.bulk.row.errorPrefix');
           rowsWithShortUrl.push({
             ...row,
-            createError: `${t("utm.bulk.row.errorPrefix")}: ${message}`,
+            createError: `${t('utm.bulk.row.errorPrefix')}: ${message}`,
           });
         }
       }
@@ -453,15 +466,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
       ).length;
       const failCount = rowsWithShortUrl.length - successCount;
       setActionMessage(
-        t("utm.bulk.message.bulkResult", {
+        t('utm.bulk.message.bulkResult', {
           success: successCount,
           fail: failCount,
         }),
       );
     } catch (error) {
       const detail =
-        error instanceof Error && error.message ? ` (${error.message})` : "";
-      setActionMessage(`${t("utm.bulk.message.bulkError")}${detail}`);
+        error instanceof Error && error.message ? ` (${error.message})` : '';
+      setActionMessage(`${t('utm.bulk.message.bulkError')}${detail}`);
     } finally {
       setCreatingShortUrls(false);
     }
@@ -499,7 +512,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
       description?: string;
     }> = [];
 
-    ["source", "medium", "campaign", "term", "content"].forEach((category) => {
+    ['source', 'medium', 'campaign', 'term', 'content'].forEach((category) => {
       const value = template[category]?.trim();
       if (value) {
         const key = `${category}|${value.toLowerCase()}`;
@@ -522,35 +535,35 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t("utm.bulk.title")}
+              {t('utm.bulk.title')}
             </h1>
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t("utm.bulk.subtitle")}
+            {t('utm.bulk.subtitle')}
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t("utm.bulk.step1.title")}
+              {t('utm.bulk.step1.title')}
             </h2>
             <input
               id="bulk-base-url"
               type="url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder={t("utm.bulk.step1.placeholder")}
+              placeholder={t('utm.bulk.step1.placeholder')}
               className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t("utm.bulk.step1.help")}
+              {t('utm.bulk.step1.help')}
             </p>
           </div>
 
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-              {t("utm.bulk.overrideSection.title")}
+              {t('utm.bulk.overrideSection.title')}
             </h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
@@ -558,7 +571,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   htmlFor="bulk-override-campaign"
                   className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
                 >
-                  {t("utm.bulk.override.campaign.label")}
+                  {t('utm.bulk.override.campaign.label')}
                 </label>
                 <input
                   id="bulk-override-campaign"
@@ -570,7 +583,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                       campaign: e.target.value,
                     }))
                   }
-                  placeholder={t("utm.bulk.override.campaign.placeholder")}
+                  placeholder={t('utm.bulk.override.campaign.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
@@ -579,7 +592,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   htmlFor="bulk-override-term"
                   className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
                 >
-                  {t("utm.bulk.override.term.label")}
+                  {t('utm.bulk.override.term.label')}
                 </label>
                 <input
                   id="bulk-override-term"
@@ -591,7 +604,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                       term: e.target.value,
                     }))
                   }
-                  placeholder={t("utm.bulk.override.term.placeholder")}
+                  placeholder={t('utm.bulk.override.term.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
@@ -600,7 +613,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   htmlFor="bulk-override-content"
                   className="mb-1 block text-xs font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
                 >
-                  {t("utm.bulk.override.content.label")}
+                  {t('utm.bulk.override.content.label')}
                 </label>
                 <input
                   id="bulk-override-content"
@@ -612,20 +625,20 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                       content: e.target.value,
                     }))
                   }
-                  placeholder={t("utm.bulk.override.content.placeholder")}
+                  placeholder={t('utm.bulk.override.content.placeholder')}
                   className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                 />
               </div>
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t("utm.bulk.overrideSection.help")}
+              {t('utm.bulk.overrideSection.help')}
             </p>
           </div>
 
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                {t("utm.bulk.step2.title")}
+                {t('utm.bulk.step2.title')}
               </h2>
               {templates.length > 0 && (
                 <button
@@ -634,24 +647,24 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   className="rounded bg-gray-100 px-3 py-1.5 text-xs text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
                 >
                   {allSelected
-                    ? t("utm.bulk.step2.deselectAll")
-                    : t("utm.bulk.step2.selectAll")}
+                    ? t('utm.bulk.step2.deselectAll')
+                    : t('utm.bulk.step2.selectAll')}
                 </button>
               )}
             </div>
 
             {templates.length === 0 ? (
               <div className="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>{t("utm.bulk.step2.empty")}</span>
+                <span>{t('utm.bulk.step2.empty')}</span>
                 <Link
                   to={
                     serverId
                       ? `/server/${serverId}/utm-template-manager`
-                      : "/utm-template-manager"
+                      : '/utm-template-manager'
                   }
                   className="w-fit rounded bg-blue-700 px-3 py-1.5 text-white no-underline hover:bg-blue-800"
                 >
-                  {t("utm.bulk.step2.gotoTemplates")}
+                  {t('utm.bulk.step2.gotoTemplates')}
                 </Link>
               </div>
             ) : (
@@ -660,7 +673,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   const checked = selectedIds.includes(template.id);
                   const tagInfo = getTemplateTagsInfo(template);
                   const hasCampaign = tagInfo.some(
-                    (t) => t.category === "campaign",
+                    (t) => t.category === 'campaign',
                   );
 
                   return (
@@ -686,8 +699,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                           </span>
                         )}
                         <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
-                          source={template.source || "-"} · medium=
-                          {template.medium || "-"}
+                          source={template.source || '-'} · medium=
+                          {template.medium || '-'}
                           {hasCampaign && ` · campaign=${template.campaign}`}
                         </span>
                         {tagInfo.some((t) => t.description) && (
@@ -699,7 +712,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                                     key={`${template.id}-${tag.category}`}
                                     className="block text-[10px] text-blue-600 dark:text-blue-400"
                                   >
-                                    <strong>{tag.category}:</strong>{" "}
+                                    <strong>{tag.category}:</strong>{' '}
                                     {tag.description}
                                   </span>
                                 ),
@@ -717,7 +730,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                {t("utm.bulk.step3.title")}
+                {t('utm.bulk.step3.title')}
               </h2>
               <div className="flex items-center gap-2">
                 <button
@@ -725,7 +738,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   onClick={handleGenerate}
                   className="rounded bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
                 >
-                  {t("utm.bulk.action.generate")}
+                  {t('utm.bulk.action.generate')}
                 </button>
                 {serverId && (
                   <button
@@ -739,8 +752,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                     className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                   >
                     {creatingShortUrls
-                      ? t("utm.bulk.action.makingShortUrls")
-                      : t("utm.bulk.action.makeShortUrls")}
+                      ? t('utm.bulk.action.makingShortUrls')
+                      : t('utm.bulk.action.makeShortUrls')}
                   </button>
                 )}
                 <button
@@ -751,8 +764,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                 >
                   <FontAwesomeIcon icon={faCopy} />
                   {copiedAll
-                    ? t("utm.bulk.action.copiedAll")
-                    : t("utm.bulk.action.copyAll")}
+                    ? t('utm.bulk.action.copiedAll')
+                    : t('utm.bulk.action.copyAll')}
                 </button>
               </div>
             </div>
@@ -766,7 +779,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
             {showShortOptions && (
               <div className="mb-2 space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
                 <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
-                  {t("utm.bulk.options.title")}
+                  {t('utm.bulk.options.title')}
                 </p>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <input
@@ -778,7 +791,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                         titlePrefix: e.target.value,
                       }))
                     }
-                    placeholder={t("utm.bulk.options.titlePrefix.placeholder")}
+                    placeholder={t('utm.bulk.options.titlePrefix.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
@@ -790,7 +803,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                         additionalTags: e.target.value,
                       }))
                     }
-                    placeholder={t("utm.bulk.options.tags.placeholder")}
+                    placeholder={t('utm.bulk.options.tags.placeholder')}
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
@@ -802,12 +815,12 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                         slugPrefix: e.target.value,
                       }))
                     }
-                    placeholder={t("utm.bulk.options.slugPrefix.placeholder")}
+                    placeholder={t('utm.bulk.options.slugPrefix.placeholder')}
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {t("utm.bulk.options.tagsHelp")}
+                  {t('utm.bulk.options.tagsHelp')}
                 </p>
                 <button
                   type="button"
@@ -816,15 +829,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
                   {creatingShortUrls
-                    ? t("utm.bulk.action.makingShortUrls")
-                    : t("utm.bulk.options.runBulk")}
+                    ? t('utm.bulk.action.makingShortUrls')
+                    : t('utm.bulk.options.runBulk')}
                 </button>
               </div>
             )}
 
             {!hasGenerated ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("utm.bulk.step3.empty")}
+                {t('utm.bulk.step3.empty')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -832,7 +845,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                   const template = templates.find((t) => t.id === row.id);
                   const tagInfo = template ? getTemplateTagsInfo(template) : [];
                   const hasCampaign = tagInfo.some(
-                    (t) => t.category === "campaign",
+                    (t) => t.category === 'campaign',
                   );
 
                   return (
@@ -856,14 +869,14 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                       {/* Template Fields Info */}
                       <div className="mb-2 flex flex-wrap gap-1">
                         <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                          source: {template?.source || "-"}
+                          source: {template?.source || '-'}
                         </span>
                         <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                          medium: {template?.medium || "-"}
+                          medium: {template?.medium || '-'}
                         </span>
                         {hasCampaign && (
                           <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                            campaign: {template?.campaign || "-"}
+                            campaign: {template?.campaign || '-'}
                           </span>
                         )}
                       </div>
@@ -878,7 +891,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                                   key={`${row.id}-${tag.category}`}
                                   className="text-[10px] text-amber-900 dark:text-amber-200"
                                 >
-                                  <strong>{tag.category}:</strong>{" "}
+                                  <strong>{tag.category}:</strong>{' '}
                                   {tag.description}
                                 </div>
                               ),
@@ -892,7 +905,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
 
                       {row.shortUrl && (
                         <p className="mt-1 break-all rounded bg-green-50 px-2 py-1 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                          {t("utm.bulk.row.shortLabel")}: {row.shortUrl}
+                          {t('utm.bulk.row.shortLabel')}: {row.shortUrl}
                         </p>
                       )}
                       {row.createError && (
@@ -911,8 +924,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                         >
                           <FontAwesomeIcon icon={faCopy} />
                           {row.shortUrl
-                            ? t("utm.bulk.row.copyShort")
-                            : t("utm.bulk.row.copyUtm")}
+                            ? t('utm.bulk.row.copyShort')
+                            : t('utm.bulk.row.copyUtm')}
                         </button>
                         {serverId && (
                           <button
@@ -921,7 +934,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                             className="flex items-center gap-2 rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
                           >
                             <FontAwesomeIcon icon={faExternalLinkAlt} />
-                            {t("utm.bulk.row.openCreate")}
+                            {t('utm.bulk.row.openCreate')}
                           </button>
                         )}
                       </div>
@@ -938,5 +951,5 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
 };
 
 export const UtmBulkBuilderPage = withDependencies(UtmBulkBuilderPageBase, [
-  "buildShlinkApiClient",
+  'buildShlinkApiClient',
 ]);

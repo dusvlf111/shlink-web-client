@@ -6,7 +6,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
@@ -133,6 +133,16 @@ const pickFallbackServerId = (
   return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
 };
 
+// The page can render via a route element, the bare /utm-builder route, or the
+// web-component's createNotFound — in the latter cases useParams() may not see
+// :serverId. Read it from the URL so short-url creation targets the server the
+// user is actually viewing, NOT the autoConnect/first server. Falling back to
+// autoConnect silently created links on the wrong Shlink server.
+const serverIdFromPathname = (pathname: string): string | undefined => {
+  const matched = pathname.match(/^\/server\/([^/]+)/)?.[1];
+  return matched && matched !== 'create' ? matched : undefined;
+};
+
 type UtmBuilderPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
@@ -141,6 +151,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
   buildShlinkApiClient,
 }) => {
   const { serverId: paramServerId } = useParams<{ serverId: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const t = useT();
   const { servers } = useServers();
@@ -148,7 +159,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
     () => pickFallbackServerId(servers),
     [servers],
   );
-  const serverId = paramServerId ?? fallbackServerId ?? undefined;
+  const serverId =
+    paramServerId ??
+    serverIdFromPathname(pathname) ??
+    fallbackServerId ??
+    undefined;
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
   const [templateName, setTemplateName] = useState('');
