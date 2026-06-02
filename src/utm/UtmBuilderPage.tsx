@@ -11,10 +11,6 @@ import { useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
-import {
-  extractUtmFromUrl,
-  recordShortUrlHistory,
-} from '../history/shortUrlHistoryService';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
 import {
@@ -400,18 +396,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
       ]);
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
-      // Best-effort history logging — the service swallows its own errors so
-      // this never affects the creation UX.
-      await recordShortUrlHistory({
-        server_id: selectedServer.id,
-        server_name: selectedServer.name,
-        short_url: created.shortUrl,
-        short_code: created.shortCode,
-        long_url: utmUrl,
-        title: composedTitle || undefined,
-        tags: parseTags(shortOptions.tags),
-        ...extractUtmFromUrl(utmUrl),
-      });
+      // History logging now happens centrally in the API client wrapper
+      // (buildShlinkApiClient), so no explicit recordShortUrlHistory call here.
     } catch (error) {
       const detail = extractShlinkErrorMessage(error);
       setShortCreateMsg(
@@ -536,17 +522,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         ]);
         success += 1;
         resultRows.push({ ...row, builtUrl: created.shortUrl, ok: true });
-        // Best-effort per-row history logging (service swallows its errors).
-        await recordShortUrlHistory({
-          server_id: selectedServer.id,
-          server_name: selectedServer.name,
-          short_url: created.shortUrl,
-          short_code: created.shortCode,
-          long_url: row.builtUrl,
-          title: composedTitle || undefined,
-          tags: parseTags(row.tags),
-          ...extractUtmFromUrl(row.builtUrl),
-        });
+        // History logging now happens centrally in the API client wrapper
+        // (buildShlinkApiClient), so no explicit logging call is needed here.
       } catch {
         fail += 1;
         resultRows.push({ ...row, ok: false });

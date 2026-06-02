@@ -47,10 +47,6 @@ export const enMessages: Messages = {
   'history.col.action': 'Action',
   'history.action.created': 'Created',
   'history.action.deleted': 'Deleted',
-  'history.delete': 'Delete',
-  'history.deleteConfirm':
-    'Delete this short URL? This action cannot be undone.',
-  'history.deleteFailed': 'Failed to delete the short URL.',
 
   'share.manager.title': 'Stats share links',
   'share.manager.subtitle':

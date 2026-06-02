@@ -115,6 +115,59 @@ export const recordShortUrlHistory = async (
   }
 };
 
+// Look up the most recent 'created' record for a given server + short code and
+// log a matching 'deleted' record, copying over the original long_url, title,
+// tags and utm_* so the deletion entry carries the same metadata. This is
+// best-effort: if the original cannot be found (or PocketBase is unavailable),
+// it falls back to the provided shortUrl as the (required) long_url so a
+// deletion is still recorded. Never throws — deletion logging must not break
+// the real delete flow.
+export const recordDeletionFromHistory = async (params: {
+  server_id: string;
+  server_name?: string;
+  short_code?: string;
+  short_url: string;
+}): Promise<void> => {
+  const { server_id, server_name, short_code, short_url } = params;
+
+  let original: ShortUrlHistoryRecord | undefined;
+  if (short_code) {
+    try {
+      // Find the latest 'created' record for this server + short code.
+      original = await pb
+        .collection('short_url_history')
+        .getFirstListItem<ShortUrlHistoryRecord>(
+          pb.filter('server_id={:sid} && short_code={:code}', {
+            sid: server_id,
+            code: short_code,
+          }),
+          { sort: '-created' },
+        );
+    } catch {
+      // Not found / collection missing / network error: fall through to the
+      // fallback below.
+    }
+  }
+
+  await recordShortUrlHistory({
+    server_id,
+    server_name: original?.server_name ?? server_name,
+    short_url: original?.short_url || short_url,
+    short_code,
+    // long_url is required by the schema, so never let it be empty: prefer the
+    // original record's long_url, then the short URL string.
+    long_url: original?.long_url || short_url,
+    title: original?.title,
+    tags: original?.tags,
+    utm_source: original?.utm_source,
+    utm_medium: original?.utm_medium,
+    utm_campaign: original?.utm_campaign,
+    utm_term: original?.utm_term,
+    utm_content: original?.utm_content,
+    action: 'deleted',
+  });
+};
+
 type FetchOptions = {
   serverId?: string;
 };

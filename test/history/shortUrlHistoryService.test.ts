@@ -1,18 +1,21 @@
 import {
   extractUtmFromUrl,
   fetchShortUrlHistory,
+  recordDeletionFromHistory,
   recordShortUrlHistory,
 } from '../../src/history/shortUrlHistoryService';
 import { pb } from '../../src/lib/pocketbase';
 
 describe('shortUrlHistoryService', () => {
   const getFullListMock = vi.fn();
+  const getFirstListItemMock = vi.fn();
   const createMock = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(pb, 'collection').mockReturnValue({
       getFullList: getFullListMock,
+      getFirstListItem: getFirstListItemMock,
       create: createMock,
     } as never);
   });
@@ -112,6 +115,62 @@ describe('shortUrlHistoryService', () => {
       });
       expect(createMock).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'deleted' }),
+      );
+      pb.authStore.clear();
+    });
+  });
+
+  describe('recordDeletionFromHistory', () => {
+    it('copies long_url/title/tags/utm from the latest matching created record', async () => {
+      pb.authStore.save('token', { id: 'user-1' } as never);
+      getFirstListItemMock.mockResolvedValueOnce({
+        server_name: 'Bin01',
+        short_url: 'https://s.test/abc',
+        long_url: 'https://example.com/page?utm_source=google',
+        title: 'Original title',
+        tags: ['promo'],
+        utm_source: 'google',
+      });
+      createMock.mockResolvedValueOnce({});
+
+      await recordDeletionFromHistory({
+        server_id: 'srv-1',
+        short_code: 'abc',
+        short_url: 'https://s.test/abc',
+      });
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'deleted',
+          server_name: 'Bin01',
+          long_url: 'https://example.com/page?utm_source=google',
+          title: 'Original title',
+          tags: ['promo'],
+          utm_source: 'google',
+        }),
+      );
+      pb.authStore.clear();
+    });
+
+    it('falls back to the short_url for long_url when no created record is found', async () => {
+      pb.authStore.save('token', { id: 'user-1' } as never);
+      getFirstListItemMock.mockRejectedValueOnce(new Error('not found'));
+      createMock.mockResolvedValueOnce({});
+
+      await recordDeletionFromHistory({
+        server_id: 'srv-1',
+        server_name: 'Bin01',
+        short_code: 'abc',
+        short_url: 'https://s.test/abc',
+      });
+
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'deleted',
+          server_name: 'Bin01',
+          short_url: 'https://s.test/abc',
+          long_url: 'https://s.test/abc',
+        }),
       );
       pb.authStore.clear();
     });

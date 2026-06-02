@@ -49,10 +49,6 @@ export const koMessages = {
   'history.col.action': '구분',
   'history.action.created': '생성',
   'history.action.deleted': '삭제',
-  'history.delete': '삭제',
-  'history.deleteConfirm':
-    '이 단축 URL을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-  'history.deleteFailed': '단축 URL 삭제에 실패했습니다.',
 
   // 통계 공유 관리 페이지
   'share.manager.title': '통계 공유 링크',
