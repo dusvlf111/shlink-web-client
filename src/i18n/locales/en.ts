@@ -25,6 +25,23 @@ export const enMessages: Messages = {
 
   'sidebar.section.share': 'Share',
   'sidebar.share.stats': 'Share stats',
+  'sidebar.history': 'History',
+
+  // History page
+  'history.title': 'Short URL history',
+  'history.subtitle': 'Review every recorded short URL creation.',
+  'history.loading': 'Loading...',
+  'history.empty': 'No short URLs have been recorded yet.',
+  'history.filter.label': 'Server filter',
+  'history.filter.allServers': 'All servers',
+  'history.col.server': 'Server',
+  'history.col.shortUrl': 'Short URL',
+  'history.col.longUrl': 'Original URL',
+  'history.col.title': 'Title',
+  'history.col.tags': 'Tags',
+  'history.col.utm': 'UTM',
+  'history.col.createdBy': 'Created by',
+  'history.col.createdAt': 'Created at',
 
   'share.manager.title': 'Stats share links',
   'share.manager.subtitle':

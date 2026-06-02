@@ -6,6 +6,10 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
+import {
+  extractUtmFromUrl,
+  recordShortUrlHistory,
+} from '../history/shortUrlHistoryService';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
 import { useUtmTags, useUtmTemplates } from './useUtmData';
@@ -449,6 +453,17 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
             shortUrl: shortUrl.shortUrl,
             shortCode: shortUrl.shortCode,
             createError: undefined,
+          });
+          // Best-effort history logging (service swallows its own errors).
+          await recordShortUrlHistory({
+            server_id: selectedServer.id,
+            server_name: selectedServer.name,
+            short_url: shortUrl.shortUrl,
+            short_code: shortUrl.shortCode,
+            long_url: row.utmUrl,
+            title: title || undefined,
+            tags,
+            ...extractUtmFromUrl(row.utmUrl),
           });
         } catch (error) {
           const message =

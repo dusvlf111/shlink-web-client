@@ -27,6 +27,23 @@ export const koMessages = {
   // 좌측 사이드바 — 공유 영역
   'sidebar.section.share': '공유',
   'sidebar.share.stats': '통계 공유',
+  'sidebar.history': '히스토리',
+
+  // 히스토리 페이지
+  'history.title': '단축링크 히스토리',
+  'history.subtitle': '생성된 단축링크 기록을 모두 확인합니다.',
+  'history.loading': '불러오는 중...',
+  'history.empty': '아직 기록된 단축링크가 없습니다.',
+  'history.filter.label': '서버 필터',
+  'history.filter.allServers': '전체 서버',
+  'history.col.server': '서버',
+  'history.col.shortUrl': '단축 URL',
+  'history.col.longUrl': '원본 URL',
+  'history.col.title': '제목',
+  'history.col.tags': '태그',
+  'history.col.utm': 'UTM',
+  'history.col.createdBy': '생성자',
+  'history.col.createdAt': '생성 시각',
 
   // 통계 공유 관리 페이지
   'share.manager.title': '통계 공유 링크',

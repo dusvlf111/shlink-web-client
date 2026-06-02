@@ -2,6 +2,7 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faChartLine,
   faClipboardList,
+  faClockRotateLeft,
   faGlobe,
   faHouse,
   faLayerGroup,
@@ -110,6 +111,12 @@ const UTM_ITEMS: readonly SidebarItem[] = [
 
 const SHARE_ITEMS: readonly SidebarItem[] = [
   { to: '/share-stats', labelKey: 'sidebar.share.stats', icon: faShareNodes },
+  {
+    to: '/history',
+    labelKey: 'sidebar.history',
+    icon: faClockRotateLeft,
+    scoped: false,
+  },
 ];
 
 const buildHref = (item: SidebarItem, prefix: string) =>

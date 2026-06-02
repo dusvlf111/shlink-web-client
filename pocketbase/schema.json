@@ -30,7 +30,10 @@
         "required": true,
         "presentable": false,
         "maxSelect": 1,
-        "values": ["admin", "member"]
+        "values": [
+          "admin",
+          "member"
+        ]
       },
       {
         "id": "select_status",
@@ -39,7 +42,11 @@
         "required": true,
         "presentable": false,
         "maxSelect": 1,
-        "values": ["pending", "active", "inactive"]
+        "values": [
+          "pending",
+          "active",
+          "inactive"
+        ]
       }
     ],
     "indexes": []
@@ -175,7 +182,13 @@
         "required": true,
         "presentable": false,
         "maxSelect": 1,
-        "values": ["source", "medium", "campaign", "term", "content"]
+        "values": [
+          "source",
+          "medium",
+          "campaign",
+          "term",
+          "content"
+        ]
       },
       {
         "id": "text_value_tags",
@@ -340,6 +353,176 @@
         "presentable": false,
         "min": "",
         "max": ""
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "pbc_short_url_history",
+    "name": "short_url_history",
+    "type": "base",
+    "system": false,
+    "listRule": "@request.auth.id != ''",
+    "viewRule": "@request.auth.id != ''",
+    "createRule": "@request.auth.id != ''",
+    "updateRule": "@request.auth.id != ''",
+    "deleteRule": "@request.auth.id != ''",
+    "fields": [
+      {
+        "id": "rel_suh_created_by",
+        "name": "created_by",
+        "type": "relation",
+        "required": true,
+        "presentable": false,
+        "collectionId": "_pb_users_auth_",
+        "cascadeDelete": false,
+        "minSelect": 1,
+        "maxSelect": 1
+      },
+      {
+        "id": "text_suh_server_id",
+        "name": "server_id",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_server_name",
+        "name": "server_name",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_short_url",
+        "name": "short_url",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 1000,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_short_code",
+        "name": "short_code",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 255,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_long_url",
+        "name": "long_url",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 1,
+        "max": 2500,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_title",
+        "name": "title",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "json_suh_tags",
+        "name": "tags",
+        "type": "json",
+        "required": false,
+        "presentable": false,
+        "maxSize": 2000000
+      },
+      {
+        "id": "text_suh_utm_source",
+        "name": "utm_source",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_utm_medium",
+        "name": "utm_medium",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_utm_campaign",
+        "name": "utm_campaign",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_utm_term",
+        "name": "utm_term",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "text_suh_utm_content",
+        "name": "utm_content",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
+        "id": "autodate_suh_created",
+        "name": "created",
+        "type": "autodate",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false
+      },
+      {
+        "id": "autodate_suh_updated",
+        "name": "updated",
+        "type": "autodate",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false
       }
     ],
     "indexes": []
