@@ -19,21 +19,45 @@ type ServerFormProps = PropsWithChildren<{
   title?: ReactNode;
 }>;
 
-export const ServerForm: FC<ServerFormProps> = ({ onSubmit, initialValues, children, title }) => {
+export const ServerForm: FC<ServerFormProps> = ({
+  onSubmit,
+  initialValues,
+  children,
+  title,
+}) => {
   const t = useT();
   const [name, setName] = useState(initialValues?.name ?? '');
   const [url, setUrl] = useState(initialValues?.url ?? '');
   const [apiKey, setApiKey] = useState(initialValues?.apiKey ?? '');
-  const { flag: forwardCredentials, toggle: toggleForwardCredentials } = useToggle(
-    initialValues?.forwardCredentials ?? false,
+  const { flag: forwardCredentials, toggle: toggleForwardCredentials } =
+    useToggle(initialValues?.forwardCredentials ?? false);
+  const { flag: minimalSlug, toggle: toggleMinimalSlug } = useToggle(
+    initialValues?.minimalSlug ?? false,
   );
-  const handleSubmit = usePreventDefault(() => onSubmit({ name, url, apiKey, forwardCredentials }));
+  const handleSubmit = usePreventDefault(() =>
+    onSubmit({ name, url, apiKey, forwardCredentials, minimalSlug }),
+  );
 
   return (
     <form name="serverForm" onSubmit={handleSubmit}>
-      <SimpleCard className="mb-4" bodyClassName="flex flex-col gap-y-3" title={title}>
-        <LabelledInput label={t('servers.form.name')} value={name} onChange={(e) => setName(e.target.value)} required />
-        <LabelledInput label={t('servers.form.url')} type="url" value={url} onChange={(e) => setUrl(e.target.value)} required />
+      <SimpleCard
+        className="mb-4"
+        bodyClassName="flex flex-col gap-y-3"
+        title={title}
+      >
+        <LabelledInput
+          label={t('servers.form.name')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <LabelledInput
+          label={t('servers.form.url')}
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+        />
         <LabelledRevealablePasswordInput
           label={t('servers.form.apiKey')}
           value={apiKey}
@@ -43,7 +67,10 @@ export const ServerForm: FC<ServerFormProps> = ({ onSubmit, initialValues, child
         <Details summary={t('servers.form.advanced')}>
           <div className="flex flex-col gap-0.5">
             <Label className="flex items-center gap-x-1.5 cursor-pointer">
-              <Checkbox onChange={toggleForwardCredentials} checked={forwardCredentials} />
+              <Checkbox
+                onChange={toggleForwardCredentials}
+                checked={forwardCredentials}
+              />
               {t('servers.form.forwardCredentials')}
             </Label>
             <small className="pl-5.5 text-gray-600 dark:text-gray-400 mt-0.5">
@@ -51,6 +78,13 @@ export const ServerForm: FC<ServerFormProps> = ({ onSubmit, initialValues, child
             </small>
             <small className="pl-5.5 text-gray-600 dark:text-gray-400">
               {t('servers.form.forwardCredentials.warning')}
+            </small>
+            <Label className="flex items-center gap-x-1.5 cursor-pointer mt-2">
+              <Checkbox onChange={toggleMinimalSlug} checked={minimalSlug} />
+              {t('servers.form.minimalSlug')}
+            </Label>
+            <small className="pl-5.5 text-gray-600 dark:text-gray-400 mt-0.5">
+              {t('servers.form.minimalSlug.help')}
             </small>
           </div>
         </Details>

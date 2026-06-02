@@ -297,6 +297,10 @@ export const enMessages: Messages = {
     '"Credentials" here means cookies, TLS client certificates, or authentication headers containing a username and password.',
   'servers.form.forwardCredentials.warning':
     'If you are not sure what this means, leave it unchecked. Enabling this option will make all requests fail for Shlink older than v4.5.0.',
+  'servers.form.minimalSlug':
+    'Sequential minimal-length slug (1 char → 2 chars …)',
+  'servers.form.minimalSlug.help':
+    'Every short URL created on this server is automatically assigned a sequential minimal-length slug. Once all 62 single-character slugs are used, it grows to 2 characters. Explicit custom slugs you provide are always respected.',
   'servers.import.button': 'Import servers',
   'servers.import.tooltip': 'Import server list from a JSON or CSV file.',
   'home.learnMore': 'Learn more about Shlink',

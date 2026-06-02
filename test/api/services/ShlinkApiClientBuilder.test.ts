@@ -7,6 +7,7 @@ import type {
   ReachableServer,
   SelectedServer,
 } from '../../../src/servers/data';
+import * as slugCounterService from '../../../src/servers/slugCounterService';
 
 vi.mock(
   '../../../src/history/shortUrlHistoryService',
@@ -19,6 +20,11 @@ vi.mock(
     };
   },
 );
+
+vi.mock('../../../src/servers/slugCounterService', () => ({
+  getNextSlugIndex: vi.fn().mockResolvedValue(0),
+  commitSlugIndex: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe('ShlinkApiClientBuilder', () => {
   const server = fromPartial<ReachableServer>;
@@ -206,6 +212,197 @@ describe('ShlinkApiClientBuilder', () => {
       const result = await apiClient.createShortUrl(fromPartial({}));
 
       expect(result).toEqual(created);
+      createSpy.mockRestore();
+    });
+  });
+
+  describe('minimal-length sequential slug wrapper', () => {
+    const getNextSlugIndex = vi.mocked(slugCounterService.getNextSlugIndex);
+    const commitSlugIndex = vi.mocked(slugCounterService.commitSlugIndex);
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      getNextSlugIndex.mockResolvedValue(0);
+      commitSlugIndex.mockResolvedValue(undefined);
+    });
+
+    it('injects a sequential custom slug for minimalSlug servers', async () => {
+      const created = {
+        shortUrl: 'https://s.test/a',
+        shortCode: 'a',
+        longUrl: 'https://example.com',
+        tags: [],
+      };
+      const createSpy = vi
+        .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
+        .mockResolvedValue(fromPartial(created));
+
+      const apiClient = createBuilder()(
+        server({
+          id: 'srv-slug-1',
+          name: 'Slug01',
+          url: 'https://s.test',
+          apiKey: 'key-slug-1',
+          minimalSlug: true,
+        }),
+      );
+
+      const result = await apiClient.createShortUrl(
+        fromPartial({ longUrl: 'https://example.com' }),
+      );
+
+      expect(result).toEqual(created);
+      expect(getNextSlugIndex).toHaveBeenCalledWith('srv-slug-1');
+      expect(createSpy).toHaveBeenCalledOnce();
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ customSlug: 'a', findIfExists: false }),
+      );
+      expect(commitSlugIndex).toHaveBeenCalledWith('srv-slug-1', 0);
+
+      createSpy.mockRestore();
+    });
+
+    it('retries with the next index when a slug is already taken', async () => {
+      const created = {
+        shortUrl: 'https://s.test/b',
+        shortCode: 'b',
+        longUrl: 'https://example.com',
+        tags: [],
+      };
+      const createSpy = vi
+        .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
+        .mockRejectedValueOnce({
+          type: 'https://shlink.io/api/error/non-unique-slug',
+          status: 400,
+        })
+        .mockResolvedValueOnce(fromPartial(created));
+
+      const apiClient = createBuilder()(
+        server({
+          id: 'srv-slug-2',
+          name: 'Slug02',
+          url: 'https://s.test',
+          apiKey: 'key-slug-2',
+          minimalSlug: true,
+        }),
+      );
+
+      const result = await apiClient.createShortUrl(
+        fromPartial({ longUrl: 'https://example.com' }),
+      );
+
+      expect(result).toEqual(created);
+      expect(createSpy).toHaveBeenCalledTimes(2);
+      // First attempt uses index 0 -> 'a', retry uses index 1 -> 'b'.
+      expect(createSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ customSlug: 'a' }),
+      );
+      expect(createSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ customSlug: 'b' }),
+      );
+      expect(commitSlugIndex).toHaveBeenCalledWith('srv-slug-2', 1);
+
+      createSpy.mockRestore();
+    });
+
+    it('respects an explicit custom slug provided by the caller', async () => {
+      const created = {
+        shortUrl: 'https://s.test/mine',
+        shortCode: 'mine',
+        longUrl: 'https://example.com',
+        tags: [],
+      };
+      const createSpy = vi
+        .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
+        .mockResolvedValue(fromPartial(created));
+
+      const apiClient = createBuilder()(
+        server({
+          id: 'srv-slug-3',
+          name: 'Slug03',
+          url: 'https://s.test',
+          apiKey: 'key-slug-3',
+          minimalSlug: true,
+        }),
+      );
+
+      const result = await apiClient.createShortUrl(
+        fromPartial({ longUrl: 'https://example.com', customSlug: 'mine' }),
+      );
+
+      expect(result).toEqual(created);
+      expect(getNextSlugIndex).not.toHaveBeenCalled();
+      expect(commitSlugIndex).not.toHaveBeenCalled();
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ customSlug: 'mine' }),
+      );
+
+      createSpy.mockRestore();
+    });
+
+    it('does not inject a slug for non-minimalSlug servers', async () => {
+      const created = {
+        shortUrl: 'https://s.test/random',
+        shortCode: 'random',
+        longUrl: 'https://example.com',
+        tags: [],
+      };
+      const createSpy = vi
+        .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
+        .mockResolvedValue(fromPartial(created));
+
+      const apiClient = createBuilder()(
+        server({
+          id: 'srv-slug-4',
+          name: 'Slug04',
+          url: 'https://s.test',
+          apiKey: 'key-slug-4',
+          minimalSlug: false,
+        }),
+      );
+
+      const result = await apiClient.createShortUrl(
+        fromPartial({ longUrl: 'https://example.com' }),
+      );
+
+      expect(result).toEqual(created);
+      expect(getNextSlugIndex).not.toHaveBeenCalled();
+      expect(commitSlugIndex).not.toHaveBeenCalled();
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.not.objectContaining({ customSlug: expect.anything() }),
+      );
+
+      createSpy.mockRestore();
+    });
+
+    it('rethrows non-slug errors without retrying', async () => {
+      const createSpy = vi
+        .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
+        .mockRejectedValue({
+          type: 'https://shlink.io/api/error/invalid-data',
+          status: 500,
+        });
+
+      const apiClient = createBuilder()(
+        server({
+          id: 'srv-slug-5',
+          name: 'Slug05',
+          url: 'https://s.test',
+          apiKey: 'key-slug-5',
+          minimalSlug: true,
+        }),
+      );
+
+      await expect(
+        apiClient.createShortUrl(
+          fromPartial({ longUrl: 'https://example.com' }),
+        ),
+      ).rejects.toMatchObject({ status: 500 });
+      expect(createSpy).toHaveBeenCalledOnce();
+      expect(commitSlugIndex).not.toHaveBeenCalled();
+
       createSpy.mockRestore();
     });
   });
