@@ -114,6 +114,26 @@ export const enMessages: Messages = {
   "share.public.share.bots": "Including bots",
 
   "utm.builder.title": "UTM builder",
+  "utm.builder.subtitle":
+    "Attach the same set of UTM parameters to several links at once",
+  "utm.builder.mode.single": "Single link",
+  "utm.builder.mode.multi": "Multiple links",
+  "utm.builder.multi.label":
+    "Base URLs (separate multiple ones with line breaks)",
+  "utm.builder.multi.placeholder":
+    "https://example.com/page1\nhttps://example.com/page2",
+  "utm.builder.multi.result.title": "Generated URL list",
+  "utm.builder.multi.result.empty": "Enter a base URL",
+  "utm.builder.multi.skipped": "Skipped (invalid URL format)",
+  "utm.builder.multi.summary": "{valid} valid · {skipped} skipped",
+  "utm.builder.multi.copyAll": "Copy all",
+  "utm.builder.multi.copiedAll": "All copied",
+  "utm.builder.multi.copyAllNeeded": "There are no valid URLs to copy.",
+  "utm.builder.multi.copyAllDone": "All URLs copied.",
+  "utm.builder.multi.createAll": "Create short URLs at once",
+  "utm.builder.multi.creating": "Creating short URLs...",
+  "utm.builder.multi.bulkResult":
+    "Short URLs created: {success} succeeded, {fail} failed",
   "utm.builder.baseUrl.label": "Base URL",
   "utm.builder.baseUrl.placeholder": "e.g. https://example.com/path",
   "utm.builder.fields.source": "Campaign source (utm_source)",
@@ -128,6 +148,8 @@ export const enMessages: Messages = {
   "utm.builder.openCreate": "Create short URL",
 
   "utm.bulk.title": "UTM bulk builder",
+  "utm.bulk.subtitle":
+    "Apply several templates saved for a single link all at once",
   "utm.bulk.step1.title": "1. Enter base URL",
   "utm.bulk.step1.placeholder": "e.g. https://example.com/path",
   "utm.bulk.step1.help":

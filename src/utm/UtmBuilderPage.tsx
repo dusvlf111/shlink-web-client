@@ -1,15 +1,24 @@
-import { faCopy, faExternalLinkAlt, faSave } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FC } from 'react';
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
-import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
-import { NoMenuLayout } from '../common/NoMenuLayout';
-import { withDependencies } from '../container/context';
-import { useT } from '../i18n';
-import { useServers } from '../servers/reducers/servers';
-import { useUtmTags, useUtmTemplates, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
-import { UtmFieldInput } from './UtmFieldInput';
+import {
+  faCopy,
+  faExternalLinkAlt,
+  faSave,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { FC } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import type { ShlinkApiClientBuilder } from "../api/services/ShlinkApiClientBuilder";
+import { NoMenuLayout } from "../common/NoMenuLayout";
+import { withDependencies } from "../container/context";
+import { useT } from "../i18n";
+import { useServers } from "../servers/reducers/servers";
+import {
+  useUtmTags,
+  useUtmTemplates,
+  UTM_CATEGORIES,
+  type UtmCategory,
+} from "./useUtmData";
+import { UtmFieldInput } from "./UtmFieldInput";
 
 type UtmFields = {
   baseUrl: string;
@@ -26,32 +35,46 @@ type ShortCreateOptions = {
   tags: string;
 };
 
-const EMPTY: UtmFields = { baseUrl: '', source: '', medium: '', campaign: '', term: '', content: '' };
-const EMPTY_SHORT_OPTIONS: ShortCreateOptions = { customSlug: '', title: '', tags: '' };
+const EMPTY: UtmFields = {
+  baseUrl: "",
+  source: "",
+  medium: "",
+  campaign: "",
+  term: "",
+  content: "",
+};
+const EMPTY_SHORT_OPTIONS: ShortCreateOptions = {
+  customSlug: "",
+  title: "",
+  tags: "",
+};
 
-const parseTags = (rawTags: string): string[] => rawTags
-  .split(',')
-  .map((tag) => tag.trim())
-  .filter(Boolean);
+const parseTags = (rawTags: string): string[] =>
+  rawTags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
 const buildUtmUrl = (fields: UtmFields): string => {
-  if (!fields.baseUrl) return '';
+  if (!fields.baseUrl) return "";
 
   try {
     const url = new URL(fields.baseUrl);
-    if (fields.source) url.searchParams.set('utm_source', fields.source);
-    if (fields.medium) url.searchParams.set('utm_medium', fields.medium);
-    if (fields.campaign) url.searchParams.set('utm_campaign', fields.campaign);
-    if (fields.term) url.searchParams.set('utm_term', fields.term);
-    if (fields.content) url.searchParams.set('utm_content', fields.content);
+    if (fields.source) url.searchParams.set("utm_source", fields.source);
+    if (fields.medium) url.searchParams.set("utm_medium", fields.medium);
+    if (fields.campaign) url.searchParams.set("utm_campaign", fields.campaign);
+    if (fields.term) url.searchParams.set("utm_term", fields.term);
+    if (fields.content) url.searchParams.set("utm_content", fields.content);
 
     return url.toString();
   } catch {
-    return '';
+    return "";
   }
 };
 
-const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'baseUrl'>> | null => {
+const extractUtmFieldsFromUrl = (
+  baseUrl: string,
+): Partial<Omit<UtmFields, "baseUrl">> | null => {
   if (!baseUrl.trim()) {
     return null;
   }
@@ -59,14 +82,16 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
   try {
     const url = new URL(baseUrl);
     const extracted = {
-      source: url.searchParams.get('utm_source') ?? '',
-      medium: url.searchParams.get('utm_medium') ?? '',
-      campaign: url.searchParams.get('utm_campaign') ?? '',
-      term: url.searchParams.get('utm_term') ?? '',
-      content: url.searchParams.get('utm_content') ?? '',
+      source: url.searchParams.get("utm_source") ?? "",
+      medium: url.searchParams.get("utm_medium") ?? "",
+      campaign: url.searchParams.get("utm_campaign") ?? "",
+      term: url.searchParams.get("utm_term") ?? "",
+      content: url.searchParams.get("utm_content") ?? "",
     };
 
-    return Object.values(extracted).some((value) => value.trim()) ? extracted : null;
+    return Object.values(extracted).some((value) => value.trim())
+      ? extracted
+      : null;
   } catch {
     return null;
   }
@@ -75,7 +100,9 @@ const extractUtmFieldsFromUrl = (baseUrl: string): Partial<Omit<UtmFields, 'base
 const hasRequiredFields = (fields: UtmFields) =>
   !!fields.baseUrl.trim() && !!fields.source.trim() && !!fields.medium.trim();
 
-const pickFallbackServerId = (servers: Record<string, { id: string; autoConnect?: boolean }>): string | null => {
+const pickFallbackServerId = (
+  servers: Record<string, { id: string; autoConnect?: boolean }>,
+): string | null => {
   const list = Object.values(servers);
   return list.find((server) => server.autoConnect)?.id ?? list[0]?.id ?? null;
 };
@@ -84,24 +111,30 @@ type UtmBuilderPageProps = {
   buildShlinkApiClient: ShlinkApiClientBuilder;
 };
 
-const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) => {
+const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
+  buildShlinkApiClient,
+}) => {
   const { serverId: paramServerId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
   const t = useT();
   const { servers } = useServers();
-  const fallbackServerId = useMemo(() => pickFallbackServerId(servers), [servers]);
+  const fallbackServerId = useMemo(
+    () => pickFallbackServerId(servers),
+    [servers],
+  );
   const serverId = paramServerId ?? fallbackServerId ?? undefined;
   const [fields, setFields] = useState<UtmFields>(EMPTY);
   const [copied, setCopied] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [templateDescription, setTemplateDescription] = useState('');
-  const [saveMsg, setSaveMsg] = useState('');
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [saveMsg, setSaveMsg] = useState("");
   const [creatingShortUrl, setCreatingShortUrl] = useState(false);
-  const [quickShortUrl, setQuickShortUrl] = useState('');
-  const [shortCreateMsg, setShortCreateMsg] = useState('');
+  const [quickShortUrl, setQuickShortUrl] = useState("");
+  const [shortCreateMsg, setShortCreateMsg] = useState("");
   const [showShortOptions, setShowShortOptions] = useState(false);
-  const [shortOptions, setShortOptions] = useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
-  const [appliedTemplateName, setAppliedTemplateName] = useState('');
+  const [shortOptions, setShortOptions] =
+    useState<ShortCreateOptions>(EMPTY_SHORT_OPTIONS);
+  const [appliedTemplateName, setAppliedTemplateName] = useState("");
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
@@ -110,7 +143,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
   const selectedServer = serverId ? servers[serverId] : null;
 
-  const set = (key: keyof UtmFields) => (val: string) => setFields((prev) => ({ ...prev, [key]: val }));
+  const set = (key: keyof UtmFields) => (val: string) =>
+    setFields((prev) => ({ ...prev, [key]: val }));
 
   const handleBaseUrlChange = (baseUrl: string) => {
     setFields((prev) => {
@@ -128,7 +162,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     });
   };
 
-  const tagsFor = (cat: UtmCategory) => tags.filter((tag) => tag.category === cat);
+  const tagsFor = (cat: UtmCategory) =>
+    tags.filter((tag) => tag.category === cat);
 
   const handleCopy = async () => {
     if (!canGenerate) return;
@@ -140,19 +175,27 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
 
   const handleGoToShorten = () => {
     if (!canGenerate) {
-      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
+      setShortCreateMsg(
+        "URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.",
+      );
       return;
     }
     if (!serverId) {
-      setShortCreateMsg('연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.');
+      setShortCreateMsg(
+        "연결된 서버가 없어서 이동할 수 없습니다. 좌측 서버 메뉴에서 서버를 선택하거나 관리자에게 등록을 요청해 주세요.",
+      );
       return;
     }
     if (!servers[serverId]) {
-      setShortCreateMsg('선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.');
+      setShortCreateMsg(
+        "선택된 서버 정보를 찾지 못했습니다. 서버 목록 새로고침 후 다시 시도해 주세요.",
+      );
       return;
     }
 
-    navigate(`/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`);
+    navigate(
+      `/server/${serverId}/create-short-url?long-url=${encodeURIComponent(utmUrl)}`,
+    );
   };
 
   const handleCreateShortInOneClick = async () => {
@@ -161,47 +204,58 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
     }
 
     if (!canGenerate) {
-      setShortCreateMsg('URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.');
+      setShortCreateMsg(
+        "URL과 utm_source / utm_medium 값을 먼저 입력해 주세요.",
+      );
       return;
     }
 
     if (!selectedServer) {
       setShortCreateMsg(
         serverId
-          ? '서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요.'
-          : '연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.',
+          ? "서버 정보를 찾지 못했습니다. 서버 목록을 새로고침해 주세요."
+          : "연결된 서버가 없습니다. 좌측 서버 메뉴에서 서버를 선택해 주세요.",
       );
       return;
     }
 
     if (!shortOptions.title.trim()) {
-      setShortCreateMsg('제목은 필수입니다.');
+      setShortCreateMsg("제목은 필수입니다.");
       return;
     }
 
     if (parseTags(shortOptions.tags).length === 0) {
-      setShortCreateMsg('태그는 1개 이상 필수입니다.');
+      setShortCreateMsg("태그는 1개 이상 필수입니다.");
       return;
     }
 
     setCreatingShortUrl(true);
-    setShortCreateMsg('단축링크 생성 중...');
+    setShortCreateMsg("단축링크 생성 중...");
 
     const TIMEOUT_MS = 8_000;
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
-      if (!raw) return '';
+      if (!raw) return "";
       if (raw instanceof Error) return raw.message;
-      if (typeof raw === 'object') {
-        const obj = raw as { status?: number; title?: string; detail?: string; invalidElements?: string[] };
+      if (typeof raw === "object") {
+        const obj = raw as {
+          status?: number;
+          title?: string;
+          detail?: string;
+          invalidElements?: string[];
+        };
         const parts: string[] = [];
-        if (typeof obj.status === 'number') parts.push(`HTTP ${obj.status}`);
-        if (typeof obj.title === 'string' && obj.title) parts.push(obj.title);
-        if (typeof obj.detail === 'string' && obj.detail) parts.push(obj.detail);
-        if (Array.isArray(obj.invalidElements) && obj.invalidElements.length > 0) {
-          parts.push(`invalid: ${obj.invalidElements.join(', ')}`);
+        if (typeof obj.status === "number") parts.push(`HTTP ${obj.status}`);
+        if (typeof obj.title === "string" && obj.title) parts.push(obj.title);
+        if (typeof obj.detail === "string" && obj.detail)
+          parts.push(obj.detail);
+        if (
+          Array.isArray(obj.invalidElements) &&
+          obj.invalidElements.length > 0
+        ) {
+          parts.push(`invalid: ${obj.invalidElements.join(", ")}`);
         }
-        return parts.length > 0 ? parts.join(' · ') : JSON.stringify(raw);
+        return parts.length > 0 ? parts.join(" · ") : JSON.stringify(raw);
       }
       return String(raw);
     };
@@ -210,9 +264,12 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
       const apiClient = buildShlinkApiClient(selectedServer);
       const customSlug = shortOptions.customSlug.trim() || undefined;
       // 벌크 생성과 동일하게: 사용자가 입력한 제목 뒤에 적용된 템플릿 이름을 붙인다.
-      const composedTitle = [shortOptions.title.trim(), appliedTemplateName.trim()]
+      const composedTitle = [
+        shortOptions.title.trim(),
+        appliedTemplateName.trim(),
+      ]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .trim();
       const created = await Promise.race([
         apiClient.createShortUrl({
@@ -223,14 +280,24 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
           findIfExists: true,
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`)), TIMEOUT_MS),
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`,
+                ),
+              ),
+            TIMEOUT_MS,
+          ),
         ),
       ]);
       setQuickShortUrl(created.shortUrl);
-      setShortCreateMsg('단축링크 생성 완료');
+      setShortCreateMsg("단축링크 생성 완료");
     } catch (error) {
       const detail = extractShlinkErrorMessage(error);
-      setShortCreateMsg(`단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ''}`);
+      setShortCreateMsg(
+        `단축링크 생성에 실패했습니다.${detail ? ` (${detail})` : ""}`,
+      );
     } finally {
       setCreatingShortUrl(false);
     }
@@ -238,14 +305,14 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
 
   const applyTemplate = (tpl: any) => {
     const templateFields = {
-      source: tpl.source || '',
-      medium: tpl.medium || '',
-      campaign: tpl.campaign || '',
-      term: tpl.term || '',
-      content: tpl.content || '',
+      source: tpl.source || "",
+      medium: tpl.medium || "",
+      campaign: tpl.campaign || "",
+      term: tpl.term || "",
+      content: tpl.content || "",
     };
     setFields((prev) => ({ ...prev, ...templateFields }));
-    setAppliedTemplateName(typeof tpl?.name === 'string' ? tpl.name : '');
+    setAppliedTemplateName(typeof tpl?.name === "string" ? tpl.name : "");
   };
 
   const handleSaveAsTemplate = async () => {
@@ -257,24 +324,34 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
       ...fields,
     });
 
-    setTemplateName('');
-    setTemplateDescription('');
-    setSaveMsg('템플릿이 저장되었습니다.');
-    setTimeout(() => setSaveMsg(''), 2000);
+    setTemplateName("");
+    setTemplateDescription("");
+    setSaveMsg("템플릿이 저장되었습니다.");
+    setTimeout(() => setSaveMsg(""), 2000);
   };
 
   return (
     <NoMenuLayout>
       <div className="mx-auto max-w-4xl">
-        <div className="mb-4 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">{t('utm.builder.title')}</h1>
+        <div className="mb-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
+              {t("utm.builder.title")}
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {t("utm.builder.subtitle")}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* 왼쪽: 빌더 */}
           <div className="lg:col-span-2 space-y-4 rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div>
-              <label htmlFor="utm-base-url" className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+              <label
+                htmlFor="utm-base-url"
+                className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)"
+              >
                 기본 URL <span className="text-red-500">*</span>
               </label>
               <input
@@ -286,7 +363,8 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                 className="w-full rounded border border-lm-border px-3 py-2 text-sm focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                URL에 포함된 utm_source, utm_medium, utm_campaign, utm_term, utm_content 값은 아래 입력칸에 자동 반영됩니다.
+                URL에 포함된 utm_source, utm_medium, utm_campaign, utm_term,
+                utm_content 값은 아래 입력칸에 자동 반영됩니다.
               </p>
             </div>
 
@@ -297,19 +375,28 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                 value={fields[cat]}
                 onChange={set(cat)}
                 tags={tagsFor(cat)}
-                required={cat === 'source' || cat === 'medium' || cat === 'campaign'}
+                required={
+                  cat === "source" || cat === "medium" || cat === "campaign"
+                }
               />
             ))}
 
             {/* 결과 URL */}
             <div className="mt-2">
-              <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">생성된 URL</p>
+              <p className="mb-1 block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                생성된 URL
+              </p>
               <div className="min-h-12 break-all rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs text-(--light-text-color) dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)">
-                {utmUrl || <span className="text-gray-500 dark:text-gray-400">기본 URL을 입력하세요</span>}
+                {utmUrl || (
+                  <span className="text-gray-500 dark:text-gray-400">
+                    기본 URL을 입력하세요
+                  </span>
+                )}
               </div>
               {!canGenerate && (
                 <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  단축링크 생성/복사를 위해 utm_source, utm_medium, utm_campaign은 필수입니다.
+                  단축링크 생성/복사를 위해 utm_source, utm_medium,
+                  utm_campaign은 필수입니다.
                 </p>
               )}
             </div>
@@ -322,7 +409,7 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                 className="flex items-center gap-2 rounded bg-lm-main px-4 py-2 text-sm text-white hover:bg-lm-secondary disabled:opacity-40 dark:bg-dm-main dark:hover:bg-dm-secondary"
               >
                 <FontAwesomeIcon icon={faCopy} />
-                {copied ? '복사됨!' : '복사'}
+                {copied ? "복사됨!" : "복사"}
               </button>
               <button
                 onClick={() => setShowShortOptions((prev) => !prev)}
@@ -341,42 +428,66 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
             </div>
 
             {shortCreateMsg && (
-              <p className="text-xs text-blue-600 dark:text-blue-300">{shortCreateMsg}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-300">
+                {shortCreateMsg}
+              </p>
             )}
             {showShortOptions && (
               <div className="space-y-2 rounded border border-lm-border p-3 dark:border-dm-border">
-                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">단축링크 생성 옵션</p>
+                <p className="text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                  단축링크 생성 옵션
+                </p>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                   <input
                     type="text"
                     value={shortOptions.title}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                     placeholder="제목 (필수)"
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.tags}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, tags: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        tags: e.target.value,
+                      }))
+                    }
                     placeholder="태그 (필수, 쉼표 구분)"
                     className="rounded border border-red-400 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:border-red-500 dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                   <input
                     type="text"
                     value={shortOptions.customSlug}
-                    onChange={(e) => setShortOptions((prev) => ({ ...prev, customSlug: e.target.value }))}
+                    onChange={(e) =>
+                      setShortOptions((prev) => ({
+                        ...prev,
+                        customSlug: e.target.value,
+                      }))
+                    }
                     placeholder="슬러그 직접 입력 (선택)"
                     className="rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
                   />
                 </div>
                 {appliedTemplateName && (
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    저장 시 제목 뒤에 적용된 템플릿 이름 <strong>{appliedTemplateName}</strong> 이 자동으로 붙습니다.
+                    저장 시 제목 뒤에 적용된 템플릿 이름{" "}
+                    <strong>{appliedTemplateName}</strong> 이 자동으로 붙습니다.
                   </p>
                 )}
                 <button
                   onClick={() => void handleCreateShortInOneClick()}
-                  disabled={!shortOptions.title.trim() || parseTags(shortOptions.tags).length === 0 || creatingShortUrl}
+                  disabled={
+                    !shortOptions.title.trim() ||
+                    parseTags(shortOptions.tags).length === 0 ||
+                    creatingShortUrl
+                  }
                   className="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
                   단축링크 생성 실행
@@ -385,8 +496,12 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
             )}
             {quickShortUrl && (
               <div className="rounded border border-lm-border bg-lm-primary/40 px-3 py-2 text-xs dark:border-dm-border dark:bg-dm-main">
-                <p className="mb-1 font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">생성된 단축링크</p>
-                <p className="break-all text-(--light-text-color) dark:text-(--dark-text-color)">{quickShortUrl}</p>
+                <p className="mb-1 font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                  생성된 단축링크
+                </p>
+                <p className="break-all text-(--light-text-color) dark:text-(--dark-text-color)">
+                  {quickShortUrl}
+                </p>
               </div>
             )}
           </div>
@@ -398,9 +513,13 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
             </h2>
             {templates.length === 0 ? (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-xs text-gray-500 dark:text-gray-400">저장된 템플릿이 없습니다.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  저장된 템플릿이 없습니다.
+                </p>
                 <button
-                  onClick={() => navigate(`/server/${serverId}/utm-template-manager`)}
+                  onClick={() =>
+                    navigate(`/server/${serverId}/utm-template-manager`)
+                  }
                   className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
                 >
                   템플릿 관리
@@ -418,7 +537,9 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                       {tpl.name}
                     </span>
                     {tpl.description && (
-                      <span className="block text-xs text-gray-500 dark:text-gray-400">{tpl.description}</span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">
+                        {tpl.description}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -427,7 +548,9 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
 
             {/* 템플릿 저장 섹션 */}
             <div className="border-t border-lm-border pt-4 dark:border-dm-border">
-              <h3 className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-400">현재 설정을 템플릿으로 저장</h3>
+              <h3 className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                현재 설정을 템플릿으로 저장
+              </h3>
               <div className="space-y-2">
                 <input
                   type="text"
@@ -453,7 +576,11 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
                   <FontAwesomeIcon icon={faSave} className="text-[10px]" />
                   저장
                 </button>
-                {saveMsg && <p className="text-center text-[10px] text-green-600 dark:text-green-400">{saveMsg}</p>}
+                {saveMsg && (
+                  <p className="text-center text-[10px] text-green-600 dark:text-green-400">
+                    {saveMsg}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -463,4 +590,6 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({ buildShlinkApiClient }) =
   );
 };
 
-export const UtmBuilderPage = withDependencies(UtmBuilderPageBase, ['buildShlinkApiClient']);
+export const UtmBuilderPage = withDependencies(UtmBuilderPageBase, [
+  "buildShlinkApiClient",
+]);

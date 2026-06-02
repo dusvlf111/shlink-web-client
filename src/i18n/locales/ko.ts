@@ -120,6 +120,24 @@ export const koMessages = {
 
   // UTM 빌더 페이지
   "utm.builder.title": "UTM 빌더",
+  "utm.builder.subtitle": "여러 링크에 같은 UTM 한 벌을 붙여 한 번에 생성",
+  "utm.builder.mode.single": "단일 링크",
+  "utm.builder.mode.multi": "다중 링크",
+  "utm.builder.multi.label": "기본 URL (여러 개는 줄바꿈으로 구분)",
+  "utm.builder.multi.placeholder":
+    "https://example.com/page1\nhttps://example.com/page2",
+  "utm.builder.multi.result.title": "생성된 URL 목록",
+  "utm.builder.multi.result.empty": "기본 URL을 입력하세요",
+  "utm.builder.multi.skipped": "건너뜀 (URL 형식 오류)",
+  "utm.builder.multi.summary": "유효 {valid}개 · 건너뜀 {skipped}개",
+  "utm.builder.multi.copyAll": "전체 복사",
+  "utm.builder.multi.copiedAll": "전체 복사됨",
+  "utm.builder.multi.copyAllNeeded": "복사할 유효한 URL이 없습니다.",
+  "utm.builder.multi.copyAllDone": "전체 복사가 완료되었습니다.",
+  "utm.builder.multi.createAll": "한번에 단축링크 만들기",
+  "utm.builder.multi.creating": "단축링크 만드는 중...",
+  "utm.builder.multi.bulkResult":
+    "단축링크 생성 완료: 성공 {success}건, 실패 {fail}건",
   "utm.builder.baseUrl.label": "기본 URL",
   "utm.builder.baseUrl.placeholder": "예) https://example.com/path",
   "utm.builder.fields.source": "캠페인 소스 (utm_source)",
@@ -135,6 +153,7 @@ export const koMessages = {
 
   // UTM 벌크 생성 페이지
   "utm.bulk.title": "UTM 벌크 생성",
+  "utm.bulk.subtitle": "한 링크에 저장된 여러 템플릿을 한 번에 적용",
   "utm.bulk.step1.title": "1. 기본 URL 입력",
   "utm.bulk.step1.placeholder": "예) https://example.com/path",
   "utm.bulk.step1.help":

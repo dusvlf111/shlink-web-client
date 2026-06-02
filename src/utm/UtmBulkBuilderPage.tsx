@@ -519,10 +519,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
   return (
     <NoMenuLayout>
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
-            {t("utm.bulk.title")}
-          </h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-(--light-text-color) dark:text-(--dark-text-color)">
+              {t("utm.bulk.title")}
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {t("utm.bulk.subtitle")}
+          </p>
         </div>
 
         <div className="space-y-4">
