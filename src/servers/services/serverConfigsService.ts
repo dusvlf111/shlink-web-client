@@ -6,6 +6,8 @@ export type ServerConfigRecord = {
   name: string;
   url: string;
   api_key?: string;
+  // When true (set in PocketBase), the server is hidden from the web app.
+  hidden?: boolean;
 };
 
 export const fromPocketBase = (record: ServerConfigRecord): ServerWithId => ({
@@ -15,7 +17,9 @@ export const fromPocketBase = (record: ServerConfigRecord): ServerWithId => ({
   apiKey: record.api_key ?? '',
 });
 
-export const toPocketBase = (data: ServerData): Omit<ServerConfigRecord, 'id'> => ({
+export const toPocketBase = (
+  data: ServerData,
+): Omit<ServerConfigRecord, 'id'> => ({
   name: data.name,
   url: data.url,
   api_key: data.apiKey,
@@ -27,13 +31,20 @@ export const fetchServerConfigs = async (): Promise<ServerWithId[]> => {
   if (!isPocketBaseLoggedIn()) {
     return [];
   }
-  const records = await pb.collection('server_configs').getFullList<ServerConfigRecord>({
-    sort: 'name',
-  });
-  return records.map(fromPocketBase);
+  const records = await pb
+    .collection('server_configs')
+    .getFullList<ServerConfigRecord>({
+      sort: 'name',
+    });
+  // Servers flagged hidden in PocketBase are never surfaced in the web app.
+  return records.filter((record) => !record.hidden).map(fromPocketBase);
 };
 
-export const createServerConfig = async (data: ServerData): Promise<ServerWithId> => {
-  const created = await pb.collection('server_configs').create<ServerConfigRecord>(toPocketBase(data));
+export const createServerConfig = async (
+  data: ServerData,
+): Promise<ServerWithId> => {
+  const created = await pb
+    .collection('server_configs')
+    .create<ServerConfigRecord>(toPocketBase(data));
   return fromPocketBase(created);
 };

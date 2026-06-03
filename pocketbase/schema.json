@@ -258,6 +258,13 @@
         "min": 0,
         "max": 500,
         "pattern": ""
+      },
+      {
+        "id": "bool_sc_hidden",
+        "name": "hidden",
+        "type": "bool",
+        "required": false,
+        "presentable": false
       }
     ],
     "indexes": []
@@ -509,6 +516,17 @@
         "pattern": ""
       },
       {
+        "id": "text_suh_template_name",
+        "name": "template_name",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "autogeneratePattern": "",
+        "min": 0,
+        "max": 500,
+        "pattern": ""
+      },
+      {
         "id": "select_suh_action",
         "name": "action",
         "type": "select",
@@ -517,6 +535,7 @@
         "maxSelect": 1,
         "values": [
           "created",
+          "updated",
           "deleted"
         ]
       },

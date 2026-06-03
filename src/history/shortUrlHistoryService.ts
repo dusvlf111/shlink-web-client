@@ -1,9 +1,9 @@
 import { pb, type UserRecord } from '../lib/pocketbase';
 
-// Whether a history record represents a short-url creation or deletion. Older
-// records predate this field, so it is optional everywhere and treated as
-// 'created' when absent.
-export type ShortUrlHistoryAction = 'created' | 'deleted';
+// Whether a history record represents a short-url creation, edit or deletion.
+// Older records predate this field, so it is optional everywhere and treated
+// as 'created' when absent.
+export type ShortUrlHistoryAction = 'created' | 'updated' | 'deleted';
 
 // One stored record in the `short_url_history` collection. Mirrors the
 // PocketBase schema (pocketbase/schema.json -> short_url_history). `expand`
@@ -23,6 +23,7 @@ export type ShortUrlHistoryRecord = {
   utm_campaign?: string;
   utm_term?: string;
   utm_content?: string;
+  template_name?: string;
   action?: ShortUrlHistoryAction;
   created: string;
   updated: string;
@@ -46,6 +47,7 @@ export type ShortUrlHistoryInput = {
   utm_campaign?: string;
   utm_term?: string;
   utm_content?: string;
+  template_name?: string;
   action?: ShortUrlHistoryAction;
 };
 
@@ -54,6 +56,23 @@ export type ShortUrlHistoryInput = {
 export const resolveHistoryAction = (
   record: Pick<ShortUrlHistoryRecord, 'action'>,
 ): ShortUrlHistoryAction => record.action ?? 'created';
+
+// The short-URL creation flow logs history from inside the SDK client wrapper,
+// which has no knowledge of which saved UTM template produced the URL. Flows
+// that DO know the template (e.g. the bulk builder) set this hint right before
+// calling createShortUrl; the next recordShortUrlHistory consumes and clears
+// it. Bulk creation is sequential, so there is no interleaving to race on.
+let nextTemplateName: string | undefined;
+
+export const setNextTemplateName = (name: string | undefined): void => {
+  nextTemplateName = name?.trim() || undefined;
+};
+
+const consumeNextTemplateName = (): string | undefined => {
+  const value = nextTemplateName;
+  nextTemplateName = undefined;
+  return value;
+};
 
 type ExtractedUtm = {
   utm_source?: string;
@@ -107,6 +126,7 @@ export const recordShortUrlHistory = async (
   try {
     await pb.collection('short_url_history').create({
       ...input,
+      template_name: input.template_name ?? consumeNextTemplateName(),
       action: input.action ?? 'created',
       created_by: userId,
     });

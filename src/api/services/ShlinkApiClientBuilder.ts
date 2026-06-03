@@ -41,6 +41,7 @@ const wrapWithHistoryLogging = (
   server: Pick<ServerWithId, 'id' | 'name' | 'url'>,
 ): ShlinkApiClient => {
   const originalCreate = apiClient.createShortUrl.bind(apiClient);
+  const originalUpdate = apiClient.updateShortUrl.bind(apiClient);
   const originalDelete = apiClient.deleteShortUrl.bind(apiClient);
 
   apiClient.createShortUrl = async (data) => {
@@ -61,6 +62,26 @@ const wrapWithHistoryLogging = (
       // Best-effort: never let history logging affect the creation result.
     }
     return created;
+  };
+
+  apiClient.updateShortUrl = async (identifier, data) => {
+    const updated = await originalUpdate(identifier, data);
+    try {
+      await recordShortUrlHistory({
+        server_id: server.id,
+        server_name: server.name,
+        short_url: updated.shortUrl,
+        short_code: updated.shortCode,
+        long_url: updated.longUrl,
+        title: updated.title ?? '',
+        tags: updated.tags ?? [],
+        ...extractUtmFromUrl(updated.longUrl),
+        action: 'updated',
+      });
+    } catch {
+      // Best-effort: never let history logging affect the update result.
+    }
+    return updated;
   };
 
   apiClient.deleteShortUrl = async (identifier, options) => {
