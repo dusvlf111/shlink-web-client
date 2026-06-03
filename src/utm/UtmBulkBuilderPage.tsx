@@ -1,4 +1,9 @@
-import { faCopy, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChevronDown,
+  faChevronRight,
+  faCopy,
+  faExternalLinkAlt,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -6,6 +11,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
+import { setNextTemplateName } from '../history/shortUrlHistoryService';
+import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
 import { useUtmTags, useUtmTemplates } from './useUtmData';
@@ -43,6 +50,80 @@ type OverrideFields = {
   term: string;
   content: string;
 };
+
+// The UTM fields a user can tweak per-template right before generating.
+type EditableField = 'source' | 'medium' | 'campaign' | 'term' | 'content';
+type EditableUtm = Record<EditableField, string>;
+type TemplateEdits = Record<string, Partial<EditableUtm>>;
+
+const EDITABLE_FIELD_DEFS: ReadonlyArray<{
+  key: EditableField;
+  labelKey: MessageKey;
+  placeholderKey: MessageKey;
+}> = [
+  {
+    key: 'source',
+    labelKey: 'utm.bulk.settings.field.source',
+    placeholderKey: 'utm.bulk.settings.placeholder.source',
+  },
+  {
+    key: 'medium',
+    labelKey: 'utm.bulk.settings.field.medium',
+    placeholderKey: 'utm.bulk.settings.placeholder.medium',
+  },
+  {
+    key: 'campaign',
+    labelKey: 'utm.bulk.override.campaign.label',
+    placeholderKey: 'utm.bulk.override.campaign.placeholder',
+  },
+  {
+    key: 'term',
+    labelKey: 'utm.bulk.override.term.label',
+    placeholderKey: 'utm.bulk.override.term.placeholder',
+  },
+  {
+    key: 'content',
+    labelKey: 'utm.bulk.override.content.label',
+    placeholderKey: 'utm.bulk.override.content.placeholder',
+  },
+];
+
+// Resolve the effective value for one field with a clear precedence:
+// per-template edit > common override (campaign/term/content only) > template value.
+// Both the preview and the final generation go through this so what the user
+// sees in "세팅 수정" is exactly what gets generated.
+const resolveField = (
+  template: UtmTemplateFields,
+  field: EditableField,
+  edits: Partial<EditableUtm> | undefined,
+  overrides: OverrideFields,
+): string => {
+  const edited = edits?.[field];
+  if (edited !== undefined) {
+    return edited;
+  }
+
+  if (field === 'campaign' || field === 'term' || field === 'content') {
+    const common = overrides[field].trim();
+    if (common) {
+      return common;
+    }
+  }
+
+  return template[field] ?? '';
+};
+
+const resolveTemplateFields = (
+  template: UtmTemplateFields,
+  edits: Partial<EditableUtm> | undefined,
+  overrides: OverrideFields,
+): UtmTemplateFields => ({
+  source: resolveField(template, 'source', edits, overrides),
+  medium: resolveField(template, 'medium', edits, overrides),
+  campaign: resolveField(template, 'campaign', edits, overrides),
+  term: resolveField(template, 'term', edits, overrides),
+  content: resolveField(template, 'content', edits, overrides),
+});
 
 const pickOverride = (
   overrideValue: string | undefined,
@@ -160,6 +241,32 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     term: '',
     content: '',
   });
+  const [showSettingsEdit, setShowSettingsEdit] = useState(false);
+  const [templateEdits, setTemplateEdits] = useState<TemplateEdits>({});
+  const [bulkAppendField, setBulkAppendField] =
+    useState<EditableField>('campaign');
+  const [bulkAppendWord, setBulkAppendWord] = useState('');
+  const [bulkAppendMessage, setBulkAppendMessage] = useState('');
+
+  const updateTemplateEdit = (
+    templateId: string,
+    field: EditableField,
+    value: string,
+  ) =>
+    setTemplateEdits((prev) => ({
+      ...prev,
+      [templateId]: { ...prev[templateId], [field]: value },
+    }));
+
+  const resetTemplateEdit = (templateId: string) =>
+    setTemplateEdits((prev) => {
+      if (!prev[templateId]) {
+        return prev;
+      }
+      return Object.fromEntries(
+        Object.entries(prev).filter(([id]) => id !== templateId),
+      );
+    });
 
   const selectedServer = serverId ? servers[serverId] : null;
 
@@ -172,6 +279,84 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     return templates.filter((template) => selectedIdSet.has(template.id));
   }, [selectedIds, templates]);
 
+  // Append a word to one chosen UTM field across every selected template, e.g.
+  // a date suffix turning "kakao_coop" into "kakao_coop_0604". The result is
+  // written into per-template edits so it shows up in "세팅 수정" and in the
+  // generated URLs alike.
+  const handleBulkAppend = () => {
+    const word = bulkAppendWord.trim();
+    if (!word) {
+      setBulkAppendMessage(t('utm.bulk.append.needWord'));
+      return;
+    }
+    if (selectedTemplates.length === 0) {
+      setBulkAppendMessage(t('utm.bulk.append.needTemplate'));
+      return;
+    }
+
+    setTemplateEdits((prev) => {
+      const next = { ...prev };
+      selectedTemplates.forEach((template) => {
+        const current = resolveField(
+          template,
+          bulkAppendField,
+          prev[template.id],
+          overrideFields,
+        );
+        const separator =
+          current && !current.endsWith('_') && !word.startsWith('_') ? '_' : '';
+        const appended = current ? `${current}${separator}${word}` : word;
+        next[template.id] = {
+          ...next[template.id],
+          [bulkAppendField]: appended,
+        };
+      });
+      return next;
+    });
+
+    setShowSettingsEdit(true);
+    setBulkAppendMessage(
+      t('utm.bulk.append.done', { count: selectedTemplates.length }),
+    );
+  };
+
+  // Overwrite one chosen UTM field with a new value across every selected
+  // template (vs. handleBulkAppend which only adds a suffix).
+  const handleBulkReplace = () => {
+    const value = bulkAppendWord.trim();
+    if (!value) {
+      setBulkAppendMessage(t('utm.bulk.append.needWord'));
+      return;
+    }
+    if (selectedTemplates.length === 0) {
+      setBulkAppendMessage(t('utm.bulk.append.needTemplate'));
+      return;
+    }
+
+    setTemplateEdits((prev) => {
+      const next = { ...prev };
+      selectedTemplates.forEach((template) => {
+        next[template.id] = {
+          ...next[template.id],
+          [bulkAppendField]: value,
+        };
+      });
+      return next;
+    });
+
+    setShowSettingsEdit(true);
+    setBulkAppendMessage(
+      t('utm.bulk.replace.done', { count: selectedTemplates.length }),
+    );
+  };
+
+  // Clear every per-template edit at once, reverting all selected templates to
+  // their saved values (plus any common override from the "1.5" section).
+  const resetAllTemplateEdits = () => {
+    setTemplateEdits({});
+    setBulkAppendMessage('');
+  };
+
   const previewRows = useMemo<GeneratedRow[]>(
     () =>
       selectedTemplates
@@ -181,12 +366,15 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
           description: template.description,
           utmUrl: buildUtmUrlFromTemplate(
             normalizeBaseUrl(baseUrl),
-            template,
-            overrideFields,
+            resolveTemplateFields(
+              template,
+              templateEdits[template.id],
+              overrideFields,
+            ),
           ),
         }))
         .filter((row) => row.utmUrl),
-    [baseUrl, overrideFields, selectedTemplates],
+    [baseUrl, overrideFields, selectedTemplates, templateEdits],
   );
 
   // Bootstrap selection only once: select every template the first time they
@@ -208,7 +396,7 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     setCopiedAll(false);
     setActionMessage('');
     setShowShortOptions(false);
-  }, [baseUrl, selectedIds, overrideFields]);
+  }, [baseUrl, selectedIds, overrideFields, templateEdits]);
 
   const allSelected =
     templates.length > 0 && selectedIds.length === templates.length;
@@ -425,6 +613,11 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
             findIfExists: true,
           };
 
+          // Tag the upcoming history record with the template that produced
+          // this row. The API client wrapper logs the creation and consumes
+          // this hint (row.name is the template name).
+          setNextTemplateName(row.name);
+
           let shortUrl;
 
           try {
@@ -478,6 +671,9 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
         error instanceof Error && error.message ? ` (${error.message})` : '';
       setActionMessage(`${t('utm.bulk.message.bulkError')}${detail}`);
     } finally {
+      // Clear any leftover hint so it can never attach to an unrelated, later
+      // short-URL creation elsewhere in the app.
+      setNextTemplateName(undefined);
       setCreatingShortUrls(false);
     }
   };
@@ -728,6 +924,198 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
               </div>
             )}
           </div>
+
+          {selectedTemplates.length > 0 && (
+            <div className="rounded-md border border-lm-border bg-white dark:border-dm-border dark:bg-dm-primary">
+              <button
+                type="button"
+                onClick={() => setShowSettingsEdit((prev) => !prev)}
+                aria-expanded={showSettingsEdit}
+                className="flex w-full items-center justify-between gap-3 p-4 text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <FontAwesomeIcon
+                    icon={showSettingsEdit ? faChevronDown : faChevronRight}
+                    className="text-xs text-gray-400"
+                  />
+                  <span className="text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                    {t('utm.bulk.settings.title')}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('utm.bulk.settings.summary', {
+                      count: selectedTemplates.length,
+                    })}
+                  </span>
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {showSettingsEdit
+                    ? t('utm.bulk.settings.collapse')
+                    : t('utm.bulk.settings.expand')}
+                </span>
+              </button>
+
+              {showSettingsEdit && (
+                <div className="space-y-3 border-t border-lm-border px-4 pb-4 pt-3 dark:border-dm-border">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('utm.bulk.settings.help')}
+                    </p>
+                    {Object.keys(templateEdits).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={resetAllTemplateEdits}
+                        className="shrink-0 rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                      >
+                        {t('utm.bulk.settings.resetAll')}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/60 dark:bg-blue-900/15">
+                    <p className="mb-1 text-xs font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
+                      {t('utm.bulk.append.title')}
+                    </p>
+                    <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">
+                      {t('utm.bulk.append.help')}
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="sm:w-44">
+                        <label
+                          htmlFor="bulk-append-field"
+                          className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                        >
+                          {t('utm.bulk.append.fieldLabel')}
+                        </label>
+                        <select
+                          id="bulk-append-field"
+                          value={bulkAppendField}
+                          onChange={(e) =>
+                            setBulkAppendField(e.target.value as EditableField)
+                          }
+                          className="w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                        >
+                          {EDITABLE_FIELD_DEFS.map((def) => (
+                            <option key={def.key} value={def.key}>
+                              {t(def.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label
+                          htmlFor="bulk-append-word"
+                          className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                        >
+                          {t('utm.bulk.append.wordLabel')}
+                        </label>
+                        <input
+                          id="bulk-append-word"
+                          type="text"
+                          value={bulkAppendWord}
+                          onChange={(e) => setBulkAppendWord(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleBulkAppend();
+                            }
+                          }}
+                          placeholder={t('utm.bulk.append.wordPlaceholder')}
+                          className="w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleBulkAppend}
+                          className="rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
+                        >
+                          {t('utm.bulk.append.button')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkReplace}
+                          className="rounded bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-800"
+                        >
+                          {t('utm.bulk.replace.button')}
+                        </button>
+                      </div>
+                    </div>
+                    {bulkAppendMessage && (
+                      <p className="mt-2 text-xs text-blue-600 dark:text-blue-300">
+                        {bulkAppendMessage}
+                      </p>
+                    )}
+                  </div>
+
+                  <p className="border-t border-lm-border pt-3 text-xs font-semibold text-(--light-text-color) dark:border-dm-border dark:text-(--dark-text-color)">
+                    {t('utm.bulk.settings.perTemplateTitle')}
+                  </p>
+
+                  {selectedTemplates.map((template) => {
+                    const edits = templateEdits[template.id];
+                    const isEdited = !!edits && Object.keys(edits).length > 0;
+
+                    return (
+                      <div
+                        key={template.id}
+                        className="rounded border border-lm-border p-3 dark:border-dm-border"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                            {template.name}
+                            {isEdited && (
+                              <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                                {t('utm.bulk.settings.edited')}
+                              </span>
+                            )}
+                          </span>
+                          {isEdited && (
+                            <button
+                              type="button"
+                              onClick={() => resetTemplateEdit(template.id)}
+                              className="rounded bg-gray-100 px-2 py-1 text-[11px] text-(--light-text-color) hover:bg-gray-200 dark:bg-gray-800 dark:text-(--dark-text-color) dark:hover:bg-gray-700"
+                            >
+                              {t('utm.bulk.settings.reset')}
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+                          {EDITABLE_FIELD_DEFS.map((def) => (
+                            <div key={def.key}>
+                              <label
+                                htmlFor={`bulk-edit-${template.id}-${def.key}`}
+                                className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                              >
+                                {t(def.labelKey)}
+                              </label>
+                              <input
+                                id={`bulk-edit-${template.id}-${def.key}`}
+                                type="text"
+                                value={resolveField(
+                                  template,
+                                  def.key,
+                                  edits,
+                                  overrideFields,
+                                )}
+                                onChange={(e) =>
+                                  updateTemplateEdit(
+                                    template.id,
+                                    def.key,
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder={t(def.placeholderKey)}
+                                className="w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-md border border-lm-border bg-white p-4 dark:border-dm-border dark:bg-dm-primary">
             <div className="mb-3 flex items-center justify-between gap-3">
