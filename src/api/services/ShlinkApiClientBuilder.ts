@@ -9,7 +9,28 @@ import type { ServerWithId } from '../../servers/data';
 import { hasServerData } from '../../servers/data';
 import type { GetState } from '../../store';
 
-const apiClients: Map<string, ShlinkApiClient> = new Map();
+// The template that produced a short URL is only known to callers like the
+// UTM bulk builder, not to the SDK client itself. `templateName` lets a
+// caller pass that per-call, request-scoped hint straight through to history
+// logging (stripped before the request reaches the Shlink API). This used to
+// be a shared module-level variable set right before calling createShortUrl,
+// which broke down once a slow/timed-out request could still resolve after
+// the caller had already moved on and overwritten the hint for a later call.
+type CreateShortUrlParams = Parameters<ShlinkApiClient['createShortUrl']>[0];
+type CreateShortUrlResult = Awaited<
+  ReturnType<ShlinkApiClient['createShortUrl']>
+>;
+type CreateShortUrlParamsWithTemplate = CreateShortUrlParams & {
+  templateName?: string;
+};
+
+type ShlinkApiClientWithHistory = Omit<ShlinkApiClient, 'createShortUrl'> & {
+  createShortUrl: (
+    data: CreateShortUrlParamsWithTemplate,
+  ) => Promise<CreateShortUrlResult>;
+};
+
+const apiClients: Map<string, ShlinkApiClientWithHistory> = new Map();
 
 const getSelectedServerFromState = (getState: GetState): ServerWithId => {
   const { selectedServer } = getState();
@@ -39,12 +60,13 @@ const buildShortUrl = (baseUrl: string, shortCode: string): string => {
 const wrapWithHistoryLogging = (
   apiClient: ShlinkApiClient,
   server: Pick<ServerWithId, 'id' | 'name' | 'url'>,
-): ShlinkApiClient => {
+): ShlinkApiClientWithHistory => {
   const originalCreate = apiClient.createShortUrl.bind(apiClient);
   const originalUpdate = apiClient.updateShortUrl.bind(apiClient);
   const originalDelete = apiClient.deleteShortUrl.bind(apiClient);
+  const clientWithHistory = apiClient as unknown as ShlinkApiClientWithHistory;
 
-  apiClient.createShortUrl = async (data) => {
+  clientWithHistory.createShortUrl = async ({ templateName, ...data }) => {
     const created = await originalCreate(data);
     try {
       await recordShortUrlHistory({
@@ -56,6 +78,7 @@ const wrapWithHistoryLogging = (
         title: created.title ?? '',
         tags: created.tags ?? [],
         ...extractUtmFromUrl(created.longUrl),
+        template_name: templateName,
         action: 'created',
       });
     } catch {
@@ -64,7 +87,7 @@ const wrapWithHistoryLogging = (
     return created;
   };
 
-  apiClient.updateShortUrl = async (identifier, data) => {
+  clientWithHistory.updateShortUrl = async (identifier, data) => {
     const updated = await originalUpdate(identifier, data);
     try {
       await recordShortUrlHistory({
@@ -84,7 +107,7 @@ const wrapWithHistoryLogging = (
     return updated;
   };
 
-  apiClient.deleteShortUrl = async (identifier, options) => {
+  clientWithHistory.deleteShortUrl = async (identifier, options) => {
     await originalDelete(identifier, options);
     try {
       await recordDeletionFromHistory({
@@ -98,7 +121,7 @@ const wrapWithHistoryLogging = (
     }
   };
 
-  return apiClient;
+  return clientWithHistory;
 };
 
 export const buildShlinkApiClient =

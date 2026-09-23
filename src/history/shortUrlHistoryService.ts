@@ -57,23 +57,6 @@ export const resolveHistoryAction = (
   record: Pick<ShortUrlHistoryRecord, 'action'>,
 ): ShortUrlHistoryAction => record.action ?? 'created';
 
-// The short-URL creation flow logs history from inside the SDK client wrapper,
-// which has no knowledge of which saved UTM template produced the URL. Flows
-// that DO know the template (e.g. the bulk builder) set this hint right before
-// calling createShortUrl; the next recordShortUrlHistory consumes and clears
-// it. Bulk creation is sequential, so there is no interleaving to race on.
-let nextTemplateName: string | undefined;
-
-export const setNextTemplateName = (name: string | undefined): void => {
-  nextTemplateName = name?.trim() || undefined;
-};
-
-const consumeNextTemplateName = (): string | undefined => {
-  const value = nextTemplateName;
-  nextTemplateName = undefined;
-  return value;
-};
-
 type ExtractedUtm = {
   utm_source?: string;
   utm_medium?: string;
@@ -126,7 +109,6 @@ export const recordShortUrlHistory = async (
   try {
     await pb.collection('short_url_history').create({
       ...input,
-      template_name: input.template_name ?? consumeNextTemplateName(),
       action: input.action ?? 'created',
       created_by: userId,
     });
