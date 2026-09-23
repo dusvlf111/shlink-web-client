@@ -11,11 +11,11 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import type { ShlinkApiClientBuilder } from '../api/services/ShlinkApiClientBuilder';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
-import { setNextTemplateName } from '../history/shortUrlHistoryService';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
-import { useUtmTags, useUtmTemplates } from './useUtmData';
+import type { UtmCategory, UtmTemplate } from './useUtmData';
+import { useUtmTags, useUtmTemplates, UTM_CATEGORIES } from './useUtmData';
 
 type GeneratedRow = {
   id: string;
@@ -500,21 +500,31 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 
-    const withTimeout = <Result,>(promise: Promise<Result>): Promise<Result> =>
-      Promise.race<Result>([
-        promise,
-        new Promise<Result>((_, reject) => {
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`,
-                ),
-              ),
-            PER_REQUEST_TIMEOUT_MS,
-          );
-        }),
-      ]);
+    // Promise.race alone would only race the *result*: the loser (the real
+    // fetch) keeps running server-side after we've already moved on to the
+    // next row. If it later succeeds, its history record gets attributed to
+    // whatever row is "current" by then (via the nextTemplateName hint below),
+    // and the UI shows the row as failed even though it was actually created.
+    // Aborting the request for real avoids both problems.
+    const withTimeout = <Result,>(
+      makeRequest: (signal: AbortSignal) => Promise<Result>,
+    ): Promise<Result> => {
+      const controller = new AbortController();
+      const timer = setTimeout(
+        () => controller.abort(),
+        PER_REQUEST_TIMEOUT_MS,
+      );
+      return makeRequest(controller.signal)
+        .catch((error) => {
+          if (controller.signal.aborted) {
+            throw new Error(
+              `Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`,
+            );
+          }
+          throw error;
+        })
+        .finally(() => clearTimeout(timer));
+    };
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
       if (!raw) return '';
@@ -611,26 +621,27 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
             title,
             tags,
             findIfExists: true,
+            // Tag the history record with the template that produced this
+            // row (row.name is the template name). Passed per-call so a
+            // slow/timed-out request can never get attributed to whichever
+            // row happens to be "current" by the time it actually settles.
+            templateName: row.name,
           };
-
-          // Tag the upcoming history record with the template that produced
-          // this row. The API client wrapper logs the creation and consumes
-          // this hint (row.name is the template name).
-          setNextTemplateName(row.name);
 
           let shortUrl;
 
           try {
-            shortUrl = await withTimeout(
+            shortUrl = await withTimeout((signal) =>
               apiClient.createShortUrl({
                 ...createPayload,
                 customSlug,
+                signal,
               }),
             );
           } catch (slugError) {
             if (customSlug && isSlugConflictError(slugError)) {
-              shortUrl = await withTimeout(
-                apiClient.createShortUrl(createPayload),
+              shortUrl = await withTimeout((signal) =>
+                apiClient.createShortUrl({ ...createPayload, signal }),
               );
             } else {
               throw slugError;
@@ -671,9 +682,6 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
         error instanceof Error && error.message ? ` (${error.message})` : '';
       setActionMessage(`${t('utm.bulk.message.bulkError')}${detail}`);
     } finally {
-      // Clear any leftover hint so it can never attach to an unrelated, later
-      // short-URL creation elsewhere in the app.
-      setNextTemplateName(undefined);
       setCreatingShortUrls(false);
     }
   };
@@ -703,14 +711,14 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     return map;
   }, [tags]);
 
-  const getTemplateTagsInfo = (template: any) => {
+  const getTemplateTagsInfo = (template: UtmTemplate) => {
     const result: Array<{
-      category: string;
+      category: UtmCategory;
       value: string;
       description?: string;
     }> = [];
 
-    ['source', 'medium', 'campaign', 'term', 'content'].forEach((category) => {
+    UTM_CATEGORIES.forEach((category) => {
       const value = template[category]?.trim();
       if (value) {
         const key = `${category}|${value.toLowerCase()}`;

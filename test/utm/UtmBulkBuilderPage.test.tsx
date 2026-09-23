@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import type * as useUtmDataModule from '../../src/utm/useUtmData';
 import { UtmBulkBuilderPage } from '../../src/utm/UtmBulkBuilderPage';
 import { renderWithStore } from '../__helpers__/setUpTest';
 
@@ -26,27 +27,31 @@ const mockTemplates = [
   },
 ];
 
-vi.mock('../../src/utm/useUtmData', () => ({
-  useUtmTemplates: () => ({
-    templates: mockTemplates,
-  }),
-  useUtmTags: () => ({
-    tags: [
-      {
-        id: 'tag-1',
-        category: 'source',
-        value: 'google',
-        description: '구글 검색',
-      },
-      {
-        id: 'tag-2',
-        category: 'medium',
-        value: 'cpc',
-        description: 'CPC 광고',
-      },
-    ],
-  }),
-}));
+vi.mock('../../src/utm/useUtmData', async (importOriginal) => {
+  const actual = await importOriginal<typeof useUtmDataModule>();
+  return {
+    ...actual,
+    useUtmTemplates: () => ({
+      templates: mockTemplates,
+    }),
+    useUtmTags: () => ({
+      tags: [
+        {
+          id: 'tag-1',
+          category: 'source',
+          value: 'google',
+          description: '구글 검색',
+        },
+        {
+          id: 'tag-2',
+          category: 'medium',
+          value: 'cpc',
+          description: 'CPC 광고',
+        },
+      ],
+    }),
+  };
+});
 
 describe('<UtmBulkBuilderPage />', () => {
   const setUp = () =>
