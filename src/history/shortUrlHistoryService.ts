@@ -170,31 +170,181 @@ export const recordDeletionFromHistory = async (params: {
   });
 };
 
-type FetchOptions = {
+export type HistoryFilters = {
   serverId?: string;
+  query?: string;
+  action?: ShortUrlHistoryAction | 'all';
+  tags?: string[];
+  templates?: string[];
+  dateFrom?: string;
+  dateTo?: string;
 };
 
-// Load the full history list (newest first), resolving the `created_by` user.
-// Returns [] on any error — including the collection not yet existing on the
-// live PocketBase instance — so the History page never crashes before the
-// collection is imported.
-export const fetchShortUrlHistory = async (
-  opts: FetchOptions = {},
-): Promise<ShortUrlHistoryRecord[]> => {
+export type HistoryListResult = {
+  items: ShortUrlHistoryRecord[];
+  page: number;
+  totalPages: number;
+  totalItems: number;
+};
+
+// Text fields searched by `filters.query`, matched with OR semantics.
+// `created_by.name`/`created_by.email` use PocketBase's relation dot-notation
+// to search the resolved user without a separate query.
+const QUERY_FIELDS = [
+  'title',
+  'short_url',
+  'short_code',
+  'long_url',
+  'server_name',
+  'server_id',
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+  'created_by.name',
+  'created_by.email',
+];
+
+// Build a PocketBase filter expression for the given filters, binding every
+// value through `pb.filter` so nothing is ever string-concatenated into the
+// expression (prevents filter injection).
+const buildFilter = (filters: HistoryFilters): string | undefined => {
+  const clauses: string[] = [];
+
+  if (filters.serverId) {
+    clauses.push(pb.filter('server_id={:sid}', { sid: filters.serverId }));
+  }
+
+  if (filters.action && filters.action !== 'all') {
+    // Records written before `action` existed are treated as 'created', so
+    // an empty `action` also matches when filtering for 'created'.
+    clauses.push(
+      pb.filter('(action={:act} || (action="" && {:act}="created"))', {
+        act: filters.action,
+      }),
+    );
+  }
+
+  if (filters.tags && filters.tags.length > 0) {
+    // `tags` is a JSON array; PocketBase has no array-contains operator, so
+    // this matches the JSON-encoded text. Quoting the bound value avoids
+    // matching a tag that is merely a substring of another (e.g. "promo" vs
+    // "promotion").
+    const tagClauses = filters.tags.map((tag, i) =>
+      pb.filter('tags~{:tag' + i + '}', { ['tag' + i]: `"${tag}"` }),
+    );
+    clauses.push(`(${tagClauses.join(' || ')})`);
+  }
+
+  if (filters.templates && filters.templates.length > 0) {
+    const templateClauses = filters.templates.map((name, i) =>
+      pb.filter('template_name={:tpl' + i + '}', { ['tpl' + i]: name }),
+    );
+    clauses.push(`(${templateClauses.join(' || ')})`);
+  }
+
+  if (filters.dateFrom) {
+    clauses.push(
+      pb.filter('created>={:from}', { from: `${filters.dateFrom} 00:00:00` }),
+    );
+  }
+  if (filters.dateTo) {
+    clauses.push(
+      pb.filter('created<={:to}', { to: `${filters.dateTo} 23:59:59` }),
+    );
+  }
+
+  const query = filters.query?.trim();
+  if (query) {
+    const queryClauses = QUERY_FIELDS.map((field, i) =>
+      pb.filter(`${field}~{:q${i}}`, { [`q${i}`]: query }),
+    );
+    clauses.push(`(${queryClauses.join(' || ')})`);
+  }
+
+  return clauses.length > 0 ? clauses.join(' && ') : undefined;
+};
+
+// Load one page of history records (newest first), resolving the
+// `created_by` user. Returns an empty page on any error — including the
+// collection not yet existing on the live PocketBase instance — so the
+// History page never crashes before the collection is imported.
+export const fetchShortUrlHistoryPage = async (
+  page: number,
+  perPage: number,
+  filters: HistoryFilters = {},
+): Promise<HistoryListResult> => {
   try {
-    return await pb
+    const result = await pb
       .collection('short_url_history')
-      .getFullList<ShortUrlHistoryRecord>({
+      .getList<ShortUrlHistoryRecord>(page, perPage, {
         sort: '-created',
         expand: 'created_by',
-        // Use PocketBase's parameterized filter helper so the serverId is bound
-        // as a value, never concatenated into the filter string (prevents
-        // filter injection).
+        filter: buildFilter(filters),
+      });
+    return {
+      items: result.items,
+      page: result.page,
+      totalPages: result.totalPages,
+      totalItems: result.totalItems,
+    };
+  } catch {
+    return { items: [], page, totalPages: 0, totalItems: 0 };
+  }
+};
+
+export type HistoryFacets = {
+  tags: string[];
+  templates: string[];
+  servers: { id: string; name: string }[];
+};
+
+// Load the distinct tags/templates/servers present across the history,
+// scoped to a server when given. Fetches only the fields needed to compute
+// the facets (not full records) so it stays cheap even with many rows.
+// Returns empty facets on any error.
+export const fetchHistoryFacets = async (
+  opts: { serverId?: string } = {},
+): Promise<HistoryFacets> => {
+  try {
+    const rows = await pb
+      .collection('short_url_history')
+      .getFullList<
+      Pick<
+        ShortUrlHistoryRecord,
+          'tags' | 'template_name' | 'server_id' | 'server_name'
+      >
+    >({
+        fields: 'tags,template_name,server_id,server_name',
         filter: opts.serverId
           ? pb.filter('server_id={:sid}', { sid: opts.serverId })
           : undefined,
       });
+
+    const tags = new Set<string>();
+    const templates = new Set<string>();
+    const servers = new Map<string, string>();
+
+    rows.forEach((row) => {
+      (row.tags ?? []).forEach((tag) => tags.add(tag));
+      const template = row.template_name?.trim();
+      if (template) {
+        templates.add(template);
+      }
+      if (!servers.has(row.server_id)) {
+        servers.set(row.server_id, row.server_name || row.server_id);
+      }
+    });
+
+    return {
+      tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
+      templates: Array.from(templates).sort((a, b) => a.localeCompare(b)),
+      servers: Array.from(servers, ([id, name]) => ({ id, name })).sort(
+        (a, b) => a.name.localeCompare(b.name),
+      ),
+    };
   } catch {
-    return [];
+    return { tags: [], templates: [], servers: [] };
   }
 };
