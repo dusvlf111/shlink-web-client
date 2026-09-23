@@ -20,6 +20,12 @@ import {
 
 const ALL_SERVERS = '__all__';
 
+// Rendering every history record as a <tr> with no cap freezes the tab once
+// the collection grows into the hundreds/thousands (large bulk UTM builds
+// push it there fast). Capping the table to a page at a time keeps DOM size
+// bounded regardless of how large the underlying history gets.
+const PAGE_SIZE = 100;
+
 // Every column the table can show. Order here is the order they render in.
 type ColumnKey =
   | 'datetime'
@@ -415,6 +421,7 @@ const HistoryPageComp: FC = () => {
   const [visibleCols, setVisibleCols] =
     useState<Set<ColumnKey>>(loadVisibleColumns);
   const [selected, setSelected] = useState<ShortUrlHistoryRecord | null>(null);
+  const [page, setPage] = useState(1);
 
   // Persist column choices so the table layout sticks across visits.
   useEffect(() => {
@@ -531,6 +538,31 @@ const HistoryPageComp: FC = () => {
     dateFrom,
     dateTo,
   ]);
+
+  // Any change to the filters can shrink the result set below the current
+  // page, so jump back to page 1 whenever they change.
+  useEffect(() => {
+    setPage(1);
+  }, [
+    query,
+    actionFilter,
+    selectedTags,
+    selectedTemplates,
+    serverFilter,
+    dateFrom,
+    dateTo,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRecords = useMemo(
+    () =>
+      filteredRecords.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
+    [filteredRecords, currentPage],
+  );
 
   const toggleInArray = (setter: typeof setSelectedTags, value: string) =>
     setter((prev) =>
@@ -945,7 +977,7 @@ const HistoryPageComp: FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-lm-border dark:divide-dm-border">
-                {filteredRecords.map((record) => (
+                {pagedRecords.map((record) => (
                   <tr
                     key={record.id}
                     data-testid={`history-row-${resolveHistoryAction(record)}`}
@@ -958,6 +990,33 @@ const HistoryPageComp: FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="rounded border border-lm-border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dm-border dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              {t('history.pagination.prev')}
+            </button>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {t('history.pagination.pageInfo', {
+                page: currentPage,
+                totalPages,
+              })}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="rounded border border-lm-border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dm-border dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              {t('history.pagination.next')}
+            </button>
           </div>
         )}
       </div>
