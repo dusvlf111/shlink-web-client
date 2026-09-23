@@ -35,6 +35,7 @@ export const koMessages = {
   'history.title': '단축링크 히스토리',
   'history.subtitle': '생성된 단축링크 기록을 모두 확인합니다.',
   'history.loading': '불러오는 중...',
+  'history.loadingMore': '더 불러오는 중...',
   'history.empty': '아직 기록된 단축링크가 없습니다.',
   'history.filter.label': '서버 필터',
   'history.filter.allServers': '전체 서버',

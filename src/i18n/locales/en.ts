@@ -33,6 +33,7 @@ export const enMessages: Messages = {
   'history.title': 'Short URL history',
   'history.subtitle': 'Review every recorded short URL creation.',
   'history.loading': 'Loading...',
+  'history.loadingMore': 'Loading more...',
   'history.empty': 'No short URLs have been recorded yet.',
   'history.filter.label': 'Server filter',
   'history.filter.allServers': 'All servers',
