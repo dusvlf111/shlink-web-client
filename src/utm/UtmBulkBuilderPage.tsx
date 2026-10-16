@@ -14,6 +14,7 @@ import { withDependencies } from '../container/context';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
+import { withRequestTimeout } from './shlinkRequest';
 import type { UtmCategory, UtmTemplate } from './useUtmData';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES } from './useUtmData';
 
@@ -494,37 +495,19 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
     setCreatingShortUrls(true);
     setActionMessage(t('utm.bulk.message.creating'));
 
-    const PER_REQUEST_TIMEOUT_MS = 8_000;
     const INTER_REQUEST_DELAY_MS = 750;
 
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Promise.race alone would only race the *result*: the loser (the real
-    // fetch) keeps running server-side after we've already moved on to the
-    // next row. If it later succeeds, its history record gets attributed to
-    // whatever row is "current" by then (via the nextTemplateName hint below),
-    // and the UI shows the row as failed even though it was actually created.
-    // Aborting the request for real avoids both problems.
+    // The timeout really aborts the request (see withRequestTimeout): merely
+    // racing the result would let the losing fetch keep running server-side
+    // after we've moved on to the next row, so a row could show as failed
+    // even though it was created. createShortUrl uses findIfExists, so a
+    // single retry on timeout is idempotent.
     const withTimeout = <Result,>(
       makeRequest: (signal: AbortSignal) => Promise<Result>,
-    ): Promise<Result> => {
-      const controller = new AbortController();
-      const timer = setTimeout(
-        () => controller.abort(),
-        PER_REQUEST_TIMEOUT_MS,
-      );
-      return makeRequest(controller.signal)
-        .catch((error) => {
-          if (controller.signal.aborted) {
-            throw new Error(
-              `Shlink 서버 응답이 ${PER_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않았습니다 (서버가 느리거나 rate limit 일 수 있습니다)`,
-            );
-          }
-          throw error;
-        })
-        .finally(() => clearTimeout(timer));
-    };
+    ): Promise<Result> => withRequestTimeout(makeRequest, { retries: 1 });
 
     const extractShlinkErrorMessage = (raw: unknown): string => {
       if (!raw) return '';
@@ -654,8 +637,8 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
             shortCode: shortUrl.shortCode,
             createError: undefined,
           });
-          // History logging now happens centrally in the API client wrapper
-          // (buildShlinkApiClient), so no explicit logging call is needed here.
+          // History is queued centrally in the API client wrapper
+          // (buildShlinkApiClient) and flushed to PocketBase in the background.
         } catch (error) {
           const message =
             extractShlinkErrorMessage(error) || t('utm.bulk.row.errorPrefix');

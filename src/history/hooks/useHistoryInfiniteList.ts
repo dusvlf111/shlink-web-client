@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushHistoryOutbox } from '../historyOutbox';
 import {
   fetchShortUrlHistoryPage,
   type HistoryFilters,
@@ -30,16 +31,20 @@ export const useHistoryInfiniteList = (filters: HistoryFilters) => {
     setTotalPages(0);
     setTotalItems(0);
 
-    void fetchShortUrlHistoryPage(1, PER_PAGE, filters).then((result) => {
-      if (token !== requestToken.current) {
-        return;
-      }
-      setRecords(result.items);
-      setPage(result.page);
-      setTotalPages(result.totalPages);
-      setTotalItems(result.totalItems);
-      setLoading(false);
-    });
+    // Ship any locally queued records first so the list below is up to date.
+    // The flush never rejects and returns immediately when the queue is empty.
+    void flushHistoryOutbox()
+      .then(() => fetchShortUrlHistoryPage(1, PER_PAGE, filters))
+      .then((result) => {
+        if (token !== requestToken.current) {
+          return;
+        }
+        setRecords(result.items);
+        setPage(result.page);
+        setTotalPages(result.totalPages);
+        setTotalItems(result.totalItems);
+        setLoading(false);
+      });
     // `filters` is memoized by useHistoryFilters, so this only re-runs when a
     // filter value actually changes.
   }, [filters]);

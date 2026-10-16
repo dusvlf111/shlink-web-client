@@ -94,24 +94,41 @@ export const extractUtmFromUrl = (longUrl: string): ExtractedUtm => {
   }
 };
 
+// Writes one history record and reports whether it was actually stored, so the
+// outbox can tell "sent" apart from "try again later". Unlike
+// `recordShortUrlHistory` this THROWS on network/API errors and returns false
+// when nobody is logged in (nothing to attribute the record to).
+//
+// `requestKey: null` opts out of the PocketBase SDK's auto-cancellation, which
+// would otherwise abort an earlier pending create to the same collection when
+// a newer one starts.
+export const createHistoryRecord = async (
+  input: ShortUrlHistoryInput,
+): Promise<boolean> => {
+  const userId = pb.authStore.record?.id;
+  if (!userId) {
+    return false;
+  }
+
+  await pb.collection('short_url_history').create(
+    {
+      ...input,
+      action: input.action ?? 'created',
+      created_by: userId,
+    },
+    { requestKey: null },
+  );
+  return true;
+};
+
 // Best-effort logging of a short-url creation. This is a side effect of the
 // real creation flow, so it must NEVER throw or otherwise break that flow:
 // any failure (not logged in, collection missing, network error) is swallowed.
 export const recordShortUrlHistory = async (
   input: ShortUrlHistoryInput,
 ): Promise<void> => {
-  const userId = pb.authStore.record?.id;
-  if (!userId) {
-    // Not logged in: nothing to attribute the record to, so skip silently.
-    return;
-  }
-
   try {
-    await pb.collection('short_url_history').create({
-      ...input,
-      action: input.action ?? 'created',
-      created_by: userId,
-    });
+    await createHistoryRecord(input);
   } catch {
     // Swallow: history logging must not affect the short-url creation UX.
   }
@@ -124,12 +141,19 @@ export const recordShortUrlHistory = async (
 // it falls back to the provided shortUrl as the (required) long_url so a
 // deletion is still recorded. Never throws — deletion logging must not break
 // the real delete flow.
-export const recordDeletionFromHistory = async (params: {
+export type DeletionHistoryParams = {
   server_id: string;
   server_name?: string;
   short_code?: string;
   short_url: string;
-}): Promise<void> => {
+};
+
+// Builds the 'deleted' history input for a deletion (including the lookup of
+// the original 'created' record). Never throws; a failed lookup falls back to
+// the provided short URL.
+export const buildDeletionHistoryInput = async (
+  params: DeletionHistoryParams,
+): Promise<ShortUrlHistoryInput> => {
   const { server_id, server_name, short_code, short_url } = params;
 
   let original: ShortUrlHistoryRecord | undefined;
@@ -151,7 +175,7 @@ export const recordDeletionFromHistory = async (params: {
     }
   }
 
-  await recordShortUrlHistory({
+  return {
     server_id,
     server_name: original?.server_name ?? server_name,
     short_url: original?.short_url || short_url,
@@ -167,7 +191,13 @@ export const recordDeletionFromHistory = async (params: {
     utm_term: original?.utm_term,
     utm_content: original?.utm_content,
     action: 'deleted',
-  });
+  };
+};
+
+export const recordDeletionFromHistory = async (
+  params: DeletionHistoryParams,
+): Promise<void> => {
+  await recordShortUrlHistory(await buildDeletionHistoryInput(params));
 };
 
 export type HistoryFilters = {
