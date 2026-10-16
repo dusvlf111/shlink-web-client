@@ -2,23 +2,15 @@ import type { HttpClient } from '@shlinkio/shlink-js-sdk';
 import { ShlinkApiClient } from '@shlinkio/shlink-js-sdk';
 import { fromPartial } from '@total-typescript/shoehorn';
 import { buildShlinkApiClient } from '../../../src/api/services/ShlinkApiClientBuilder';
-import * as historyService from '../../../src/history/shortUrlHistoryService';
+import * as historyOutbox from '../../../src/history/historyOutbox';
 import type {
   ReachableServer,
   SelectedServer,
 } from '../../../src/servers/data';
 
-vi.mock(
-  '../../../src/history/shortUrlHistoryService',
-  async (importOriginal) => {
-    const actual = await importOriginal<typeof historyService>();
-    return {
-      ...actual,
-      recordShortUrlHistory: vi.fn().mockResolvedValue(undefined),
-      recordDeletionFromHistory: vi.fn().mockResolvedValue(undefined),
-    };
-  },
-);
+vi.mock('../../../src/history/historyOutbox', () => ({
+  enqueueHistoryEntry: vi.fn(),
+}));
 
 describe('ShlinkApiClientBuilder', () => {
   const server = fromPartial<ReachableServer>;
@@ -96,18 +88,13 @@ describe('ShlinkApiClientBuilder', () => {
   });
 
   describe('history logging wrapper', () => {
-    const recordShortUrlHistory = vi.mocked(
-      historyService.recordShortUrlHistory,
-    );
-    const recordDeletionFromHistory = vi.mocked(
-      historyService.recordDeletionFromHistory,
-    );
+    const enqueueHistoryEntry = vi.mocked(historyOutbox.enqueueHistoryEntry);
 
     beforeEach(() => {
       vi.clearAllMocks();
     });
 
-    it('logs a \'created\' history record after createShortUrl succeeds', async () => {
+    it('queues a \'created\' history record after createShortUrl succeeds', async () => {
       const created = {
         shortUrl: 'https://s.test/abc',
         shortCode: 'abc',
@@ -134,8 +121,9 @@ describe('ShlinkApiClientBuilder', () => {
 
       expect(result).toEqual(created);
       expect(createSpy).toHaveBeenCalledOnce();
-      expect(recordShortUrlHistory).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(enqueueHistoryEntry).toHaveBeenCalledWith({
+        kind: 'record',
+        input: expect.objectContaining({
           server_id: 'srv-1',
           server_name: 'Bin01',
           short_url: 'https://s.test/abc',
@@ -147,12 +135,12 @@ describe('ShlinkApiClientBuilder', () => {
           utm_medium: 'cpc',
           action: 'created',
         }),
-      );
+      });
 
       createSpy.mockRestore();
     });
 
-    it('logs a \'deleted\' history record after deleteShortUrl succeeds', async () => {
+    it('queues a \'deleted\' history entry after deleteShortUrl succeeds', async () => {
       const deleteSpy = vi
         .spyOn(ShlinkApiClient.prototype, 'deleteShortUrl')
         .mockResolvedValue(undefined);
@@ -169,19 +157,20 @@ describe('ShlinkApiClientBuilder', () => {
       await apiClient.deleteShortUrl({ shortCode: 'xyz' });
 
       expect(deleteSpy).toHaveBeenCalledWith({ shortCode: 'xyz' }, undefined);
-      expect(recordDeletionFromHistory).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(enqueueHistoryEntry).toHaveBeenCalledWith({
+        kind: 'deletion',
+        params: expect.objectContaining({
           server_id: 'srv-2',
           server_name: 'Bin02',
           short_code: 'xyz',
           short_url: 'https://s.test/xyz',
         }),
-      );
+      });
 
       deleteSpy.mockRestore();
     });
 
-    it('does not throw and still returns when history logging fails', async () => {
+    it('does not throw and still returns when queueing history fails', async () => {
       const created = {
         shortUrl: 'https://s.test/zzz',
         shortCode: 'zzz',
@@ -192,7 +181,9 @@ describe('ShlinkApiClientBuilder', () => {
       const createSpy = vi
         .spyOn(ShlinkApiClient.prototype, 'createShortUrl')
         .mockResolvedValue(fromPartial(created));
-      recordShortUrlHistory.mockRejectedValueOnce(new Error('logging boom'));
+      enqueueHistoryEntry.mockImplementationOnce(() => {
+        throw new Error('logging boom');
+      });
 
       const apiClient = createBuilder()(
         server({

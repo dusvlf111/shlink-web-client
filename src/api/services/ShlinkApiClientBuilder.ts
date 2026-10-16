@@ -1,10 +1,7 @@
 import type { HttpClient } from '@shlinkio/shlink-js-sdk';
 import { ShlinkApiClient } from '@shlinkio/shlink-js-sdk';
-import {
-  extractUtmFromUrl,
-  recordDeletionFromHistory,
-  recordShortUrlHistory,
-} from '../../history/shortUrlHistoryService';
+import { enqueueHistoryEntry } from '../../history/historyOutbox';
+import { extractUtmFromUrl } from '../../history/shortUrlHistoryService';
 import type { ServerWithId } from '../../servers/data';
 import { hasServerData } from '../../servers/data';
 import type { GetState } from '../../store';
@@ -53,10 +50,14 @@ const buildShortUrl = (baseUrl: string, shortCode: string): string => {
   return `${trimmed}/${shortCode}`;
 };
 
-// Wrap createShortUrl/deleteShortUrl so every creation and deletion that flows
-// through this client is logged to the short-url history (best-effort). The
-// server identity (id/name) is captured here so callers don't have to pass it.
-// Logging never throws and never blocks the underlying API call.
+// Wrap createShortUrl/updateShortUrl/deleteShortUrl so every change that flows
+// through this client is queued for the short-url history. The server identity
+// (id/name) is captured here so callers don't have to pass it.
+//
+// History is only *queued* (a synchronous local write): the PocketBase write
+// happens later from the background outbox flush, so a slow or unavailable
+// PocketBase can never delay, time out, or fail a Shlink request. Queueing
+// never throws.
 const wrapWithHistoryLogging = (
   apiClient: ShlinkApiClient,
   server: Pick<ServerWithId, 'id' | 'name' | 'url'>,
@@ -69,17 +70,20 @@ const wrapWithHistoryLogging = (
   clientWithHistory.createShortUrl = async ({ templateName, ...data }) => {
     const created = await originalCreate(data);
     try {
-      await recordShortUrlHistory({
-        server_id: server.id,
-        server_name: server.name,
-        short_url: created.shortUrl,
-        short_code: created.shortCode,
-        long_url: created.longUrl,
-        title: created.title ?? '',
-        tags: created.tags ?? [],
-        ...extractUtmFromUrl(created.longUrl),
-        template_name: templateName,
-        action: 'created',
+      enqueueHistoryEntry({
+        kind: 'record',
+        input: {
+          server_id: server.id,
+          server_name: server.name,
+          short_url: created.shortUrl,
+          short_code: created.shortCode,
+          long_url: created.longUrl,
+          title: created.title ?? '',
+          tags: created.tags ?? [],
+          ...extractUtmFromUrl(created.longUrl),
+          template_name: templateName,
+          action: 'created',
+        },
       });
     } catch {
       // Best-effort: never let history logging affect the creation result.
@@ -90,16 +94,19 @@ const wrapWithHistoryLogging = (
   clientWithHistory.updateShortUrl = async (identifier, data) => {
     const updated = await originalUpdate(identifier, data);
     try {
-      await recordShortUrlHistory({
-        server_id: server.id,
-        server_name: server.name,
-        short_url: updated.shortUrl,
-        short_code: updated.shortCode,
-        long_url: updated.longUrl,
-        title: updated.title ?? '',
-        tags: updated.tags ?? [],
-        ...extractUtmFromUrl(updated.longUrl),
-        action: 'updated',
+      enqueueHistoryEntry({
+        kind: 'record',
+        input: {
+          server_id: server.id,
+          server_name: server.name,
+          short_url: updated.shortUrl,
+          short_code: updated.shortCode,
+          long_url: updated.longUrl,
+          title: updated.title ?? '',
+          tags: updated.tags ?? [],
+          ...extractUtmFromUrl(updated.longUrl),
+          action: 'updated',
+        },
       });
     } catch {
       // Best-effort: never let history logging affect the update result.
@@ -110,11 +117,14 @@ const wrapWithHistoryLogging = (
   clientWithHistory.deleteShortUrl = async (identifier, options) => {
     await originalDelete(identifier, options);
     try {
-      await recordDeletionFromHistory({
-        server_id: server.id,
-        server_name: server.name,
-        short_code: identifier.shortCode,
-        short_url: buildShortUrl(server.url, identifier.shortCode),
+      enqueueHistoryEntry({
+        kind: 'deletion',
+        params: {
+          server_id: server.id,
+          server_name: server.name,
+          short_code: identifier.shortCode,
+          short_url: buildShortUrl(server.url, identifier.shortCode),
+        },
       });
     } catch {
       // Best-effort: never let history logging affect the deletion result.

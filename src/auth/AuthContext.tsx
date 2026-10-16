@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { startHistoryOutboxSync } from '../history/historyOutbox';
 import { pb, type UserRecord } from '../lib/pocketbase';
 
 type AuthContextType = {
@@ -31,6 +32,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     return pb.authStore.onChange(syncUser);
   }, []);
+
+  // While someone is logged in, ship locally queued short-url history to
+  // PocketBase in the background (it is never written during link creation).
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) {
+      return undefined;
+    }
+    return startHistoryOutboxSync();
+  }, [userId]);
 
   const login = async (email: string, password: string) => {
     const result = await pb.collection('users').authWithPassword(email, password);

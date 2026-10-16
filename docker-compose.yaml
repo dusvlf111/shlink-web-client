@@ -42,7 +42,9 @@ services:
       - 'DB_USER=shlink'
       - 'DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES:-changeme}'
       # Additional Shlink config
-      - 'RESOLVE_TITLE=true'
+      # Resolving a missing title fetches the target page during creation and
+      # can slow requests down; set RESOLVE_TITLE=false in Coolify to disable.
+      - 'RESOLVE_TITLE=${RESOLVE_TITLE:-true}'
       - 'SHORT_URL_MODE=path'
       - 'VISITS_WEBHOOKS=true'
       # GeoLite2 City database license key (free MaxMind account).

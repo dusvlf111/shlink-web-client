@@ -13,6 +13,7 @@ import { NoMenuLayout } from '../common/NoMenuLayout';
 import { withDependencies } from '../container/context';
 import { useT } from '../i18n';
 import { useServers } from '../servers/reducers/servers';
+import { withRequestTimeout } from './shlinkRequest';
 import {
   useUtmTags,
   useUtmTemplates,
@@ -335,8 +336,6 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
     setCreatingShortUrl(true);
     setShortCreateMsg('단축링크 생성 중...');
 
-    const TIMEOUT_MS = 8_000;
-
     const extractShlinkErrorMessage = (raw: unknown): string => {
       if (!raw) return '';
       if (raw instanceof Error) return raw.message;
@@ -374,30 +373,21 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         .filter(Boolean)
         .join(' ')
         .trim();
-      const created = await Promise.race([
+      const created = await withRequestTimeout((signal) =>
         apiClient.createShortUrl({
           longUrl: utmUrl,
           customSlug,
           title: composedTitle || undefined,
           tags: parseTags(shortOptions.tags),
           findIfExists: true,
+          templateName: appliedTemplateName.trim() || undefined,
+          signal,
         }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`,
-                ),
-              ),
-            TIMEOUT_MS,
-          ),
-        ),
-      ]);
+      );
       setQuickShortUrl(created.shortUrl);
       setShortCreateMsg('단축링크 생성 완료');
-      // History logging now happens centrally in the API client wrapper
-      // (buildShlinkApiClient), so no explicit recordShortUrlHistory call here.
+      // History is queued centrally in the API client wrapper
+      // (buildShlinkApiClient) and flushed to PocketBase in the background.
     } catch (error) {
       const detail = extractShlinkErrorMessage(error);
       setShortCreateMsg(
@@ -471,7 +461,6 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 
     setCreatingShortUrl(true);
 
-    const TIMEOUT_MS = 8_000;
     const INTER_REQUEST_DELAY_MS = 750;
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
@@ -500,30 +489,25 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
         .trim();
 
       try {
-        const created = await Promise.race([
-          apiClient.createShortUrl({
-            longUrl: row.builtUrl,
-            customSlug: undefined,
-            title: composedTitle || undefined,
-            tags: parseTags(row.tags),
-            findIfExists: true,
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () =>
-                reject(
-                  new Error(
-                    `Shlink 서버 응답이 ${TIMEOUT_MS / 1000}초 안에 오지 않았습니다`,
-                  ),
-                ),
-              TIMEOUT_MS,
-            ),
-          ),
-        ]);
+        // createShortUrl is idempotent here (findIfExists), so one retry on a
+        // timeout is safe and rescues most transient slowness.
+        const created = await withRequestTimeout(
+          (signal) =>
+            apiClient.createShortUrl({
+              longUrl: row.builtUrl,
+              customSlug: undefined,
+              title: composedTitle || undefined,
+              tags: parseTags(row.tags),
+              findIfExists: true,
+              templateName: appliedTemplateName.trim() || undefined,
+              signal,
+            }),
+          { retries: 1 },
+        );
         success += 1;
         resultRows.push({ ...row, builtUrl: created.shortUrl, ok: true });
-        // History logging now happens centrally in the API client wrapper
-        // (buildShlinkApiClient), so no explicit logging call is needed here.
+        // History is queued centrally in the API client wrapper
+        // (buildShlinkApiClient) and flushed to PocketBase in the background.
       } catch {
         fail += 1;
         resultRows.push({ ...row, ok: false });

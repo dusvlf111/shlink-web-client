@@ -201,6 +201,7 @@ describe('shortUrlHistoryService', () => {
       });
       expect(createMock).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'created', created_by: 'user-1' }),
+        { requestKey: null },
       );
       pb.authStore.clear();
     });
@@ -216,6 +217,7 @@ describe('shortUrlHistoryService', () => {
       });
       expect(createMock).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'deleted' }),
+        { requestKey: null },
       );
       pb.authStore.clear();
     });
@@ -249,6 +251,7 @@ describe('shortUrlHistoryService', () => {
           tags: ['promo'],
           utm_source: 'google',
         }),
+        { requestKey: null },
       );
       pb.authStore.clear();
     });
@@ -272,6 +275,7 @@ describe('shortUrlHistoryService', () => {
           short_url: 'https://s.test/abc',
           long_url: 'https://s.test/abc',
         }),
+        { requestKey: null },
       );
       pb.authStore.clear();
     });
