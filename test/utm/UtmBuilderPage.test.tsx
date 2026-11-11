@@ -158,6 +158,18 @@ describe('<UtmBuilderPage />', () => {
     });
   });
 
+  it('filters the template list by the search box', async () => {
+    const { user } = setUp();
+
+    await user.type(screen.getByLabelText('템플릿 검색'), 'spring');
+    expect(screen.getByText('기본 템플릿')).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('템플릿 검색'));
+    await user.type(screen.getByLabelText('템플릿 검색'), '없는템플릿');
+    expect(screen.queryByText('기본 템플릿')).not.toBeInTheDocument();
+    expect(screen.getByText('검색 결과가 없습니다.')).toBeInTheDocument();
+  });
+
   it('generates UTM URL when required fields are filled', async () => {
     const { user } = setUp();
 

@@ -17,6 +17,7 @@ import { useServers } from '../servers/reducers/servers';
 import { withRequestTimeout } from './shlinkRequest';
 import type { UtmCategory, UtmTemplate } from './useUtmData';
 import { useUtmTags, useUtmTemplates, UTM_CATEGORIES } from './useUtmData';
+import { matchesTemplateSearch } from './utmSearch';
 
 type GeneratedRow = {
   id: string;
@@ -212,6 +213,10 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
   const navigate = useNavigate();
   const t = useT();
   const { templates } = useUtmTemplates();
+  const [templateQuery, setTemplateQuery] = useState('');
+  const filteredTemplates = templates.filter((template) =>
+    matchesTemplateSearch(templateQuery, template),
+  );
   const { tags } = useUtmTags();
   const { servers } = useServers();
   const fallbackServerId = useMemo(
@@ -857,62 +862,77 @@ const UtmBulkBuilderPageBase: FC<UtmBulkBuilderPageProps> = ({
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {templates.map((template) => {
-                  const checked = selectedIds.includes(template.id);
-                  const tagInfo = getTemplateTagsInfo(template);
-                  const hasCampaign = tagInfo.some(
-                    (t) => t.category === 'campaign',
-                  );
+              <>
+                <input
+                  type="search"
+                  value={templateQuery}
+                  onChange={(e) => setTemplateQuery(e.target.value)}
+                  placeholder={t('utm.bulk.step2.search.placeholder')}
+                  aria-label={t('utm.bulk.step2.search.label')}
+                  className="mb-3 w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                {filteredTemplates.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('utm.bulk.step2.search.empty')}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {filteredTemplates.map((template) => {
+                    const checked = selectedIds.includes(template.id);
+                    const tagInfo = getTemplateTagsInfo(template);
+                    const hasCampaign = tagInfo.some(
+                      (t) => t.category === 'campaign',
+                    );
 
-                  return (
-                    <label
-                      key={template.id}
-                      htmlFor={`bulk-template-${template.id}`}
-                      className="flex cursor-pointer items-start gap-2 rounded border border-lm-border px-3 py-2 hover:border-lm-main dark:border-dm-border dark:hover:border-dm-main"
-                    >
-                      <input
-                        id={`bulk-template-${template.id}`}
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleSelected(template.id)}
-                        className="mt-0.5"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
-                          {template.name}
-                        </span>
-                        {template.description && (
-                          <span className="block text-xs text-gray-500 dark:text-gray-400">
-                            {template.description}
+                    return (
+                      <label
+                        key={template.id}
+                        htmlFor={`bulk-template-${template.id}`}
+                        className="flex cursor-pointer items-start gap-2 rounded border border-lm-border px-3 py-2 hover:border-lm-main dark:border-dm-border dark:hover:border-dm-main"
+                      >
+                        <input
+                          id={`bulk-template-${template.id}`}
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelected(template.id)}
+                          className="mt-0.5"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                            {template.name}
                           </span>
-                        )}
-                        <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
-                          source={template.source || '-'} · medium=
-                          {template.medium || '-'}
-                          {hasCampaign && ` · campaign=${template.campaign}`}
+                          {template.description && (
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                              {template.description}
+                            </span>
+                          )}
+                          <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
+                            source={template.source || '-'} · medium=
+                            {template.medium || '-'}
+                            {hasCampaign && ` · campaign=${template.campaign}`}
+                          </span>
+                          {tagInfo.some((t) => t.description) && (
+                            <div className="mt-1 space-y-0.5">
+                              {tagInfo.map(
+                                (tag) =>
+                                  tag.description && (
+                                    <span
+                                      key={`${template.id}-${tag.category}`}
+                                      className="block text-[10px] text-blue-600 dark:text-blue-400"
+                                    >
+                                      <strong>{tag.category}:</strong>{' '}
+                                      {tag.description}
+                                    </span>
+                                  ),
+                              )}
+                            </div>
+                          )}
                         </span>
-                        {tagInfo.some((t) => t.description) && (
-                          <div className="mt-1 space-y-0.5">
-                            {tagInfo.map(
-                              (tag) =>
-                                tag.description && (
-                                  <span
-                                    key={`${template.id}-${tag.category}`}
-                                    className="block text-[10px] text-blue-600 dark:text-blue-400"
-                                  >
-                                    <strong>{tag.category}:</strong>{' '}
-                                    {tag.description}
-                                  </span>
-                                ),
-                            )}
-                          </div>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 

@@ -21,6 +21,7 @@ import {
   type UtmCategory,
 } from './useUtmData';
 import { UtmFieldInput } from './UtmFieldInput';
+import { matchesTemplateSearch } from './utmSearch';
 
 type UtmFields = {
   baseUrl: string;
@@ -205,6 +206,10 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
 
   const { tags } = useUtmTags();
   const { templates, saveTemplate } = useUtmTemplates();
+  const [templateQuery, setTemplateQuery] = useState('');
+  const filteredTemplates = templates.filter((tpl) =>
+    matchesTemplateSearch(templateQuery, tpl),
+  );
 
   const utmUrl = useMemo(() => buildUtmUrl(fields), [fields]);
   const canGenerate = hasRequiredFields(fields) && !!utmUrl;
@@ -893,7 +898,20 @@ const UtmBuilderPageBase: FC<UtmBuilderPageProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                {templates.map((tpl) => (
+                <input
+                  type="search"
+                  value={templateQuery}
+                  onChange={(e) => setTemplateQuery(e.target.value)}
+                  placeholder="템플릿 이름, 설명, UTM 값 검색"
+                  aria-label="템플릿 검색"
+                  className="w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                {filteredTemplates.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    검색 결과가 없습니다.
+                  </p>
+                )}
+                {filteredTemplates.map((tpl) => (
                   <button
                     key={tpl.id}
                     onClick={() => applyTemplate(tpl)}

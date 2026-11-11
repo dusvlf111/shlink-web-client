@@ -66,6 +66,7 @@ export const koMessages = {
   'history.search.label': '검색',
   'history.search.placeholder': '제목, URL, 태그, UTM, 생성자 검색',
   'history.search.empty': '검색 결과가 없습니다.',
+  'history.filter.search.placeholder': '목록에서 검색',
   'history.detail.shortCode': '단축 코드',
   'history.detail.template': '사용 템플릿',
   'history.detail.updatedAt': '수정 시각',
@@ -251,6 +252,9 @@ export const koMessages = {
   'utm.bulk.step2.deselectAll': '전체 해제',
   'utm.bulk.step2.empty': '저장된 템플릿이 없습니다.',
   'utm.bulk.step2.gotoTemplates': '템플릿 관리로 이동',
+  'utm.bulk.step2.search.label': '템플릿 검색',
+  'utm.bulk.step2.search.placeholder': '템플릿 이름, 설명, UTM 값 검색',
+  'utm.bulk.step2.search.empty': '검색 결과가 없습니다.',
   'utm.bulk.step3.title': '3. 생성 결과',
   'utm.bulk.step3.empty':
     '기본 URL을 입력하고 템플릿을 선택한 뒤 만들기 버튼을 눌러주세요.',
