@@ -64,6 +64,7 @@ export const enMessages: Messages = {
   'history.search.label': 'Search',
   'history.search.placeholder': 'Search title, URL, tags, UTM, creator',
   'history.search.empty': 'No matching records.',
+  'history.filter.search.placeholder': 'Filter options',
   'history.detail.shortCode': 'Short code',
   'history.detail.template': 'Template used',
   'history.detail.updatedAt': 'Updated at',
@@ -246,6 +247,9 @@ export const enMessages: Messages = {
   'utm.bulk.step2.deselectAll': 'Deselect all',
   'utm.bulk.step2.empty': 'No templates saved yet.',
   'utm.bulk.step2.gotoTemplates': 'Go to template manager',
+  'utm.bulk.step2.search.label': 'Search templates',
+  'utm.bulk.step2.search.placeholder': 'Search name, description, UTM values',
+  'utm.bulk.step2.search.empty': 'No matching templates.',
   'utm.bulk.step3.title': '3. Result',
   'utm.bulk.step3.empty':
     'Enter a base URL, pick templates, and press the build button.',

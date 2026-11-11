@@ -1,6 +1,8 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FC } from 'react';
+import { useState } from 'react';
+import { useT } from '../../i18n';
 import { FilterChip } from './FilterChip';
 
 // A collapsible chip-multiselect filter (tags, templates, ...), collapsed by
@@ -16,9 +18,17 @@ export const HistoryFilterDropdown: FC<{
   selected: string[];
   onToggle: (value: string) => void;
 }> = ({ label, icon, options, selected, onToggle }) => {
+  const t = useT();
+  const [query, setQuery] = useState('');
+
   if (options.length === 0) {
     return null;
   }
+
+  const q = query.trim().toLowerCase();
+  const filteredOptions = q
+    ? options.filter((option) => option.toLowerCase().includes(q))
+    : options;
 
   return (
     <details className="group relative">
@@ -36,7 +46,20 @@ export const HistoryFilterDropdown: FC<{
           native `details:not([open]) > *` hiding rule (a class selector beats
           a plain-element one) and the panel would never actually collapse. */}
       <div className="absolute left-0 z-10 mt-1 hidden w-64 max-w-[80vw] flex-wrap gap-1.5 rounded-lg border border-lm-border bg-white p-2 shadow-lg group-open:flex dark:border-dm-border dark:bg-dm-primary">
-        {options.map((option) => (
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('history.filter.search.placeholder')}
+          aria-label={t('history.filter.search.placeholder')}
+          className="w-full rounded border border-lm-border px-2 py-1 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+        />
+        {filteredOptions.length === 0 && (
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('history.search.empty')}
+          </span>
+        )}
+        {filteredOptions.map((option) => (
           <FilterChip
             key={option}
             active={selected.includes(option)}

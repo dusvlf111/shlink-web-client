@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { useT } from '../i18n';
 import { useUtmTags, UTM_CATEGORIES, type UtmCategory } from './useUtmData';
+import { matchesSearch } from './utmSearch';
 
 export const UtmTagManager: FC = () => {
   const t = useT();
@@ -12,6 +13,7 @@ export const UtmTagManager: FC = () => {
   const [value, setValue] = useState('');
   const [description, setDescription] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
+  const [tagQuery, setTagQuery] = useState('');
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   const { tags, addTag, updateTag, deleteTag } = useUtmTags();
@@ -86,7 +88,11 @@ export const UtmTagManager: FC = () => {
   };
 
   const tagsByCategory = (cat: UtmCategory) =>
-    tags.filter((tag) => tag.category === cat);
+    tags.filter(
+      (tag) =>
+        tag.category === cat &&
+        matchesSearch(tagQuery, tag.value, tag.description),
+    );
 
   return (
     <NoMenuLayout>
@@ -189,6 +195,14 @@ export const UtmTagManager: FC = () => {
             <h2 className="mb-3 text-sm font-semibold text-(--light-text-color) dark:text-(--dark-text-color)">
               저장된 태그
             </h2>
+            <input
+              type="search"
+              value={tagQuery}
+              onChange={(e) => setTagQuery(e.target.value)}
+              placeholder="태그 값, 설명 검색"
+              aria-label="태그 검색"
+              className="mb-3 w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+            />
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {UTM_CATEGORIES.map((cat) => {
                 const categoryTags = tagsByCategory(cat);
@@ -202,7 +216,9 @@ export const UtmTagManager: FC = () => {
                     </h3>
                     {categoryTags.length === 0 ? (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        태그가 없습니다.
+                        {tagQuery.trim()
+                          ? '검색 결과가 없습니다.'
+                          : '태그가 없습니다.'}
                       </p>
                     ) : (
                       <div className="max-h-48 space-y-1 overflow-y-auto pr-1">

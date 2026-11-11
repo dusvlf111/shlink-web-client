@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { NoMenuLayout } from '../common/NoMenuLayout';
 import { useT } from '../i18n';
 import { useUtmTags, useUtmTemplates, type UtmCategory } from './useUtmData';
+import { matchesTemplateSearch } from './utmSearch';
 
 const REQUIRED_FIELDS: UtmCategory[] = ['source', 'medium'];
 const OPTIONAL_FIELDS: UtmCategory[] = ['campaign', 'term', 'content'];
@@ -21,6 +22,7 @@ export const UtmTemplateManager: FC = () => {
     content: '',
   });
   const [saveMsg, setSaveMsg] = useState('');
+  const [templateQuery, setTemplateQuery] = useState('');
   const [validationError, setValidationError] = useState('');
   const [openSuggestionField, setOpenSuggestionField] =
     useState<UtmCategory | null>(null);
@@ -31,6 +33,9 @@ export const UtmTemplateManager: FC = () => {
   const { templates, saveTemplate, updateTemplate, deleteTemplate } =
     useUtmTemplates();
   const { tags } = useUtmTags();
+  const filteredTemplates = templates.filter((tpl) =>
+    matchesTemplateSearch(templateQuery, tpl),
+  );
 
   const handleFieldChange = (key: UtmCategory, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -381,66 +386,81 @@ export const UtmTemplateManager: FC = () => {
                 저장된 템플릿이 없습니다.
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {templates.map((tpl) => {
-                  const tags = templateTags(tpl);
+              <>
+                <input
+                  type="search"
+                  value={templateQuery}
+                  onChange={(e) => setTemplateQuery(e.target.value)}
+                  placeholder="템플릿 이름, 설명, UTM 값 검색"
+                  aria-label="템플릿 검색"
+                  className="mb-3 w-full rounded border border-lm-border px-2 py-1.5 text-xs focus:border-lm-main focus:outline-none dark:border-dm-border dark:bg-dm-main dark:text-(--dark-text-color)"
+                />
+                {filteredTemplates.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    검색 결과가 없습니다.
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {filteredTemplates.map((tpl) => {
+                    const tags = templateTags(tpl);
 
-                  return (
-                    <div
-                      key={tpl.id}
-                      className="rounded border border-lm-border px-3 py-2 dark:border-dm-border"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 text-sm">
-                          <span className="block truncate font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
-                            {tpl.name}
-                          </span>
-                          {tpl.description && (
-                            <span className="block text-xs text-gray-500 dark:text-gray-400">
-                              {tpl.description}
+                    return (
+                      <div
+                        key={tpl.id}
+                        className="rounded border border-lm-border px-3 py-2 dark:border-dm-border"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 text-sm">
+                            <span className="block truncate font-medium text-(--light-text-color) dark:text-(--dark-text-color)">
+                              {tpl.name}
                             </span>
+                            {tpl.description && (
+                              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                {tpl.description}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditTemplate(tpl)}
+                              className="text-[11px] text-blue-600 hover:text-blue-700"
+                            >
+                              수정
+                            </button>
+                            <button
+                              onClick={() => void handleDelete(tpl)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <FontAwesomeIcon
+                                icon={faTrash}
+                                className="text-xs"
+                              />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 space-y-1">
+                          {tags.length === 0 ? (
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                              UTM 값이 없습니다.
+                            </span>
+                          ) : (
+                            tags.map((tag) => (
+                              <span
+                                key={`${tpl.id}-${tag.label}`}
+                                className="block rounded bg-lm-primary/50 px-1.5 py-0.5 text-[11px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)"
+                              >
+                                {tag.label}
+                                {tag.description ? ` (${tag.description})` : ''}
+                              </span>
+                            ))
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditTemplate(tpl)}
-                            className="text-[11px] text-blue-600 hover:text-blue-700"
-                          >
-                            수정
-                          </button>
-                          <button
-                            onClick={() => void handleDelete(tpl)}
-                            className="text-gray-400 hover:text-red-500"
-                          >
-                            <FontAwesomeIcon
-                              icon={faTrash}
-                              className="text-xs"
-                            />
-                          </button>
-                        </div>
                       </div>
-
-                      <div className="mt-2 space-y-1">
-                        {tags.length === 0 ? (
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                            UTM 값이 없습니다.
-                          </span>
-                        ) : (
-                          tags.map((tag) => (
-                            <span
-                              key={`${tpl.id}-${tag.label}`}
-                              className="block rounded bg-lm-primary/50 px-1.5 py-0.5 text-[11px] text-(--light-text-color) dark:bg-dm-main dark:text-(--dark-text-color)"
-                            >
-                              {tag.label}
-                              {tag.description ? ` (${tag.description})` : ''}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
